@@ -2,6 +2,8 @@ import re
 
 from ply.lex import LexToken, Token, lex
 
+from symbols import SymbolStore
+
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
 # ruff: noqa: F841
 
@@ -17,10 +19,9 @@ tokens = (
     "LINE_LABEL",
     "LINE_NUM_LABEL",
     "ID",
-    "VAR",
-    "FUNC",
-    "PREFIX",
-    "INFIX",
+    "KEYWORD",
+    "VARIABLE",
+    "PROCEDURE",
     "STRING_LIT",
     "BASE_LIT",
     "EXP_LIT",
@@ -61,7 +62,7 @@ id_body = rf"""
             """
 
 
-def Lexer():
+def Lexer(symbols: SymbolStore):
     t_ignore = ws
 
     def t_error(t: LexToken):
@@ -171,11 +172,36 @@ def Lexer():
         """
     )
     def t_ID(t: LexToken):
-        name = t.lexer.lexmatch.group("name")
+        name = t.lexer.lexmatch.group("name").lower()
         sigil = t.lexer.lexmatch.group("sigil")
-        if name == "?" and sigil is None:
-            name = "Print"
-        t.value = (name, sigil)
+        if symbols.is_keyword(name):
+            # Keywords with a $ are no longer keywords, hence `if$ = ""` and
+            # `if$3 = ""` are acceptable but `if% = 3` is not.
+            if sigil is None:
+                t.type = "KEYWORD"
+                t.value = name
+                return t
+            elif not sigil.startswith("$"):
+                t.type = "ERROR"
+                t.lexer.skip(len(t.value))
+                return t
+            # case of sigil "$" falls through below
+        if proc := symbols.find_procedure(name):
+            if sigil is not None:
+                # The sigil must match the existing procedure, if present
+                typ = symbols.lookup_sigil(sigil)
+                if proc.signature and typ != proc.signature.ret:
+                    t.type = "ERROR"
+                    return t
+            t.type = "PROCEDURE"
+            t.value = proc
+            return t
+        elif var := symbols.find_variable(name, sigil):
+            t.type = "VARIABLE"
+            t.value = var
+            return t
+        # otherwise remain as ID
+        t.value = (name, symbols.lookup_sigil(sigil))
         return t
 
     t_LT_EQ = "<="
