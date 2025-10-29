@@ -1,0 +1,51 @@
+from ply.lex import LexToken
+
+from errors import ParseError
+from lexer import Lexer
+from symbols import SymbolStore
+
+
+class ParseContext:
+    def __init__(self, input: str):
+        self.symbols = SymbolStore()
+        self.token_stream = Lexer(self.symbols)
+        self.token_stream.input(input)
+        next(self)
+
+    def __next__(self):
+        try:
+            self.tok = next(self.token_stream)
+            print(self.tok)
+        except StopIteration:
+            eof = LexToken()
+            eof.lexer = self.tok.lexer
+            eof.lexpos = self.tok.lexer.lexlen
+            eof.lineno = self.tok.lineno
+            eof.type = "EOF"
+            eof.value = ""
+            self.tok = eof
+        return self.tok
+
+    def skip(self, *tok_types: str):
+        while self.tok.type in tok_types:
+            next(self)
+
+    def consume(self, tok_type: str, tok_value: str | None = None):
+        if tok_value is None:
+            if self.tok.type != tok_type:
+                raise ParseError("Expected " + tok_type)
+        else:
+            if self.tok.type != tok_type and self.tok.value != tok_value:
+                raise ParseError(f"Expected {tok_type} {tok_value}")
+        return next(self)
+
+    def at_line_terminator(self):
+        return (
+            self.at_a("NEWLINE")
+            or self.at_a("LINE_SPLIT")
+            or self.at_a("KEYWORD", "else")
+            or self.at_a("EOF")
+        )
+
+    def at_a(self, type: str, value: str | None = None):
+        return self.tok.type == type and (value is None or self.tok.value == value)

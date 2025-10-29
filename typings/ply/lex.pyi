@@ -20,6 +20,7 @@ class Lexer:
     lexpos: int
     lineno: int
     lexdata: str | bytes
+    lexlen: int
     lexmatch: Match[str]
 
     def __init__(self) -> None: ...

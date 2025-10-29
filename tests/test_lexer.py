@@ -3,8 +3,8 @@ from typing import Any
 
 import lexer
 from ast_nodes import Procedure
-from datatypes import TypeSignature
-from symbols import BUILTIN_TYPES, SymbolStore
+from datatypes import BUILTIN_TYPES, TypeSignature
+from symbols import SymbolStore
 
 SINGLE = BUILTIN_TYPES["single"]
 
@@ -140,24 +140,27 @@ def test_id_custom_sigil():
 
 
 def test_check_punctuation():
-    check("<=", Token("LT_EQ"))
-    check("<", Token("LT"))
-    check(">=", Token("GT_EQ"))
-    check(">", Token("GT"))
-    check("<>", Token("NEQ"))
-    check("=", Token("EQUALS"))
-    check("(", Token("OPAREN"))
-    check(")", Token("CPAREN"))
-    check("*", Token("STAR"))
-    check("/", Token("SLASH"))
-    check("^", Token("CARET"))
-    check("\\", Token("BACKSLASH"))
-    check("+", Token("PLUS"))
-    check("-", Token("DASH"))
-    check(";", Token("SEMICOLON"))
-    check(",", Token("COMMA"))
-    check(".", Token("DOT"))
-    check("#", Token("HASH"))
+    for s in [
+        "<=",
+        "<",
+        ">=",
+        ">",
+        "<>",
+        "=",
+        "(",
+        ")",
+        "*",
+        "/",
+        "^",
+        "\\",
+        "+",
+        "-",
+        ";",
+        ",",
+        ".",
+        "#",
+    ]:
+        check(s, Token("PUNCTUATION", s))
 
 
 def test_comment():

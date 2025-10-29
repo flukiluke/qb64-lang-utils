@@ -27,24 +27,7 @@ tokens = (
     "EXP_LIT",
     "DEC_LIT",
     "INT_LIT",
-    "LT_EQ",
-    "GT_EQ",
-    "NEQ",
-    "STAR",
-    "OPAREN",
-    "CPAREN",
-    "CARET",
-    "BACKSLASH",
-    "DASH",
-    "PLUS",
-    "EQUALS",
-    "SEMICOLON",
-    "LT",
-    "GT",
-    "COMMA",
-    "DOT",
-    "SLASH",
-    "HASH",
+    "PUNCTUATION",
 )
 
 ws = "[ \t]"
@@ -204,23 +187,16 @@ def Lexer(symbols: SymbolStore):
         t.value = (name, symbols.lookup_sigil(sigil))
         return t
 
-    t_LT_EQ = "<="
-    t_LT = "<"
-    t_GT_EQ = ">="
-    t_GT = ">"
-    t_NEQ = "<>"
-    t_EQUALS = "="
-    t_OPAREN = r"\("
-    t_CPAREN = r"\)"
-    t_STAR = r"\*"
-    t_SLASH = "/"
-    t_CARET = r"\^"
-    t_BACKSLASH = r"\\"
-    t_PLUS = r"\+"
-    t_DASH = "-"
-    t_SEMICOLON = ";"
-    t_COMMA = ","
-    t_DOT = r"\."
-    t_HASH = "[#]"
+    @Token(r"""<= | >= | <>
+                        | <  | > | =
+                        | \( | \)
+                        | \* | / 
+                        | \^ | \\
+                        | \+ | -
+                        | ;  | ,
+                        | \. | [#]
+    """)
+    def t_PUNCTUATION(t: LexToken):
+        return t
 
     return lex(reflags=re.VERBOSE | re.IGNORECASE)
