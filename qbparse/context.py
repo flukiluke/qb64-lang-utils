@@ -15,10 +15,10 @@ class ParseContext:
 
     def __next__(self):
         if len(self.reversed_tokens):
-            return self.reversed_tokens.pop()
+            self.tok = self.reversed_tokens.pop()
+            return self.tok
         try:
             self.tok = next(self.token_stream)
-            print(self.tok)
         except StopIteration:
             eof = LexToken()
             eof.lexer = self.tok.lexer
@@ -30,7 +30,8 @@ class ParseContext:
         return self.tok
 
     def reverse(self, tok: LexToken):
-        self.reversed_tokens.append(tok)
+        self.reversed_tokens.append(self.tok)
+        self.tok = tok
 
     def skip(self, *tok_types: str):
         while self.tok.type in tok_types:

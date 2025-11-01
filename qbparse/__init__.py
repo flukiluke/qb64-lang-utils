@@ -14,8 +14,8 @@ def parse(input: str):
     program = Program()
     ctx = ParseContext(input, program.globals)
     main = Procedure("_main", TypeSignature(BUILTIN_TYPES["_none"], []))
+    main.impl = ProcDefinition()
     program.globals.procedures["_main"] = main
-    main_def = ProcDefinition(main)
     while (
         not ctx.at_a("EOF")
         and not ctx.at_a("KEYWORD", "sub")
@@ -23,5 +23,5 @@ def parse(input: str):
     ):
         stmt = do_stmt(ctx)
         if stmt:
-            main_def.statements.append(stmt)
+            main.impl.statements.append(stmt)
     return program

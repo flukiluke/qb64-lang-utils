@@ -34,32 +34,6 @@ KEYWORD_PARSERS = {
 }
 
 
-def do_assignment(ctx: ParseContext, lval: LValue | None = None):
-    """
-    Expects: first token of lvalue if lval == None else "=" token
-    Results: token after rvalue
-    """
-    lval = do_lvalue(ctx)
-    ctx.consume("PUNCTUATION", "=")
-    rval = do_expr(ctx)
-    return Assignment(lval, rval)
-
-
-def do_lvalue(ctx: ParseContext) -> LValue:
-    if ctx.tok.type == "VARIABLE":
-        result = LVar(ctx.tok.value)
-    elif ctx.tok.type == "ID":
-        result = LVar(ctx.symbols.create_local(*ctx.tok.value))
-    else:
-        raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
-    next(ctx)
-    return result
-
-
-def do_procedure_call(ctx: ParseContext):
-    pass
-
-
 def do_stmt(ctx: ParseContext) -> Statement | None:
     result = None
     match ctx.tok.type:
@@ -97,3 +71,29 @@ def do_unknown_var_or_procedure(ctx: ParseContext) -> Statement:
         raise ParseError("Unimplemented implicit array")
     else:
         raise ParseError("Unimplemented procedure call")
+
+
+def do_assignment(ctx: ParseContext):
+    """
+    Expects: first token of lvalue
+    Results: token after rvalue
+    """
+    lval = do_lvalue(ctx)
+    ctx.consume("PUNCTUATION", "=")
+    rval = do_expr(ctx)
+    return Assignment(lval, rval)
+
+
+def do_lvalue(ctx: ParseContext) -> LValue:
+    if ctx.tok.type == "VARIABLE":
+        result = LVar(ctx.tok.value)
+    elif ctx.tok.type == "ID":
+        result = LVar(ctx.symbols.create_local(*ctx.tok.value))
+    else:
+        raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
+    next(ctx)
+    return result
+
+
+def do_procedure_call(ctx: ParseContext):
+    pass

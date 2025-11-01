@@ -4,7 +4,7 @@ from collections.abc import Generator, Iterable
 from typing import Any
 
 from qbparse.datatypes import BUILTIN_TYPES, Type
-from qbparse.symbols import Procedure, Variable
+from qbparse.symbols import Variable
 
 
 class Node:
@@ -35,18 +35,16 @@ class Statement(Node):
 
 
 class ProcDefinition(Node):
-    def __init__(self, target: Procedure):
-        self.target = target
+    def __init__(self):
         self.statements: list[Statement] = []
-        target.impl = self
 
     def __repr__(self):
-        return f"[ProcDefinition target={self.target} statements={self.statements}]"
+        return f"[ProcDefinition statements={self.statements}]"
 
     def __eq__(self, other: Any):
         if type(self) is not type(other):
             return NotImplemented
-        return self.target == other.target and self.statements == other.statements
+        return self.statements == other.statements
 
     def children(self):
         return self.statements

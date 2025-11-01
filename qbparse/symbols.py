@@ -72,7 +72,9 @@ class Procedure:
         self.impl: ProcDefinition | None = None
 
     def __repr__(self):
-        return f"[Procedure name={self.name} signature={self.signature}]"
+        return (
+            f"[Procedure name={self.name} signature={self.signature} impl={self.impl}]"
+        )
 
     def __eq__(self, other: Any):
         if type(self) is not type(other):
@@ -102,7 +104,7 @@ class SymbolStore:
     def find_procedure(self, ident: str):
         return self.procedures.get(ident) or BUILTIN_PROCS.get(ident)
 
-    def find_variable(self, ident: str, sigil: str | None):
+    def find_variable(self, ident: str, sigil: str | None = None):
         if ident not in self.variables:
             return None
         vars = self.variables[ident]

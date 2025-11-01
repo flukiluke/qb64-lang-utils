@@ -1,17 +1,17 @@
 from pytest import raises
 
-import qbparse.ast as ast
 from qbparse import parse
+from qbparse.ast import BinOp, Constant, Expr, Node, UniOp
 from qbparse.datatypes import BUILTIN_TYPES
 from qbparse.errors import ParseError
 
 SINGLE = BUILTIN_TYPES["single"]
 
 
-def check(input: str, expected: ast.Node):
+def check(input: str, expected: Node):
     impl = parse("?" + input).globals.procedures["_main"].impl
     assert impl is not None
-    expr = impl.find(ast.Expr)
+    expr = impl.find(Expr)
     assert expr is not None
     assert expr == expected
 
@@ -19,10 +19,10 @@ def check(input: str, expected: ast.Node):
 def test_binop():
     check(
         "2 + 3 - 4",
-        ast.BinOp(
+        BinOp(
             "-",
-            ast.BinOp("+", ast.Constant(2, SINGLE), ast.Constant(3, SINGLE)),
-            ast.Constant(4, SINGLE),
+            BinOp("+", Constant(2, SINGLE), Constant(3, SINGLE)),
+            Constant(4, SINGLE),
         ),
     )
 
@@ -30,24 +30,24 @@ def test_binop():
 def test_binop_precedence():
     check(
         "2 - 3 * 4",
-        ast.BinOp(
+        BinOp(
             "-",
-            ast.Constant(2, SINGLE),
-            ast.BinOp("*", ast.Constant(3, SINGLE), ast.Constant(4, SINGLE)),
+            Constant(2, SINGLE),
+            BinOp("*", Constant(3, SINGLE), Constant(4, SINGLE)),
         ),
     )
     check(
         "2 and 3 = 4 + 5 / 6",
-        ast.BinOp(
+        BinOp(
             "and",
-            ast.Constant(2, SINGLE),
-            ast.BinOp(
+            Constant(2, SINGLE),
+            BinOp(
                 "=",
-                ast.Constant(3, SINGLE),
-                ast.BinOp(
+                Constant(3, SINGLE),
+                BinOp(
                     "+",
-                    ast.Constant(4, SINGLE),
-                    ast.BinOp("/", ast.Constant(5, SINGLE), ast.Constant(6, SINGLE)),
+                    Constant(4, SINGLE),
+                    BinOp("/", Constant(5, SINGLE), Constant(6, SINGLE)),
                 ),
             ),
         ),
@@ -57,64 +57,56 @@ def test_binop_precedence():
 def test_negation():
     check(
         "-2 * -3",
-        ast.BinOp(
+        BinOp(
             "*",
-            ast.UniOp("negation", ast.Constant(2, SINGLE)),
-            ast.UniOp("negation", ast.Constant(3, SINGLE)),
+            UniOp("negation", Constant(2, SINGLE)),
+            UniOp("negation", Constant(3, SINGLE)),
         ),
     )
     check(
         "-(2 > 3)",
-        ast.UniOp(
+        UniOp(
             "negation",
-            ast.BinOp(">", ast.Constant(2, SINGLE), ast.Constant(3, SINGLE)),
+            BinOp(">", Constant(2, SINGLE), Constant(3, SINGLE)),
         ),
     )
     check(
         "2 <> --4",
-        ast.BinOp(
+        BinOp(
             "<>",
-            ast.Constant(2, SINGLE),
-            ast.UniOp("negation", ast.UniOp("negation", ast.Constant(4, SINGLE))),
+            Constant(2, SINGLE),
+            UniOp("negation", UniOp("negation", Constant(4, SINGLE))),
         ),
     )
     check(
         "2--4",
-        ast.BinOp(
+        BinOp(
             "-",
-            ast.Constant(2, SINGLE),
-            ast.UniOp("negation", ast.Constant(4, SINGLE)),
+            Constant(2, SINGLE),
+            UniOp("negation", Constant(4, SINGLE)),
         ),
     )
     check(
         "-2^3",
-        ast.UniOp(
-            "negation", ast.BinOp("^", ast.Constant(2, SINGLE), ast.Constant(3, SINGLE))
-        ),
+        UniOp("negation", BinOp("^", Constant(2, SINGLE), Constant(3, SINGLE))),
     )
 
 
 def test_not():
     check(
         "2 and not 3",
-        ast.BinOp(
-            "and", ast.Constant(2, SINGLE), ast.UniOp("not", ast.Constant(3, SINGLE))
-        ),
+        BinOp("and", Constant(2, SINGLE), UniOp("not", Constant(3, SINGLE))),
     )
     check(
         "not 2 + 3",
-        ast.UniOp(
-            "not", ast.BinOp("+", ast.Constant(2, SINGLE), ast.Constant(3, SINGLE))
-        ),
+        UniOp("not", BinOp("+", Constant(2, SINGLE), Constant(3, SINGLE))),
     )
     check(
         "not not 2 and not - not 3",
-        ast.BinOp(
+        BinOp(
             "and",
-            ast.UniOp("not", ast.UniOp("not", ast.Constant(2, SINGLE))),
-            ast.UniOp(
-                "not", ast.UniOp("negation", ast.UniOp("not", ast.Constant(3, SINGLE)))
-            ),
+            UniOp("not", UniOp("not", Constant(2, SINGLE))),
+            UniOp("not", UniOp("negation", UniOp("not", Constant(3, SINGLE)))),
         ),
     )
 
@@ -122,23 +114,23 @@ def test_not():
 def test_parentheses():
     check(
         "(2 - 3) * 4",
-        ast.BinOp(
+        BinOp(
             "*",
-            ast.BinOp("-", ast.Constant(2, SINGLE), ast.Constant(3, SINGLE)),
-            ast.Constant(4, SINGLE),
+            BinOp("-", Constant(2, SINGLE), Constant(3, SINGLE)),
+            Constant(4, SINGLE),
         ),
     )
     check(
         "-(2 + ((3 or 4) and ((5))))",
-        ast.UniOp(
+        UniOp(
             "negation",
-            ast.BinOp(
+            BinOp(
                 "+",
-                ast.Constant(2, SINGLE),
-                ast.BinOp(
+                Constant(2, SINGLE),
+                BinOp(
                     "and",
-                    ast.BinOp("or", ast.Constant(3, SINGLE), ast.Constant(4, SINGLE)),
-                    ast.Constant(5, SINGLE),
+                    BinOp("or", Constant(3, SINGLE), Constant(4, SINGLE)),
+                    Constant(5, SINGLE),
                 ),
             ),
         ),

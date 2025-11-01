@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from typing import Any
 
-from qbparse.ast import Procedure
 from qbparse.datatypes import BUILTIN_TYPES, TypeSignature
 from qbparse.lexer import Lexer
-from qbparse.symbols import SymbolStore
+from qbparse.symbols import Procedure, SymbolStore
 
 SINGLE = BUILTIN_TYPES["single"]
 
