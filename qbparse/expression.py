@@ -1,7 +1,7 @@
-from ast_nodes import BinOp, Constant, Expr, UniOp
-from datatypes import BUILTIN_TYPES
-from errors import ParseError
-from parsers.context import ParseContext
+from qbparse.ast import BinOp, Constant, Expr, UniOp
+from qbparse.context import ParseContext
+from qbparse.datatypes import BUILTIN_TYPES
+from qbparse.errors import ParseError
 
 PRECEDENCE = {
     "imp": 2,
@@ -27,7 +27,7 @@ PRECEDENCE = {
 PREC_NEGATION = 13
 
 
-def parse(ctx: ParseContext, right_binding: int = 0) -> Expr:
+def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
     """
     Expects: first token of expression
     Results: token after expression
@@ -40,13 +40,13 @@ def parse(ctx: ParseContext, right_binding: int = 0) -> Expr:
         next(ctx)
         match token.type, token.value:
             case "PUNCTUATION", "(":
-                result = parse(ctx)
+                result = do_expr(ctx)
                 ctx.consume("PUNCTUATION", "(")
                 return result
             case "PUNCTUATION", "-":
-                return UniOp("negation", parse(ctx, PREC_NEGATION))
+                return UniOp("negation", do_expr(ctx, PREC_NEGATION))
             case "KEYWORD", "not":
-                return UniOp("not", parse(ctx, PRECEDENCE["not"]))
+                return UniOp("not", do_expr(ctx, PRECEDENCE["not"]))
             case "ID", _:
                 raise ParseError("Unimplemented implicit variable declaration")
             case "STRING_LIT", _:
@@ -75,7 +75,7 @@ def parse(ctx: ParseContext, right_binding: int = 0) -> Expr:
         token = ctx.tok
         next(ctx)
         if token.type in ["KEYWORD", "PUNCTUATION"] and token.value in PRECEDENCE:
-            right = parse(ctx, PRECEDENCE[token.value])
+            right = do_expr(ctx, PRECEDENCE[token.value])
             return BinOp(token.value, left, right)
         raise ParseError(f"Unpexpected {token.type} {token.value}")
 

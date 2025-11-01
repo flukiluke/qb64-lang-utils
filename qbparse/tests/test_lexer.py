@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Any
 
-import lexer
-from ast_nodes import Procedure
-from datatypes import BUILTIN_TYPES, TypeSignature
-from symbols import SymbolStore
+from qbparse.ast import Procedure
+from qbparse.datatypes import BUILTIN_TYPES, TypeSignature
+from qbparse.lexer import Lexer
+from qbparse.symbols import SymbolStore
 
 SINGLE = BUILTIN_TYPES["single"]
 
@@ -19,7 +19,7 @@ class Token:
 def check(
     text: str, expecteds: Token | list[Token], symbols: SymbolStore | None = None
 ):
-    lex = lexer.Lexer(symbols if symbols else SymbolStore())
+    lex = Lexer(symbols if symbols else SymbolStore())
     lex.input(text)
     actuals = list(lex)
     if isinstance(expecteds, Token):
@@ -128,7 +128,7 @@ def test_id_builtin_sigil():
 def test_id_custom_sigil():
     def check_custom_sigil(input: str, type_name: str):
         symbols = SymbolStore()
-        lex = lexer.Lexer(symbols)
+        lex = Lexer(symbols)
         lex.input(input)
         result = list(lex)[0]
         assert result.type == "ID"

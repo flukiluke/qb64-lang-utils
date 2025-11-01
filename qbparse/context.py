@@ -1,18 +1,21 @@
 from ply.lex import LexToken
 
-from errors import ParseError
-from lexer import Lexer
-from symbols import SymbolStore
+from qbparse.errors import ParseError
+from qbparse.lexer import Lexer
+from qbparse.symbols import SymbolStore
 
 
 class ParseContext:
-    def __init__(self, input: str):
-        self.symbols = SymbolStore()
+    def __init__(self, input: str, symbols: SymbolStore):
+        self.symbols = symbols
         self.token_stream = Lexer(self.symbols)
         self.token_stream.input(input)
+        self.reversed_tokens: list[LexToken] = []
         next(self)
 
     def __next__(self):
+        if len(self.reversed_tokens):
+            return self.reversed_tokens.pop()
         try:
             self.tok = next(self.token_stream)
             print(self.tok)
@@ -25,6 +28,9 @@ class ParseContext:
             eof.value = ""
             self.tok = eof
         return self.tok
+
+    def reverse(self, tok: LexToken):
+        self.reversed_tokens.append(tok)
 
     def skip(self, *tok_types: str):
         while self.tok.type in tok_types:

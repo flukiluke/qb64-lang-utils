@@ -1,8 +1,16 @@
-from ast_nodes import Procedure
-from datatypes import BUILTIN_SIGILS, BUILTIN_TYPES, FixedWidthType, Type
-from errors import ParseError
+from typing import TYPE_CHECKING, Any
 
-BUILTIN_PROCS: dict[str, Procedure] = {}
+from qbparse.datatypes import (
+    BUILTIN_SIGILS,
+    BUILTIN_TYPES,
+    FixedWidthType,
+    Type,
+    TypeSignature,
+)
+from qbparse.errors import ParseError
+
+if TYPE_CHECKING:
+    from qbparse.ast import ProcDefinition
 
 KEYWORDS = set(
     [
@@ -43,9 +51,36 @@ KEYWORDS = set(
 
 
 class Variable:
-    def __init__(self, name: str, typ: Type):
+    def __init__(self, name: str, type: Type):
         self.name = name
-        self.typ = typ
+        self.type = type
+
+    def __repr__(self):
+        return f"[Variable name={self.name} type={self.type}]"
+
+    def __eq__(self, other: Any):
+        if type(self) is not type(other):
+            return NotImplemented
+        return self.name == other.name and self.type == other.type
+
+
+class Procedure:
+    def __init__(self, name: str, signature: TypeSignature | None):
+        self.name = name
+        # signature & impl may be None for special cased procedures
+        self.signature = signature
+        self.impl: ProcDefinition | None = None
+
+    def __repr__(self):
+        return f"[Procedure name={self.name} signature={self.signature}]"
+
+    def __eq__(self, other: Any):
+        if type(self) is not type(other):
+            return NotImplemented
+        return self.name == other.name and self.signature == other.signature
+
+
+BUILTIN_PROCS: dict[str, Procedure] = {}
 
 
 class SymbolStore:
@@ -88,3 +123,12 @@ class SymbolStore:
             raise ParseError("Unknown type " + sigil)
         full_name = base_type.name + " * " + str(width)
         return self.types.setdefault(full_name, FixedWidthType(base_type, width))
+
+    def create_local(self, name: str, type: Type | None):
+        if type is None:
+            type = self.default_type
+        typeset = self.variables.setdefault(name, {})
+        if type in typeset:
+            raise ParseError("Duplicate variable")
+        typeset[type] = Variable(name, type)
+        return typeset[type]

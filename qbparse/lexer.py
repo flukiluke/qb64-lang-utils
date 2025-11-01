@@ -2,7 +2,7 @@ import re
 
 from ply.lex import LexToken, Token, lex
 
-from symbols import SymbolStore
+from qbparse.symbols import SymbolStore
 
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
 # ruff: noqa: F841

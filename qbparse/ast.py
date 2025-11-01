@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections.abc import Generator, Iterable
 from typing import Any
 
-from datatypes import BUILTIN_TYPES, Type, TypeSignature
+from qbparse.datatypes import BUILTIN_TYPES, Type
+from qbparse.symbols import Procedure, Variable
 
 
 class Node:
@@ -33,27 +34,19 @@ class Statement(Node):
     pass
 
 
-class Procedure(Node):
-    def __init__(self, name: str, signature: TypeSignature | None):
-        self.name = name
-        # signature may be None for special cased procedures
-        self.signature = signature
+class ProcDefinition(Node):
+    def __init__(self, target: Procedure):
+        self.target = target
         self.statements: list[Statement] = []
+        target.impl = self
 
     def __repr__(self):
-        return (
-            f"[Procedure name={self.name} signature={self.signature}"
-            f"statements={self.statements}]"
-        )
+        return f"[ProcDefinition target={self.target} statements={self.statements}]"
 
     def __eq__(self, other: Any):
         if type(self) is not type(other):
             return NotImplemented
-        return (
-            self.name == other.name
-            and self.signature == other.signature
-            and self.statements == other.statements
-        )
+        return self.target == other.target and self.statements == other.statements
 
     def children(self):
         return self.statements
@@ -61,6 +54,23 @@ class Procedure(Node):
 
 class Expr(Node):
     pass
+
+
+class LValue(Node):
+    pass
+
+
+class LVar(LValue):
+    def __init__(self, target: Variable):
+        self.target = target
+
+    def __repr__(self):
+        return f"[LVar target={self.target}]"
+
+    def __eq__(self, other: Any):
+        if type(self) is not type(other):
+            return NotImplemented
+        return self.target == other.target
 
 
 class BinOp(Expr):
@@ -104,6 +114,23 @@ class UniOp(Expr):
 
 class Call(Expr, Statement):
     pass
+
+
+class Assignment(Statement):
+    def __init__(self, lval: LValue, rval: Expr):
+        self.lval = lval
+        self.rval = rval
+
+    def __repr__(self):
+        return f"[Assignment lval={self.lval} rval={self.rval}]"
+
+    def __eq__(self, other: Any):
+        if type(self) is not type(other):
+            return NotImplemented
+        return self.lval == other.lval and self.rval == other.rval
+
+    def children(self):
+        return (self.lval, self.rval)
 
 
 class Constant(Expr):

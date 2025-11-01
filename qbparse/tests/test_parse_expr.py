@@ -1,15 +1,17 @@
 from pytest import raises
 
-import ast_nodes as ast
-from datatypes import BUILTIN_TYPES
-from errors import ParseError
-from parsers import parse
+import qbparse.ast as ast
+from qbparse import parse
+from qbparse.datatypes import BUILTIN_TYPES
+from qbparse.errors import ParseError
 
 SINGLE = BUILTIN_TYPES["single"]
 
 
 def check(input: str, expected: ast.Node):
-    expr = parse("?" + input).procedures["_main"].find(ast.Expr)
+    impl = parse("?" + input).globals.procedures["_main"].impl
+    assert impl is not None
+    expr = impl.find(ast.Expr)
     assert expr is not None
     assert expr == expected
 
