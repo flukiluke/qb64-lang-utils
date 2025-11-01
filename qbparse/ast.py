@@ -11,8 +11,8 @@ class Node:
     def children(self) -> Iterable[Node]:
         return ()
 
-    def find(self, kind: type[Node], **props: Any) -> Node | None:
-        return next(self.find_all(kind, **props), None)
+    def find(self, kind: type[Node], **props: Any) -> Node:
+        return next(self.find_all(kind, **props))
 
     def find_all(self, kind: type[Node], **props: Any) -> Generator[Node]:
         if isinstance(self, kind) and self._test_props(props):
@@ -54,16 +54,16 @@ class Expr(Node):
     pass
 
 
-class LValue(Node):
+class LValue(Expr):
     pass
 
 
-class LVar(LValue):
+class Var(LValue):
     def __init__(self, target: Variable):
         self.target = target
 
     def __repr__(self):
-        return f"[LVar target={self.target}]"
+        return f"[Var target={self.target}]"
 
     def __eq__(self, other: Any):
         if type(self) is not type(other):

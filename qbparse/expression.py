@@ -1,4 +1,4 @@
-from qbparse.ast import BinOp, Constant, Expr, UniOp
+from qbparse.ast import BinOp, Constant, Expr, LValue, UniOp, Var
 from qbparse.context import ParseContext
 from qbparse.datatypes import BUILTIN_TYPES
 from qbparse.errors import ParseError
@@ -48,15 +48,16 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
             case "KEYWORD", "not":
                 return UniOp("not", do_expr(ctx, PRECEDENCE["not"]))
             case "ID", _:
-                raise ParseError("Unimplemented implicit variable declaration")
+                ctx.reverse(token)
+                return do_lvalue(ctx)
             case "STRING_LIT", _:
                 return Constant(token.value, BUILTIN_TYPES["string"])
             case (("BASE_LIT" | "EXP_LIT" | "DEC_LIT" | "INT_LIT"), _):
                 return Constant(token.value, detect_numeric_type(token.value))
             case "PROCEDURE", _:
                 raise ParseError("Unimplemented procedure call")
-            case "VARIABLE", _:
-                raise ParseError("Unimplemented variable access")
+            case "VARIABLE", var:
+                return Var(var)
             case _:
                 raise ParseError(f"Unexpected {token.type} {token.value}")
 
@@ -87,3 +88,14 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
 def detect_numeric_type(number: int | float):
     return BUILTIN_TYPES["single"]
+
+
+def do_lvalue(ctx: ParseContext) -> LValue:
+    if ctx.tok.type == "VARIABLE":
+        result = Var(ctx.tok.value)
+    elif ctx.tok.type == "ID":
+        result = Var(ctx.symbols.create_local(*ctx.tok.value))
+    else:
+        raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
+    next(ctx)
+    return result

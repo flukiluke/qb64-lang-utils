@@ -1,7 +1,7 @@
 from pytest import raises
 
 from qbparse import parse
-from qbparse.ast import BinOp, Constant, Expr, Node, UniOp
+from qbparse.ast import BinOp, Constant, Expr, Node, Print, UniOp, Var
 from qbparse.datatypes import BUILTIN_TYPES
 from qbparse.errors import ParseError
 
@@ -145,3 +145,26 @@ def test_errors():
     raises(ParseError, parse, "? 2)")
     raises(ParseError, parse, "? 2 + * 3")
     raises(ParseError, parse, "? 2 + (*) 3")
+
+
+def test_existing_scalar():
+    program = parse("x = 10 : ? x + 3")
+    variable = program.globals.find_variable("x")
+    impl = program.globals.procedures["_main"].impl
+    assert variable is not None
+    assert impl is not None
+
+    expr = impl.find(Print).find(Expr)
+    assert expr == BinOp("+", Var(variable), Constant(3, SINGLE))
+
+
+def test_implicit_scalar():
+    program = parse("? x + 3")
+    variable = program.globals.find_variable("x")
+    impl = program.globals.procedures["_main"].impl
+    assert variable is not None
+    assert impl is not None
+
+    expr = impl.find(Print).find(Expr)
+    assert expr == BinOp("+", Var(variable), Constant(3, SINGLE))
+

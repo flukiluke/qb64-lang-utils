@@ -1,7 +1,7 @@
-from qbparse.ast import Assignment, LValue, LVar, Print, Statement
+from qbparse.ast import Assignment, Print, Statement
 from qbparse.context import ParseContext
 from qbparse.errors import ParseError
-from qbparse.expression import do_expr
+from qbparse.expression import do_expr, do_lvalue
 
 
 def do_print(ctx: ParseContext):
@@ -82,17 +82,6 @@ def do_assignment(ctx: ParseContext):
     ctx.consume("PUNCTUATION", "=")
     rval = do_expr(ctx)
     return Assignment(lval, rval)
-
-
-def do_lvalue(ctx: ParseContext) -> LValue:
-    if ctx.tok.type == "VARIABLE":
-        result = LVar(ctx.tok.value)
-    elif ctx.tok.type == "ID":
-        result = LVar(ctx.symbols.create_local(*ctx.tok.value))
-    else:
-        raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
-    next(ctx)
-    return result
 
 
 def do_procedure_call(ctx: ParseContext):
