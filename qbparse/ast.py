@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
+from itertools import chain
 from typing import Any
 
 from qbparse.datatypes import BUILTIN_TYPES, Type
@@ -11,16 +12,20 @@ class Node:
     def children(self) -> Iterable[Node]:
         return ()
 
-    def find(self, kind: type[Node], **props: Any) -> Node:
-        return next(self.find_all(kind, **props))
+    def find(self, kind: type[Node], props: dict[str, Any] = {}) -> Node:
+        return next(self.find_all(kind, props))
 
-    def find_all(self, kind: type[Node], **props: Any) -> Generator[Node]:
+    def find_all(
+        self, kind: type[Node], props: dict[str, Any] = {}, nesting: bool = False
+    ) -> Generator[Node]:
         if isinstance(self, kind) and self._test_props(props):
             yield self
+            if not nesting:
+                return
         for node in self.children():
-            yield from node.find_all(kind, **props)
+            yield from node.find_all(kind, props, nesting)
 
-    def _test_props(self, props: Any):
+    def _test_props(self, props: dict[str, Any]):
         for prop, value in props.items():
             try:
                 if getattr(self, prop) != value:
@@ -149,8 +154,8 @@ class Print(Statement):
     TAB_SEPARATOR = Constant("\t", BUILTIN_TYPES["string"])
     FINAL_NEWLINE = Constant("\n", BUILTIN_TYPES["string"])
 
-    def __init__(self):
-        self.params: list[Expr] = []
+    def __init__(self, params: list[Expr] | None = None):
+        self.params = params if params else []
 
     def __repr__(self):
         return f"[Print params={self.params}]"
@@ -162,3 +167,42 @@ class Print(Statement):
 
     def children(self):
         return self.params
+
+
+class If(Statement):
+    def __init__(
+        self,
+        guard: Expr,
+        true_branch: list[Statement],
+        elseifs: list[tuple[Expr, list[Statement]]],
+        false_branch: list[Statement],
+    ):
+        self.guard = guard
+        self.true_branch = true_branch
+        self.elseifs = elseifs
+        self.false_branch = false_branch
+
+    def __repr__(self):
+        return (
+            f"[If guard={self.guard} then={self.true_branch} "
+            f"elseifs={self.elseifs} else={self.false_branch}]"
+        )
+
+    def __eq__(self, other: Any):
+        if type(self) is not type(other):
+            return NotImplemented
+        return (
+            self.guard == other.guard
+            and self.true_branch == other.true_branch
+            and self.elseifs == other.elseifs
+            and self.false_branch == other.false_branch
+        )
+
+    def children(self):
+        return chain(
+            [self.guard],
+            self.true_branch,
+            [e[0] for e in self.elseifs],
+            *[e[1] for e in self.elseifs],
+            self.false_branch,
+        )

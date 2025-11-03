@@ -1,8 +1,12 @@
+import os
+
 from ply.lex import LexToken
 
 from qbparse.errors import ParseError
 from qbparse.lexer import Lexer
 from qbparse.symbols import SymbolStore
+
+TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 
 
 class ParseContext:
@@ -16,6 +20,8 @@ class ParseContext:
     def __next__(self):
         if len(self.reversed_tokens):
             self.tok = self.reversed_tokens.pop()
+            if TRACE_TOKENS:
+                print(">", self.tok)
             return self.tok
         try:
             self.tok = next(self.token_stream)
@@ -27,14 +33,20 @@ class ParseContext:
             eof.type = "EOF"
             eof.value = ""
             self.tok = eof
+        if TRACE_TOKENS:
+            print(">", self.tok)
         return self.tok
 
     def reverse(self, tok: LexToken):
+        if TRACE_TOKENS:
+            print("<<<", self.tok)
         self.reversed_tokens.append(self.tok)
         self.tok = tok
+        if TRACE_TOKENS:
+            print(">", self.tok)
 
-    def skip(self, *tok_types: str):
-        while self.tok.type in tok_types:
+    def skip(self, type: str, value: str | None = None):
+        while self.at_a(type, value):
             next(self)
 
     def consume(self, tok_type: str, tok_value: str | None = None):
@@ -47,12 +59,10 @@ class ParseContext:
         return next(self)
 
     def at_line_terminator(self):
-        return (
-            self.at_a("NEWLINE")
-            or self.at_a("LINE_SPLIT")
-            or self.at_a("KEYWORD", "else")
-            or self.at_a("EOF")
-        )
+        """
+        Is current token a newline/:, else or EOF?
+        """
+        return self.at_a("NEWLINE") or self.at_a("KEYWORD", "else") or self.at_a("EOF")
 
-    def at_a(self, type: str, value: str | None = None):
+    def at_a(self, type: str, value: str | None = None) -> bool:
         return self.tok.type == type and (value is None or self.tok.value == value)

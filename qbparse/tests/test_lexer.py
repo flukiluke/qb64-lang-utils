@@ -163,14 +163,19 @@ def test_check_punctuation():
 
 
 def test_comment():
-    check("'foo", Token("COMMENT", "foo"))
-    check("this ' comment", [Token("ID"), Token("COMMENT", " comment")])
-    check("that '", [Token("ID"), Token("COMMENT", "")])
+    check("'foo", Token("NEWLINE", "'"))
+    check("this ' comment", [Token("ID"), Token("NEWLINE", "'")])
+    check("that '", [Token("ID"), Token("NEWLINE", "'")])
+    check("'foo\n", Token("NEWLINE", "'"))
+    check("this ' comment\n", [Token("ID"), Token("NEWLINE", "'")])
+    check("that '\n  ", [Token("ID"), Token("NEWLINE", "'")])
 
 
 def test_remark():
-    check("rem foo", Token("REMARK", " foo"))
-    check("foo REM", [Token("ID"), Token("REMARK", "")])
+    check("rem foo", Token("NEWLINE", "rem"))
+    check("foo REM", [Token("ID"), Token("NEWLINE", "rem")])
+    check("rem foo\n", Token("NEWLINE", "rem"))
+    check("foo REM\n  ", [Token("ID"), Token("NEWLINE", "rem")])
 
 
 def test_line_label():
@@ -197,10 +202,12 @@ def test_line_num_label():
 def test_line_split():
     check(
         "print foo:bar",
-        [Token("KEYWORD"), Token("ID"), Token("LINE_SPLIT"), Token("ID")],
+        [Token("KEYWORD"), Token("ID"), Token("NEWLINE", ":"), Token("ID")],
     )
-    check("print foo:", [Token("KEYWORD"), Token("ID"), Token("LINE_SPLIT")])
-    check(":foo", [Token("LINE_SPLIT"), Token("ID")])
+    check("print foo:", [Token("KEYWORD"), Token("ID"), Token("NEWLINE", ":")])
+    check(":foo", [Token("NEWLINE", ":"), Token("ID")])
+    check("print foo:", [Token("KEYWORD"), Token("ID"), Token("NEWLINE", ":")])
+    check(":foo", [Token("NEWLINE", ":"), Token("ID")])
 
 
 def test_line_join():

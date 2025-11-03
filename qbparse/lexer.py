@@ -56,16 +56,19 @@ def Lexer(symbols: SymbolStore):
     @Token(nl)
     def t_NEWLINE(t: LexToken):
         t.lexer.lineno += 1
+        t.value = "\n"
         return t
 
-    @Token("'.*$")
+    @Token(r"'.*(\n|$)")
     def t_COMMENT(t: LexToken):
-        t.value = t.value[1:]
+        t.type = "NEWLINE"
+        t.value = "'"
         return t
 
-    @Token(f"REM(?P<c>{ws}+.*)?$")
+    @Token(rf"REM({ws}+.*)?(\n|$)")
     def t_REMARK(t: LexToken):
-        t.value = t.lexer.lexmatch.group("c") or ""
+        t.type = "NEWLINE"
+        t.value = "rem"
         return t
 
     @Token(f"^{ws}*(?P<n>{digit}+){ws}*(?P<l>{id_body}){ws}*:")
@@ -85,6 +88,7 @@ def Lexer(symbols: SymbolStore):
 
     @Token(":")
     def t_LINE_SPLIT(t: LexToken):
+        t.type = "NEWLINE"
         return t
 
     @Token(f"_{ws}*{nl}")

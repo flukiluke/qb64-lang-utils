@@ -167,4 +167,3 @@ def test_implicit_scalar():
 
     expr = impl.find(Print).find(Expr)
     assert expr == BinOp("+", Var(variable), Constant(3, SINGLE))
-
