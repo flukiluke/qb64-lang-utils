@@ -1,0 +1,31 @@
+name: qb64-lang-utils
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  test:
+    name: python-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install project
+        run: uv sync --locked --all-extras --dev
+
+      - name: Check formatting
+        run: uv run ruff check --output-format=github .
+
+      - name: Run tests
+        run: uv run pytest 
