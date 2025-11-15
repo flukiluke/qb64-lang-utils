@@ -2,6 +2,7 @@ import re
 
 from ply.lex import LexToken, Token, lex
 
+from qbparse.datatypes import BUILTIN_TYPES, Type
 from qbparse.symbols import SymbolStore
 
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
@@ -102,30 +103,47 @@ def Lexer(symbols: SymbolStore):
         return t
 
     @Token(
-        rf"""(?P<base>\.{digit}+    # Decimal leading, or
-                | {digit}+          # integer leading
-                    \.?{digit}*)    # with optional decimal part.
-                (D|E|F|d|e|f)       # Mandatory exponent flag.
-                (?P<sign>\+|-)?     # Optional exponent sign.
-                (?P<exp>{digit}*)   # Optional exponent
+        rf"""(?P<man>\.{digit}+        # Decimal leading, or
+                | {digit}+             # integer leading
+                    \.?{digit}*)       # with optional decimal part.
+                (?P<flag>D|E|F|d|e|f)  # Mandatory exponent flag.
+                (?P<sign>\+|-)?        # Optional exponent sign.
+                (?P<exp>{digit}*)      # Optional exponent
         """
     )
     def t_EXP_LIT(t: LexToken):
         match = t.lexer.lexmatch
-        base = match.group("base")
+        mantissa = match.group("man")
         exp_sign = match.group("sign") or "+"
         exp = match.group("exp") or "0"
-        t.value = float(f"{base}e{exp_sign}{exp}")
+        if match.group("flag") in ["e", "E"]:
+            type = symbols.lookup_sigil("!")
+        elif match.group("flag") in ["d", "D"]:
+            type = symbols.lookup_sigil("#")
+        else:
+            t.value = (
+                build_float_literal(mantissa, exp_sign, exp),
+                symbols.lookup_sigil("##"),
+            )
+            return t
+        value = float(f"{mantissa}e{exp_sign}{exp}")
+        if type.min <= value <= type.max:
+            t.value = (value, type)
+        else:
+            t.type = "ERROR"
+            t.value = "Literal outside range of requested type"
         return t
 
     @Token(
-        r"""&H[0-9A-Fa-f]+
-              |&O[0-7]+
-              |&B[01]+
+        rf"""(?P<num>&H[0-9A-Fa-f]+
+                    |&O[0-7]+
+                    |&B[01]+)
+              (?P<sigil>~?(`{digit}*|%%|&&|%&|%|&))?
         """
     )
     def t_BASE_LIT(t: LexToken):
-        match t.value[1].upper():
+        num_part = t.lexer.lexmatch.group("num")
+        match num_part[1].upper():
             case "H":
                 base = 16
             case "O":
@@ -134,7 +152,16 @@ def Lexer(symbols: SymbolStore):
                 base = 2
             case _:
                 base = 10
-        t.value = int(t.value[2:], base)
+        value = int(num_part[2:], base)
+        sigil = t.lexer.lexmatch.group("sigil")
+        try:
+            if sigil is None:
+                t.value = detect_base_int_type(value)
+            else:
+                t.value = constrain_base_int_value(value, symbols.lookup_sigil(sigil))
+        except ValueError:
+            t.type = "ERROR"
+            t.value = "Literal outside range of requested type"
         return t
 
     @Token(rf"\.{digit}+|{digit}+\.{digit}*")
@@ -204,3 +231,45 @@ def Lexer(symbols: SymbolStore):
         return t
 
     return lex(reflags=re.VERBOSE | re.IGNORECASE)
+
+
+def build_float_literal(mantissa: str, exp_sign: str, exp: str) -> tuple[int, int]:
+    """
+    A Python float can't store the 80 bit extended precision type needed to support
+    _FLOAT, so represent them as (mantissa, exponent) tuples where both parts are
+    integers.
+    """
+    int_exp = int(exp)
+    if exp_sign == "-":
+        int_exp *= -1
+    index = mantissa.find(".")
+    if index >= 0:
+        int_mantissa = int(mantissa.replace(".", "", count=1))
+        int_exp += index - len(mantissa) + 1
+    else:
+        int_mantissa = int(mantissa)
+    return (int_mantissa, int_exp)
+
+
+def detect_base_int_type(value: int) -> tuple[int, Type]:
+    """
+    Identify the type of a value using rules for base notation numbers,
+    returning the type and the number. Raise ValueError if number is outside
+    the representable range.
+    """
+    for type_name in ["integer", "long", "_integer64"]:
+        type = BUILTIN_TYPES[type_name]
+        if type.min <= value <= type.max:
+            return (value, type)
+        unsigned_type = BUILTIN_TYPES["_unsigned " + type_name]
+        if unsigned_type.min <= value <= unsigned_type.max:
+            return (-int(unsigned_type.max) + value - 1, type)
+    raise ValueError()
+
+
+def constrain_base_int_value(value: int, type: Type) -> tuple[int, Type]:
+    if type.min <= value <= type.max:
+        return (value, type)
+    if type.min < 0 and value <= type.max * 2 + 1:
+        return (value - (int(type.max) * 2 + 1) - 1, type)
+    raise ValueError()

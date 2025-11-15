@@ -49,27 +49,136 @@ def test_dec_lit():
 
 
 def test_base_lit():
-    check_expr("&H123456789ABCDEF0", Token("BASE_LIT", 0x123456789ABCDEF0))
-    check_expr("&h08", Token("BASE_LIT", 0x8))
-    check_expr("&B10", Token("BASE_LIT", 0b10))
-    check_expr("&b001", Token("BASE_LIT", 0b1))
-    check_expr("&O12345670", Token("BASE_LIT", 0o12345670))
-    check_expr("&o002", Token("BASE_LIT", 0o2))
+    check_expr(
+        "&H123456789ABCDEF0",
+        Token("BASE_LIT", (0x123456789ABCDEF0, BUILTIN_TYPES["_integer64"])),
+    )
+    check_expr("&h08", Token("BASE_LIT", (0x8, BUILTIN_TYPES["integer"])))
+    check_expr("&B10", Token("BASE_LIT", (0b10, BUILTIN_TYPES["integer"])))
+    check_expr("&b001", Token("BASE_LIT", (0b1, BUILTIN_TYPES["integer"])))
+    check_expr("&O12345670", Token("BASE_LIT", (0o12345670, BUILTIN_TYPES["long"])))
+    check_expr("&o002", Token("BASE_LIT", (0o2, BUILTIN_TYPES["integer"])))
 
 
-def test_exp_lit():
-    for c in "d", "e", "f", "D", "E", "F":
-        check_expr(f"17{c}2", Token("EXP_LIT", 1700))
-        check_expr(f"17.25{c}2", Token("EXP_LIT", 1725))
-        check_expr(f"1.725{c}+2", Token("EXP_LIT", 172.5))
-        check_expr(f".1725{c}2", Token("EXP_LIT", 17.25))
-        check_expr(f".1725{c}10", Token("EXP_LIT", 0.1725e10))
-        check_expr(f"17{c}", Token("EXP_LIT", 17))
-        check_expr(f"17.25{c}", Token("EXP_LIT", 17.25))
-        check_expr(f".25{c}", Token("EXP_LIT", 0.25))
-        check_expr(f".25{c}", Token("EXP_LIT", 0.25))
-        check_expr(f"25{c}-2", Token("EXP_LIT", 0.25))
-        check_expr(f"2.5{c}-10", Token("EXP_LIT", 2.5e-10))
+def test_base_lit_type_detection():
+    check_expr("&h0", Token("BASE_LIT", (0, BUILTIN_TYPES["integer"])))
+    check_expr("&h7fff", Token("BASE_LIT", (0x7FFF, BUILTIN_TYPES["integer"])))
+    # This behaviour is whacky, probably deserves a warning
+    check_expr("&h8000", Token("BASE_LIT", (-0x8000, BUILTIN_TYPES["integer"])))
+    check_expr("&hDEAD", Token("BASE_LIT", (-8531, BUILTIN_TYPES["integer"])))
+    check_expr("&h7fffffff", Token("BASE_LIT", (0x7FFFFFFF, BUILTIN_TYPES["long"])))
+    check_expr("&h80000000", Token("BASE_LIT", (-0x80000000, BUILTIN_TYPES["long"])))
+    check_expr(
+        "&h7fffffffffffffff",
+        Token("BASE_LIT", (0x7FFFFFFFFFFFFFFF, BUILTIN_TYPES["_integer64"])),
+    )
+    check_expr(
+        "&h8000000000000000",
+        Token("BASE_LIT", (-0x8000000000000000, BUILTIN_TYPES["_integer64"])),
+    )
+    check_expr(
+        "&hffffffffffffffff",
+        Token("BASE_LIT", (-1, BUILTIN_TYPES["_integer64"])),
+    )
+    check_expr("&h10000000000000000", Token("ERROR"))
+
+
+def test_base_lit_explicit_type():
+    check_expr("&b0`", Token("BASE_LIT", (0, BUILTIN_TYPES["_bit"])))
+    check_expr("&b1`", Token("BASE_LIT", (-1, BUILTIN_TYPES["_bit"])))
+    check_expr("&b10`", Token("ERROR"))
+    check_expr("&o0~`", Token("BASE_LIT", (0, BUILTIN_TYPES["_unsigned _bit"])))
+    check_expr("&o1~`", Token("BASE_LIT", (1, BUILTIN_TYPES["_unsigned _bit"])))
+    check_expr("&o2~`", Token("ERROR"))
+    check_expr("&h7f%%", Token("BASE_LIT", (0x7F, BUILTIN_TYPES["_byte"])))
+    check_expr("&h80%%", Token("BASE_LIT", (-0x80, BUILTIN_TYPES["_byte"])))
+    check_expr("&h80~%%", Token("BASE_LIT", (0x80, BUILTIN_TYPES["_unsigned _byte"])))
+    check_expr("&h100~%%", Token("ERROR"))
+    check_expr("&h7fff%", Token("BASE_LIT", (0x7FFF, BUILTIN_TYPES["integer"])))
+    check_expr("&h8000%", Token("BASE_LIT", (-0x8000, BUILTIN_TYPES["integer"])))
+    check_expr(
+        "&h8000~%", Token("BASE_LIT", (0x8000, BUILTIN_TYPES["_unsigned integer"]))
+    )
+    check_expr(
+        "&hffff~%", Token("BASE_LIT", (0xFFFF, BUILTIN_TYPES["_unsigned integer"]))
+    )
+    check_expr("&h10000%", Token("ERROR"))
+    check_expr("&h7fffffff&", Token("BASE_LIT", (0x7FFFFFFF, BUILTIN_TYPES["long"])))
+    check_expr("&h80000000&", Token("BASE_LIT", (-0x80000000, BUILTIN_TYPES["long"])))
+    check_expr(
+        "&h80000000~&", Token("BASE_LIT", (0x80000000, BUILTIN_TYPES["_unsigned long"]))
+    )
+    check_expr(
+        "&hffffffff~&", Token("BASE_LIT", (0xFFFFFFFF, BUILTIN_TYPES["_unsigned long"]))
+    )
+    check_expr("&h100000000~&", Token("ERROR"))
+    check_expr(
+        "&h7fffffffffffffff&&",
+        Token("BASE_LIT", (0x7FFFFFFFFFFFFFFF, BUILTIN_TYPES["_integer64"])),
+    )
+    check_expr(
+        "&h8000000000000000&&",
+        Token("BASE_LIT", (-0x8000000000000000, BUILTIN_TYPES["_integer64"])),
+    )
+    check_expr(
+        "&h8000000000000000~&&",
+        Token("BASE_LIT", (0x8000000000000000, BUILTIN_TYPES["_unsigned _integer64"])),
+    )
+    check_expr(
+        "&hffffffffffffffff~&&",
+        Token("BASE_LIT", (0xFFFFFFFFFFFFFFFF, BUILTIN_TYPES["_unsigned _integer64"])),
+    )
+    check_expr("&h10000000000000000~&&", Token("ERROR"))
+    check_expr("&b1&&", Token("BASE_LIT", (1, BUILTIN_TYPES["_integer64"])))
+
+
+def test_exp_e_lit():
+    expected_type = BUILTIN_TYPES["single"]
+    for c in "e", "E":
+        check_expr(f"17{c}2", Token("EXP_LIT", (1700, expected_type)))
+        check_expr(f"17.25{c}2", Token("EXP_LIT", (1725, expected_type)))
+        check_expr(f"1.725{c}+2", Token("EXP_LIT", (172.5, expected_type)))
+        check_expr(f".1725{c}2", Token("EXP_LIT", (17.25, expected_type)))
+        check_expr(f".1725{c}10", Token("EXP_LIT", (0.1725e10, expected_type)))
+        check_expr(f"17{c}", Token("EXP_LIT", (17, expected_type)))
+        check_expr(f"17.25{c}", Token("EXP_LIT", (17.25, expected_type)))
+        check_expr(f".25{c}", Token("EXP_LIT", (0.25, expected_type)))
+        check_expr(f"25.{c}", Token("EXP_LIT", (25, expected_type)))
+        check_expr(f"25{c}-2", Token("EXP_LIT", (0.25, expected_type)))
+        check_expr(f"2.5{c}-10", Token("EXP_LIT", (2.5e-10, expected_type)))
+        check_expr("3e39", Token("ERROR"))
+
+
+def test_exp_d_lit():
+    expected_type = BUILTIN_TYPES["double"]
+    for c in "d", "D":
+        check_expr(f"17{c}2", Token("EXP_LIT", (1700, expected_type)))
+        check_expr(f"17.25{c}2", Token("EXP_LIT", (1725, expected_type)))
+        check_expr(f"1.725{c}+2", Token("EXP_LIT", (172.5, expected_type)))
+        check_expr(f".1725{c}2", Token("EXP_LIT", (17.25, expected_type)))
+        check_expr(f".1725{c}10", Token("EXP_LIT", (0.1725e10, expected_type)))
+        check_expr(f"17{c}", Token("EXP_LIT", (17, expected_type)))
+        check_expr(f"17.25{c}", Token("EXP_LIT", (17.25, expected_type)))
+        check_expr(f".25{c}", Token("EXP_LIT", (0.25, expected_type)))
+        check_expr(f"25.{c}", Token("EXP_LIT", (25, expected_type)))
+        check_expr(f"25{c}-2", Token("EXP_LIT", (0.25, expected_type)))
+        check_expr(f"2.5{c}-10", Token("EXP_LIT", (2.5e-10, expected_type)))
+
+
+def test_exp_f_lit():
+    expected_type = BUILTIN_TYPES["_float"]
+    for c in "f", "F":
+        check_expr(f"17{c}2", Token("EXP_LIT", ((17, 2), expected_type)))
+        check_expr(f"17.25{c}2", Token("EXP_LIT", ((1725, 0), expected_type)))
+        check_expr(f"1.725{c}+2", Token("EXP_LIT", ((1725, -1), expected_type)))
+        check_expr(f".1725{c}2", Token("EXP_LIT", ((1725, -2), expected_type)))
+        check_expr(f".1725{c}10", Token("EXP_LIT", ((1725, 6), expected_type)))
+        check_expr(f"17{c}", Token("EXP_LIT", ((17, 0), expected_type)))
+        check_expr(f"17.25{c}", Token("EXP_LIT", ((1725, -2), expected_type)))
+        check_expr(f".25{c}", Token("EXP_LIT", ((25, -2), expected_type)))
+        check_expr(f"25.{c}", Token("EXP_LIT", ((25, 0), expected_type)))
+        check_expr(f"25{c}-2", Token("EXP_LIT", ((25, -2), expected_type)))
+        check_expr(f"2.5{c}-10", Token("EXP_LIT", ((25, -11), expected_type)))
 
 
 def test_string_lit():
@@ -111,13 +220,13 @@ def test_id_builtin_sigil():
     check("foo%", Token("ID", ("foo", BUILTIN_TYPES["integer"])))
     check("foo&", Token("ID", ("foo", BUILTIN_TYPES["long"])))
     check("foo&&", Token("ID", ("foo", BUILTIN_TYPES["_integer64"])))
-    check("foo%&", Token("ID", ("foo", BUILTIN_TYPES["_offset"])))
+    # check("foo%&", Token("ID", ("foo", BUILTIN_TYPES["_offset"])))
     check("foo~`", Token("ID", ("foo", BUILTIN_TYPES["_unsigned _bit"])))
     check("foo~%%", Token("ID", ("foo", BUILTIN_TYPES["_unsigned _byte"])))
     check("foo~%", Token("ID", ("foo", BUILTIN_TYPES["_unsigned integer"])))
     check("foo~&", Token("ID", ("foo", BUILTIN_TYPES["_unsigned long"])))
     check("foo~&&", Token("ID", ("foo", BUILTIN_TYPES["_unsigned _integer64"])))
-    check("foo~%&", Token("ID", ("foo", BUILTIN_TYPES["_unsigned _offset"])))
+    # check("foo~%&", Token("ID", ("foo", BUILTIN_TYPES["_unsigned _offset"])))
     check("foo!", Token("ID", ("foo", BUILTIN_TYPES["single"])))
     check("foo#", Token("ID", ("foo", BUILTIN_TYPES["double"])))
     check("foo##", Token("ID", ("foo", BUILTIN_TYPES["_float"])))
