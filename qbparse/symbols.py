@@ -116,15 +116,15 @@ class SymbolStore:
             return self.default_type
         if builtin := BUILTIN_SIGILS.get(sigil):
             return builtin
-        for s in ["`", "~`", "$"]:
-            if sigil.startswith(s):
-                base_type = BUILTIN_SIGILS[s]
-                width = int(sigil.strip("`~$"))
-                break
+        if sigil.startswith("`"):
+            new_type = FixedWidthType.of_bit(int(sigil[1:]))
+        elif sigil.startswith("~`"):
+            new_type = FixedWidthType.of_unsigned_bit(int(sigil[2:]))
+        elif sigil.startswith("$"):
+            new_type = FixedWidthType.of_string(int(sigil[1:]))
         else:
             raise ParseError("Unknown type " + sigil)
-        full_name = base_type.name + " * " + str(width)
-        return self.types.setdefault(full_name, FixedWidthType(base_type, width))
+        return self.types.setdefault(new_type.name, new_type)
 
     def create_local(self, name: str, type: Type | None):
         if type is None:

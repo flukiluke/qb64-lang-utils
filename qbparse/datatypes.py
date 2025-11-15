@@ -13,10 +13,24 @@ class Type:
 
 
 class FixedWidthType(Type):
-    def __init__(self, base_type: Type, width: int):
+    @staticmethod
+    def of_string(width: int):
+        return FixedWidthType(BUILTIN_TYPES["string"], width)
+
+    @staticmethod
+    def of_bit(width: int):
+        return FixedWidthType(
+            BUILTIN_TYPES["_bit"], width, -(2 ** (width - 1)), 2 ** (width - 1) - 1
+        )
+
+    @staticmethod
+    def of_unsigned_bit(width: int):
+        return FixedWidthType(BUILTIN_TYPES["_unsigned _bit"], width, 0, 2**width - 1)
+
+    def __init__(self, base_type: Type, width: int, min: int = 0, max: int = 0):
+        super().__init__(base_type.name + " * " + str(width), min, max)
         self.base_type = base_type
         self.width = width
-        self.name = self.base_type.name + " * " + str(width)
 
 
 class TypeSignature:

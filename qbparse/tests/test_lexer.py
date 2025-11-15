@@ -83,6 +83,25 @@ def test_base_lit_type_detection():
     check_expr("&h10000000000000000", Token("ERROR"))
 
 
+def test_base_lit_explicit_bitn():
+    def check_bitn(input: str, value: int, sigil: str):
+        symbols = SymbolStore()
+        lex = Lexer(symbols)
+        lex.input("? " + input)
+        actuals = list(lex)
+        assert len(actuals) == 2
+        assert actuals[1].type == "BASE_LIT"
+        assert actuals[1].value == (value, symbols.lookup_sigil(sigil))
+
+    check_bitn("&b1`1", -1, "`1")
+    check_expr("&b10`1", Token("ERROR"))
+    check_bitn("&b1`4", 1, "`4")
+    check_bitn("&b1010`4", -6, "`4")
+    check_bitn("&b1~`1", 1, "~`1")
+    check_expr("&b10~`1", Token("ERROR"))
+    check_bitn("&b1010~`4", 10, "~`4")
+
+
 def test_base_lit_explicit_type():
     check_expr("&b0`", Token("BASE_LIT", (0, BUILTIN_TYPES["_bit"])))
     check_expr("&b1`", Token("BASE_LIT", (-1, BUILTIN_TYPES["_bit"])))
