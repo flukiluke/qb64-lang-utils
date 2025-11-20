@@ -5,11 +5,11 @@ from qbparse.ast import Constant, If, Print, Statement
 from qbparse.datatypes import BUILTIN_TYPES
 from qbparse.errors import ParseError
 
-SINGLE = BUILTIN_TYPES["single"]
+INTEGER = BUILTIN_TYPES["integer"]
 STRING = BUILTIN_TYPES["string"]
-ONE = Constant(1, SINGLE)
-TWO = Constant(2, SINGLE)
-THREE = Constant(3, SINGLE)
+ONE = Constant(1, INTEGER)
+TWO = Constant(2, INTEGER)
+THREE = Constant(3, INTEGER)
 
 
 def PrintStr(s: str):

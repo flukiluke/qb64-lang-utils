@@ -1,8 +1,16 @@
 import re
+from typing import cast
 
 from ply.lex import LexToken, Token, lex
 
-from qbparse.datatypes import BUILTIN_TYPES, Type
+from qbparse.datatypes import (
+    BUILTIN_TYPES,
+    ExtendedFloat,
+    FloatType,
+    IntegralType,
+    Type,
+)
+from qbparse.errors import ParseError
 from qbparse.symbols import SymbolStore
 
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
@@ -24,6 +32,7 @@ tokens = (
     "VARIABLE",
     "PROCEDURE",
     "STRING_LIT",
+    "NUM_LIT",
     "BASE_LIT",
     "EXP_LIT",
     "DEC_LIT",
@@ -112,21 +121,20 @@ def Lexer(symbols: SymbolStore):
         """
     )
     def t_EXP_LIT(t: LexToken):
+        t.type = "NUM_LIT"
         match = t.lexer.lexmatch
         mantissa = match.group("man")
         exp_sign = match.group("sign") or "+"
         exp = match.group("exp") or "0"
         if match.group("flag") in ["e", "E"]:
-            type = symbols.lookup_sigil("!")
+            type = cast(FloatType, BUILTIN_TYPES["single"])
+            value = float(f"{mantissa}e{exp_sign}{exp}")
         elif match.group("flag") in ["d", "D"]:
-            type = symbols.lookup_sigil("#")
+            type = cast(FloatType, BUILTIN_TYPES["double"])
+            value = float(f"{mantissa}e{exp_sign}{exp}")
         else:
-            t.value = (
-                build_float_literal(mantissa, exp_sign, exp),
-                symbols.lookup_sigil("##"),
-            )
-            return t
-        value = float(f"{mantissa}e{exp_sign}{exp}")
+            type = cast(FloatType, BUILTIN_TYPES["_float"])
+            value = ExtendedFloat(mantissa, exp_sign + exp)
         if type.min <= value <= type.max:
             t.value = (value, type)
         else:
@@ -142,6 +150,7 @@ def Lexer(symbols: SymbolStore):
         """
     )
     def t_BASE_LIT(t: LexToken):
+        t.type = "NUM_LIT"
         num_part = t.lexer.lexmatch.group("num")
         match num_part[1].upper():
             case "H":
@@ -158,20 +167,54 @@ def Lexer(symbols: SymbolStore):
             if sigil is None:
                 t.value = detect_base_int_type(value)
             else:
-                t.value = constrain_base_int_value(value, symbols.lookup_sigil(sigil))
+                t.value = constrain_base_int_value(
+                    value, cast(IntegralType, symbols.lookup_sigil(sigil))
+                )
         except ValueError:
             t.type = "ERROR"
             t.value = "Literal outside range of requested type"
         return t
 
-    @Token(rf"\.{digit}+|{digit}+\.{digit}*")
+    @Token(
+        rf"""(?P<num>\.{digit}+|{digit}+\.{digit}*)
+             (?P<sigil>[#][#]|[#]|!)?
+        """
+    )
     def t_DEC_LIT(t: LexToken):
-        t.value = float(t.value)
+        t.type = "NUM_LIT"
+        num_part = t.lexer.lexmatch.group("num")
+        sigil = t.lexer.lexmatch.group("sigil")
+        try:
+            if sigil is None:
+                t.value = detect_dec_lit_type(num_part)
+            else:
+                t.value = constrain_dec_lit_value(
+                    num_part, cast(FloatType, symbols.lookup_sigil(sigil))
+                )
+        except ValueError:
+            t.type = "ERROR"
+            t.value = "Literal outside range of requested type"
         return t
 
-    @Token(f"{digit}+")
+    @Token(
+        rf"""(?P<num>{digit}+)
+             (?P<sigil>~?(`{digit}*|%%|&&|%&|%|&))?
+        """
+    )
     def t_INT_LIT(t: LexToken):
-        t.value = int(t.value)
+        t.type = "NUM_LIT"
+        num_part = int(t.lexer.lexmatch.group("num"))
+        sigil = t.lexer.lexmatch.group("sigil")
+        try:
+            if sigil is None:
+                t.value = detect_int_lit_type(num_part)
+            else:
+                t.value = constrain_int_lit_value(
+                    num_part, cast(IntegralType, symbols.lookup_sigil(sigil))
+                )
+        except ValueError:
+            t.type = "ERROR"
+            t.value = "Literal outside range of requested type"
         return t
 
     @Token(
@@ -215,7 +258,11 @@ def Lexer(symbols: SymbolStore):
             t.value = var
             return t
         # otherwise remain as ID
-        t.value = (name, symbols.lookup_sigil(sigil))
+        try:
+            t.value = (name, symbols.lookup_sigil(sigil))
+        except ParseError as e:
+            t.type = "ERROR"
+            t.value = str(e)
         return t
 
     @Token(r"""<= | >= | <>
@@ -233,24 +280,6 @@ def Lexer(symbols: SymbolStore):
     return lex(reflags=re.VERBOSE | re.IGNORECASE)
 
 
-def build_float_literal(mantissa: str, exp_sign: str, exp: str) -> tuple[int, int]:
-    """
-    A Python float can't store the 80 bit extended precision type needed to support
-    _FLOAT, so represent them as (mantissa, exponent) tuples where both parts are
-    integers.
-    """
-    int_exp = int(exp)
-    if exp_sign == "-":
-        int_exp *= -1
-    index = mantissa.find(".")
-    if index >= 0:
-        int_mantissa = int(mantissa.replace(".", "", count=1))
-        int_exp += index - len(mantissa) + 1
-    else:
-        int_mantissa = int(mantissa)
-    return (int_mantissa, int_exp)
-
-
 def detect_base_int_type(value: int) -> tuple[int, Type]:
     """
     Identify the type of a value using rules for base notation numbers,
@@ -258,18 +287,57 @@ def detect_base_int_type(value: int) -> tuple[int, Type]:
     the representable range.
     """
     for type_name in ["integer", "long", "_integer64"]:
-        type = BUILTIN_TYPES[type_name]
+        type = cast(IntegralType, BUILTIN_TYPES[type_name])
         if type.min <= value <= type.max:
             return (value, type)
-        unsigned_type = BUILTIN_TYPES["_unsigned " + type_name]
+        unsigned_type = cast(IntegralType, BUILTIN_TYPES["_unsigned " + type_name])
         if unsigned_type.min <= value <= unsigned_type.max:
             return (-int(unsigned_type.max) + value - 1, type)
     raise ValueError()
 
 
-def constrain_base_int_value(value: int, type: Type) -> tuple[int, Type]:
+def constrain_base_int_value(
+    value: int, type: IntegralType
+) -> tuple[int, IntegralType]:
     if type.min <= value <= type.max:
         return (value, type)
     if type.min < 0 and value <= type.max * 2 + 1:
         return (value - (int(type.max) * 2 + 1) - 1, type)
+    raise ValueError()
+
+
+def detect_dec_lit_type(value: str) -> tuple[float | ExtendedFloat, Type]:
+    num_digits = len(value) - 1
+    if num_digits <= 7:
+        return (float(value), BUILTIN_TYPES["single"])
+    if num_digits <= 16:
+        return (float(value), BUILTIN_TYPES["double"])
+    return (ExtendedFloat(value), BUILTIN_TYPES["_float"])
+
+
+def constrain_dec_lit_value(value: str, type: FloatType):
+    v = float(value)
+    inf = float("inf")
+    if type == BUILTIN_TYPES["single"]:
+        if v != inf and type.min <= v <= type.max:
+            return (v, type)
+    elif type == BUILTIN_TYPES["double"]:
+        if v != inf:
+            return (v, type)
+    elif type == BUILTIN_TYPES["_float"]:
+        return (ExtendedFloat(value), type)
+    raise ValueError()
+
+
+def detect_int_lit_type(value: int) -> tuple[int, Type]:
+    for type_name in ["integer", "long", "_integer64", "_unsigned _integer64"]:
+        type = cast(IntegralType, BUILTIN_TYPES[type_name])
+        if type.min <= value <= type.max:
+            return (value, type)
+    raise ValueError()
+
+
+def constrain_int_lit_value(value: int, type: IntegralType):
+    if type.min <= value <= type.max:
+        return (value, type)
     raise ValueError()

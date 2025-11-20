@@ -52,8 +52,8 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
                 return do_lvalue(ctx)
             case "STRING_LIT", _:
                 return Constant(token.value, BUILTIN_TYPES["string"])
-            case (("BASE_LIT" | "EXP_LIT" | "DEC_LIT" | "INT_LIT"), _):
-                return Constant(token.value, detect_numeric_type(token.value))
+            case "NUM_LIT", _:
+                return Constant(token.value[0], token.value[1])
             case "PROCEDURE", _:
                 raise ParseError("Unimplemented procedure call")
             case "VARIABLE", var:
@@ -63,7 +63,7 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
     def binding_power():
         match ctx.tok.type, ctx.tok.value:
-            case (("STRING_LIT" | "BASE_LIT" | "EXP_LIT" | "DEC_LIT" | "INT_LIT"), _):
+            case (("STRING_LIT" | "NUM_LIT"), _):
                 raise ParseError("Unexpected literal")
             case "PUNCTUATION", ")":
                 return 0
@@ -84,10 +84,6 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
     while right_binding < binding_power():
         left = trailing(left)
     return left
-
-
-def detect_numeric_type(number: int | float):
-    return BUILTIN_TYPES["single"]
 
 
 def do_lvalue(ctx: ParseContext) -> LValue:

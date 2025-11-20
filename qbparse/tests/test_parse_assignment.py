@@ -16,15 +16,15 @@ def run(input: str, variable_name: str):
 def test_implicit_scalar():
     impl, variable = run("x = 5", "x")
     assert impl.find(Assignment) == Assignment(
-        Var(variable), Constant(5, BUILTIN_TYPES["single"])
+        Var(variable), Constant(5, BUILTIN_TYPES["integer"])
     )
 
 
 def test_existing_scalar():
     impl, variable = run("foo = 32 : foo = 17", "foo")
     assert list(impl.find_all(Assignment)) == [
-        Assignment(Var(variable), Constant(32, BUILTIN_TYPES["single"])),
-        Assignment(Var(variable), Constant(17, BUILTIN_TYPES["single"])),
+        Assignment(Var(variable), Constant(32, BUILTIN_TYPES["integer"])),
+        Assignment(Var(variable), Constant(17, BUILTIN_TYPES["integer"])),
     ]
 
 
@@ -34,7 +34,7 @@ def test_expression_rvalue():
         Var(variable),
         BinOp(
             "/",
-            Constant(23, BUILTIN_TYPES["single"]),
-            Constant(7, BUILTIN_TYPES["single"]),
+            Constant(23, BUILTIN_TYPES["integer"]),
+            Constant(7, BUILTIN_TYPES["integer"]),
         ),
     )

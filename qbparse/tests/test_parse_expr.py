@@ -5,7 +5,7 @@ from qbparse.ast import BinOp, Constant, Expr, Node, Print, UniOp, Var
 from qbparse.datatypes import BUILTIN_TYPES
 from qbparse.errors import ParseError
 
-SINGLE = BUILTIN_TYPES["single"]
+INTEGER = BUILTIN_TYPES["integer"]
 
 
 def check(input: str, expected: Node):
@@ -21,8 +21,8 @@ def test_binop():
         "2 + 3 - 4",
         BinOp(
             "-",
-            BinOp("+", Constant(2, SINGLE), Constant(3, SINGLE)),
-            Constant(4, SINGLE),
+            BinOp("+", Constant(2, INTEGER), Constant(3, INTEGER)),
+            Constant(4, INTEGER),
         ),
     )
 
@@ -32,22 +32,22 @@ def test_binop_precedence():
         "2 - 3 * 4",
         BinOp(
             "-",
-            Constant(2, SINGLE),
-            BinOp("*", Constant(3, SINGLE), Constant(4, SINGLE)),
+            Constant(2, INTEGER),
+            BinOp("*", Constant(3, INTEGER), Constant(4, INTEGER)),
         ),
     )
     check(
         "2 and 3 = 4 + 5 / 6",
         BinOp(
             "and",
-            Constant(2, SINGLE),
+            Constant(2, INTEGER),
             BinOp(
                 "=",
-                Constant(3, SINGLE),
+                Constant(3, INTEGER),
                 BinOp(
                     "+",
-                    Constant(4, SINGLE),
-                    BinOp("/", Constant(5, SINGLE), Constant(6, SINGLE)),
+                    Constant(4, INTEGER),
+                    BinOp("/", Constant(5, INTEGER), Constant(6, INTEGER)),
                 ),
             ),
         ),
@@ -59,54 +59,54 @@ def test_negation():
         "-2 * -3",
         BinOp(
             "*",
-            UniOp("negation", Constant(2, SINGLE)),
-            UniOp("negation", Constant(3, SINGLE)),
+            UniOp("negation", Constant(2, INTEGER)),
+            UniOp("negation", Constant(3, INTEGER)),
         ),
     )
     check(
         "-(2 > 3)",
         UniOp(
             "negation",
-            BinOp(">", Constant(2, SINGLE), Constant(3, SINGLE)),
+            BinOp(">", Constant(2, INTEGER), Constant(3, INTEGER)),
         ),
     )
     check(
         "2 <> --4",
         BinOp(
             "<>",
-            Constant(2, SINGLE),
-            UniOp("negation", UniOp("negation", Constant(4, SINGLE))),
+            Constant(2, INTEGER),
+            UniOp("negation", UniOp("negation", Constant(4, INTEGER))),
         ),
     )
     check(
         "2--4",
         BinOp(
             "-",
-            Constant(2, SINGLE),
-            UniOp("negation", Constant(4, SINGLE)),
+            Constant(2, INTEGER),
+            UniOp("negation", Constant(4, INTEGER)),
         ),
     )
     check(
         "-2^3",
-        UniOp("negation", BinOp("^", Constant(2, SINGLE), Constant(3, SINGLE))),
+        UniOp("negation", BinOp("^", Constant(2, INTEGER), Constant(3, INTEGER))),
     )
 
 
 def test_not():
     check(
         "2 and not 3",
-        BinOp("and", Constant(2, SINGLE), UniOp("not", Constant(3, SINGLE))),
+        BinOp("and", Constant(2, INTEGER), UniOp("not", Constant(3, INTEGER))),
     )
     check(
         "not 2 + 3",
-        UniOp("not", BinOp("+", Constant(2, SINGLE), Constant(3, SINGLE))),
+        UniOp("not", BinOp("+", Constant(2, INTEGER), Constant(3, INTEGER))),
     )
     check(
         "not not 2 and not - not 3",
         BinOp(
             "and",
-            UniOp("not", UniOp("not", Constant(2, SINGLE))),
-            UniOp("not", UniOp("negation", UniOp("not", Constant(3, SINGLE)))),
+            UniOp("not", UniOp("not", Constant(2, INTEGER))),
+            UniOp("not", UniOp("negation", UniOp("not", Constant(3, INTEGER)))),
         ),
     )
 
@@ -116,8 +116,8 @@ def test_parentheses():
         "(2 - 3) * 4",
         BinOp(
             "*",
-            BinOp("-", Constant(2, SINGLE), Constant(3, SINGLE)),
-            Constant(4, SINGLE),
+            BinOp("-", Constant(2, INTEGER), Constant(3, INTEGER)),
+            Constant(4, INTEGER),
         ),
     )
     check(
@@ -126,11 +126,11 @@ def test_parentheses():
             "negation",
             BinOp(
                 "+",
-                Constant(2, SINGLE),
+                Constant(2, INTEGER),
                 BinOp(
                     "and",
-                    BinOp("or", Constant(3, SINGLE), Constant(4, SINGLE)),
-                    Constant(5, SINGLE),
+                    BinOp("or", Constant(3, INTEGER), Constant(4, INTEGER)),
+                    Constant(5, INTEGER),
                 ),
             ),
         ),
@@ -155,7 +155,7 @@ def test_existing_scalar():
     assert impl is not None
 
     expr = impl.find(Print).find(Expr)
-    assert expr == BinOp("+", Var(variable), Constant(3, SINGLE))
+    assert expr == BinOp("+", Var(variable), Constant(3, INTEGER))
 
 
 def test_implicit_scalar():
@@ -166,4 +166,4 @@ def test_implicit_scalar():
     assert impl is not None
 
     expr = impl.find(Print).find(Expr)
-    assert expr == BinOp("+", Var(variable), Constant(3, SINGLE))
+    assert expr == BinOp("+", Var(variable), Constant(3, INTEGER))

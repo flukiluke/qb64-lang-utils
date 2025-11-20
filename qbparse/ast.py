@@ -4,7 +4,7 @@ from collections.abc import Generator, Iterable
 from itertools import chain
 from typing import Any
 
-from qbparse.datatypes import BUILTIN_TYPES, Type
+from qbparse.datatypes import BUILTIN_TYPES, ExtendedFloat, Type
 from qbparse.symbols import Variable
 
 
@@ -137,7 +137,7 @@ class Assignment(Statement):
 
 
 class Constant(Expr):
-    def __init__(self, value: str | int | float, type: Type):
+    def __init__(self, value: str | int | float | ExtendedFloat, type: Type):
         self.value = value
         self.type = type
 

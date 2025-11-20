@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING, Any
 from qbparse.datatypes import (
     BUILTIN_SIGILS,
     BUILTIN_TYPES,
-    FixedWidthType,
+    BitnType,
+    StringType,
     Type,
     TypeSignature,
 )
@@ -87,7 +88,7 @@ BUILTIN_PROCS: dict[str, Procedure] = {}
 
 class SymbolStore:
     def __init__(self):
-        self.variables: dict[str, dict[Type, Variable]] = {}
+        self.variables: dict[str, dict[str, Variable]] = {}
         self.procedures: dict[str, Procedure] = {}
         self.types: dict[str, Type] = {}
         self.default_type = BUILTIN_TYPES["single"]
@@ -108,8 +109,8 @@ class SymbolStore:
         if ident not in self.variables:
             return None
         vars = self.variables[ident]
-        typ = self.lookup_sigil(sigil)
-        return vars.get(typ)
+        type = self.lookup_sigil(sigil)
+        return vars.get(type.name)
 
     def lookup_sigil(self, sigil: str | None):
         if sigil is None:
@@ -117,11 +118,14 @@ class SymbolStore:
         if builtin := BUILTIN_SIGILS.get(sigil):
             return builtin
         if sigil.startswith("`"):
-            new_type = FixedWidthType.of_bit(int(sigil[1:]))
+            new_type = BitnType.of_signed(int(sigil[1:]))
         elif sigil.startswith("~`"):
-            new_type = FixedWidthType.of_unsigned_bit(int(sigil[2:]))
+            new_type = BitnType.of_unsigned(int(sigil[2:]))
         elif sigil.startswith("$"):
-            new_type = FixedWidthType.of_string(int(sigil[1:]))
+            max_len = int(sigil[1:])
+            if max_len == 0:
+                raise ParseError("String maximum width cannot be 0")
+            new_type = StringType.of_max_len(max_len)
         else:
             raise ParseError("Unknown type " + sigil)
         return self.types.setdefault(new_type.name, new_type)
@@ -130,7 +134,7 @@ class SymbolStore:
         if type is None:
             type = self.default_type
         typeset = self.variables.setdefault(name, {})
-        if type in typeset:
+        if type.name in typeset:
             raise ParseError("Duplicate variable")
-        typeset[type] = Variable(name, type)
-        return typeset[type]
+        typeset[type.name] = Variable(name, type)
+        return typeset[type.name]
