@@ -27,5 +27,8 @@ jobs:
       - name: Check formatting
         run: uv run ruff check --output-format=github .
 
+      - name: Check typing
+        run: uv run pyright
+
       - name: Run tests
         run: uv run pytest 
