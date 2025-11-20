@@ -4,7 +4,15 @@ from typing import cast
 from ply.lex import LexToken, Token, lex
 
 from qbparse.datatypes import (
-    BUILTIN_TYPES,
+    TYPE__FLOAT,
+    TYPE__INTEGER64,
+    TYPE__UNSIGNED__INTEGER64,
+    TYPE__UNSIGNED_INTEGER,
+    TYPE__UNSIGNED_LONG,
+    TYPE_DOUBLE,
+    TYPE_INTEGER,
+    TYPE_LONG,
+    TYPE_SINGLE,
     ExtendedFloat,
     FloatType,
     IntegralType,
@@ -127,13 +135,13 @@ def Lexer(symbols: SymbolStore):
         exp_sign = match.group("sign") or "+"
         exp = match.group("exp") or "0"
         if match.group("flag") in ["e", "E"]:
-            type = cast(FloatType, BUILTIN_TYPES["single"])
+            type = TYPE_SINGLE
             value = float(f"{mantissa}e{exp_sign}{exp}")
         elif match.group("flag") in ["d", "D"]:
-            type = cast(FloatType, BUILTIN_TYPES["double"])
+            type = TYPE_DOUBLE
             value = float(f"{mantissa}e{exp_sign}{exp}")
         else:
-            type = cast(FloatType, BUILTIN_TYPES["_float"])
+            type = TYPE__FLOAT
             value = ExtendedFloat(mantissa, exp_sign + exp)
         if type.min <= value <= type.max:
             t.value = (value, type)
@@ -286,13 +294,15 @@ def detect_base_int_type(value: int) -> tuple[int, Type]:
     returning the type and the number. Raise ValueError if number is outside
     the representable range.
     """
-    for type_name in ["integer", "long", "_integer64"]:
-        type = cast(IntegralType, BUILTIN_TYPES[type_name])
-        if type.min <= value <= type.max:
-            return (value, type)
-        unsigned_type = cast(IntegralType, BUILTIN_TYPES["_unsigned " + type_name])
-        if unsigned_type.min <= value <= unsigned_type.max:
-            return (-int(unsigned_type.max) + value - 1, type)
+    for signed, unsigned in [
+        (TYPE_INTEGER, TYPE__UNSIGNED_INTEGER),
+        (TYPE_LONG, TYPE__UNSIGNED_LONG),
+        (TYPE__INTEGER64, TYPE__UNSIGNED__INTEGER64),
+    ]:
+        if signed.min <= value <= signed.max:
+            return (value, signed)
+        if unsigned.min <= value <= unsigned.max:
+            return (-int(unsigned.max) + value - 1, signed)
     raise ValueError()
 
 
@@ -309,29 +319,28 @@ def constrain_base_int_value(
 def detect_dec_lit_type(value: str) -> tuple[float | ExtendedFloat, Type]:
     num_digits = len(value) - 1
     if num_digits <= 7:
-        return (float(value), BUILTIN_TYPES["single"])
+        return (float(value), TYPE_SINGLE)
     if num_digits <= 16:
-        return (float(value), BUILTIN_TYPES["double"])
-    return (ExtendedFloat(value), BUILTIN_TYPES["_float"])
+        return (float(value), TYPE_DOUBLE)
+    return (ExtendedFloat(value), TYPE__FLOAT)
 
 
 def constrain_dec_lit_value(value: str, type: FloatType):
     v = float(value)
     inf = float("inf")
-    if type == BUILTIN_TYPES["single"]:
+    if type == TYPE_SINGLE:
         if v != inf and type.min <= v <= type.max:
             return (v, type)
-    elif type == BUILTIN_TYPES["double"]:
+    elif type == TYPE_DOUBLE:
         if v != inf:
             return (v, type)
-    elif type == BUILTIN_TYPES["_float"]:
+    elif type == TYPE__FLOAT:
         return (ExtendedFloat(value), type)
     raise ValueError()
 
 
 def detect_int_lit_type(value: int) -> tuple[int, Type]:
-    for type_name in ["integer", "long", "_integer64", "_unsigned _integer64"]:
-        type = cast(IntegralType, BUILTIN_TYPES[type_name])
+    for type in [TYPE_INTEGER, TYPE_LONG, TYPE__INTEGER64, TYPE__UNSIGNED__INTEGER64]:
         if type.min <= value <= type.max:
             return (value, type)
     raise ValueError()

@@ -1,6 +1,6 @@
 from qbparse.ast import BinOp, Constant, Expr, LValue, UniOp, Var
 from qbparse.context import ParseContext
-from qbparse.datatypes import BUILTIN_TYPES
+from qbparse.datatypes import TYPE_STRING
 from qbparse.errors import ParseError
 
 PRECEDENCE = {
@@ -51,7 +51,7 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
                 ctx.reverse(token)
                 return do_lvalue(ctx)
             case "STRING_LIT", _:
-                return Constant(token.value, BUILTIN_TYPES["string"])
+                return Constant(token.value, TYPE_STRING)
             case "NUM_LIT", _:
                 return Constant(token.value[0], token.value[1])
             case "PROCEDURE", _:

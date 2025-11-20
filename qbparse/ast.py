@@ -4,7 +4,7 @@ from collections.abc import Generator, Iterable
 from itertools import chain
 from typing import Any
 
-from qbparse.datatypes import BUILTIN_TYPES, ExtendedFloat, Type
+from qbparse.datatypes import TYPE_STRING, ExtendedFloat, Type
 from qbparse.symbols import Variable
 
 
@@ -151,8 +151,8 @@ class Constant(Expr):
 
 
 class Print(Statement):
-    TAB_SEPARATOR = Constant("\t", BUILTIN_TYPES["string"])
-    FINAL_NEWLINE = Constant("\n", BUILTIN_TYPES["string"])
+    TAB_SEPARATOR = Constant("\t", TYPE_STRING)
+    FINAL_NEWLINE = Constant("\n", TYPE_STRING)
 
     def __init__(self, params: list[Expr] | None = None):
         self.params = params if params else []

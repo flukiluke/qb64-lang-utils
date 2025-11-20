@@ -2,18 +2,16 @@ from pytest import raises
 
 from qbparse import parse
 from qbparse.ast import Constant, If, Print, Statement
-from qbparse.datatypes import BUILTIN_TYPES
+from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING
 from qbparse.errors import ParseError
 
-INTEGER = BUILTIN_TYPES["integer"]
-STRING = BUILTIN_TYPES["string"]
-ONE = Constant(1, INTEGER)
-TWO = Constant(2, INTEGER)
-THREE = Constant(3, INTEGER)
+ONE = Constant(1, TYPE_INTEGER)
+TWO = Constant(2, TYPE_INTEGER)
+THREE = Constant(3, TYPE_INTEGER)
 
 
 def PrintStr(s: str):
-    return Print([Constant(s, STRING)])
+    return Print([Constant(s, TYPE_STRING)])
 
 
 def run(input: str):

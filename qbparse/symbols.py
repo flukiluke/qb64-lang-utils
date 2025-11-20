@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from qbparse.datatypes import (
     BUILTIN_SIGILS,
-    BUILTIN_TYPES,
+    TYPE_SINGLE,
     BitnType,
     StringType,
     Type,
@@ -91,7 +91,7 @@ class SymbolStore:
         self.variables: dict[str, dict[str, Variable]] = {}
         self.procedures: dict[str, Procedure] = {}
         self.types: dict[str, Type] = {}
-        self.default_type = BUILTIN_TYPES["single"]
+        self.default_type = TYPE_SINGLE
 
     def __repr__(self):
         return (

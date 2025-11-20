@@ -1,6 +1,6 @@
 from qbparse import parse
 from qbparse.ast import Assignment, BinOp, Constant, Var
-from qbparse.datatypes import BUILTIN_TYPES
+from qbparse.datatypes import TYPE_INTEGER
 
 
 def run(input: str, variable_name: str):
@@ -15,16 +15,14 @@ def run(input: str, variable_name: str):
 
 def test_implicit_scalar():
     impl, variable = run("x = 5", "x")
-    assert impl.find(Assignment) == Assignment(
-        Var(variable), Constant(5, BUILTIN_TYPES["integer"])
-    )
+    assert impl.find(Assignment) == Assignment(Var(variable), Constant(5, TYPE_INTEGER))
 
 
 def test_existing_scalar():
     impl, variable = run("foo = 32 : foo = 17", "foo")
     assert list(impl.find_all(Assignment)) == [
-        Assignment(Var(variable), Constant(32, BUILTIN_TYPES["integer"])),
-        Assignment(Var(variable), Constant(17, BUILTIN_TYPES["integer"])),
+        Assignment(Var(variable), Constant(32, TYPE_INTEGER)),
+        Assignment(Var(variable), Constant(17, TYPE_INTEGER)),
     ]
 
 
@@ -34,7 +32,7 @@ def test_expression_rvalue():
         Var(variable),
         BinOp(
             "/",
-            Constant(23, BUILTIN_TYPES["integer"]),
-            Constant(7, BUILTIN_TYPES["integer"]),
+            Constant(23, TYPE_INTEGER),
+            Constant(7, TYPE_INTEGER),
         ),
     )
