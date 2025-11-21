@@ -239,9 +239,10 @@ def Lexer(symbols: SymbolStore):
     def t_ID(t: LexToken):
         name = t.lexer.lexmatch.group("name").lower()
         sigil = t.lexer.lexmatch.group("sigil")
+        # The presence or absence of the $ is critical for detecting some builtins.
+        # `if` is a keyword, but `if$ = 3` is valid. Similarly `left$` is a function,
+        # but `left = 3` is valid.
         if symbols.is_keyword(name):
-            # Keywords with a $ are no longer keywords, hence `if$ = ""` and
-            # `if$3 = ""` are acceptable but `if% = 3` is not.
             if sigil is None:
                 t.type = "KEYWORD"
                 t.value = name
@@ -251,7 +252,9 @@ def Lexer(symbols: SymbolStore):
                 t.lexer.skip(len(t.value))
                 return t
             # case of sigil "$" falls through below
-        if proc := symbols.find_procedure(name):
+        if (proc := symbols.find_procedure(name)) or (
+            sigil == "$" and (proc := symbols.find_procedure(name + "$"))
+        ):
             if sigil is not None:
                 # The sigil must match the existing procedure, if present
                 typ = symbols.lookup_sigil(sigil)

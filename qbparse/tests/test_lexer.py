@@ -333,14 +333,18 @@ def test_procedure():
     symbols = SymbolStore()
     a_sub = Procedure("a_sub", TypeSignature(TYPE__NONE, []))
     a_function = Procedure("a_function", TypeSignature(TYPE_STRING, []))
+    a_string_builtin = Procedure("a_string_builtin$", TypeSignature(TYPE_STRING, []))
     symbols.procedures["a_sub"] = a_sub
     symbols.procedures["a_function"] = a_function
+    symbols.procedures["a_string_builtin$"] = a_string_builtin
 
     check("a_sub", Token("PROCEDURE", a_sub), symbols)
     check("a_sub!", Token("ERROR"), symbols)
     check("a_function", Token("PROCEDURE", a_function), symbols)
     check("a_function$", Token("PROCEDURE", a_function), symbols)
     check("a_function!", Token("ERROR"), symbols)
+    check("a_string_builtin", Token("ID", ("a_string_builtin", TYPE_SINGLE)), symbols)
+    check("a_string_builtin$", Token("PROCEDURE", a_string_builtin), symbols)
 
 
 def test_id():

@@ -2,7 +2,9 @@ from typing import TYPE_CHECKING, Any
 
 from qbparse.datatypes import (
     BUILTIN_SIGILS,
+    TYPE__FLOAT,
     TYPE_SINGLE,
+    TYPE_STRING,
     BitnType,
     StringType,
     Type,
@@ -83,7 +85,10 @@ class Procedure:
         return self.name == other.name and self.signature == other.signature
 
 
-BUILTIN_PROCS: dict[str, Procedure] = {}
+BUILTIN_PROCS: dict[str, Procedure] = {
+    "val": Procedure("val", TypeSignature(TYPE__FLOAT, [TYPE_STRING])),
+    "lcase$": Procedure("lcase$", TypeSignature(TYPE_STRING, [TYPE_STRING])),
+}
 
 
 class SymbolStore:

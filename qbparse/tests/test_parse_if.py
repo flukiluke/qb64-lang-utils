@@ -250,3 +250,4 @@ def test_nested_if():
 
 
 # TODO: IF x THEN 100 ELSE 200
+# TODO: IF x GOTO label
