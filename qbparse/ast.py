@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections.abc import Generator, Iterable
 from itertools import chain
 from typing import Any
+from dataclasses import dataclass, field
 
 from qbparse.datatypes import TYPE_STRING, ExtendedFloat, Type
-from qbparse.symbols import Variable
+import qbparse.symbols as symbols
 
 
 class Node:
@@ -39,17 +40,9 @@ class Statement(Node):
     pass
 
 
+@dataclass
 class ProcDefinition(Node):
-    def __init__(self):
-        self.statements: list[Statement] = []
-
-    def __repr__(self):
-        return f"[ProcDefinition statements={self.statements}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.statements == other.statements
+    statements: list[Statement] = field(default_factory=lambda: [])
 
     def children(self):
         return self.statements
@@ -63,53 +56,23 @@ class LValue(Expr):
     pass
 
 
+@dataclass
 class Var(LValue):
-    def __init__(self, target: Variable):
-        self.target = target
+    target: symbols.Variable
 
-    def __repr__(self):
-        return f"[Var target={self.target}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.target == other.target
-
-
+@dataclass
 class BinOp(Expr):
-    def __init__(self, name: str, left: Expr, right: Expr):
-        self.name = name
-        self.left = left
-        self.right = right
-
-    def __repr__(self):
-        return f"[BinOp name={self.name} left={self.left} right={self.right}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return (
-            self.name == other.name
-            and self.left == other.left
-            and self.right == other.right
-        )
+    name: str
+    left: Expr
+    right: Expr
 
     def children(self):
         return (self.left, self.right)
 
-
+@dataclass
 class UniOp(Expr):
-    def __init__(self, name: str, param: Expr):
-        self.name = name
-        self.param = param
-
-    def __repr__(self):
-        return f"[UniOp name={self.name} param={self.param}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.name == other.name and self.param == other.param
+    name: str
+    param: Expr
 
     def children(self):
         return (self.param,)
@@ -119,84 +82,35 @@ class Call(Expr, Statement):
     pass
 
 
+@dataclass
 class Assignment(Statement):
-    def __init__(self, lval: LValue, rval: Expr):
-        self.lval = lval
-        self.rval = rval
-
-    def __repr__(self):
-        return f"[Assignment lval={self.lval} rval={self.rval}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.lval == other.lval and self.rval == other.rval
+    lval:  LValue
+    rval: Expr
 
     def children(self):
         return (self.lval, self.rval)
 
-
+@dataclass
 class Constant(Expr):
-    def __init__(self, value: str | int | float | ExtendedFloat, type: Type):
-        self.value = value
-        self.type = type
+    value: str | int | float | ExtendedFloat
+    type: Type
 
-    def __repr__(self):
-        return f"[Constant value={repr(self.value)} type={self.type}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.value == other.value and self.type == other.type
-
-
+@dataclass
 class Print(Statement):
     TAB_SEPARATOR = Constant("\t", TYPE_STRING)
     FINAL_NEWLINE = Constant("\n", TYPE_STRING)
 
-    def __init__(self, params: list[Expr] | None = None):
-        self.params = params if params else []
-
-    def __repr__(self):
-        return f"[Print params={self.params}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.params == other.params
+    params: list[Expr] = field(default_factory=lambda: [])
 
     def children(self):
         return self.params
 
-
+@dataclass
 class If(Statement):
-    def __init__(
-        self,
-        guard: Expr,
-        true_branch: list[Statement],
-        elseifs: list[tuple[Expr, list[Statement]]],
-        false_branch: list[Statement],
-    ):
-        self.guard = guard
-        self.true_branch = true_branch
-        self.elseifs = elseifs
-        self.false_branch = false_branch
-
-    def __repr__(self):
-        return (
-            f"[If guard={self.guard} then={self.true_branch} "
-            f"elseifs={self.elseifs} else={self.false_branch}]"
-        )
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return (
-            self.guard == other.guard
-            and self.true_branch == other.true_branch
-            and self.elseifs == other.elseifs
-            and self.false_branch == other.false_branch
-        )
+    guard: Expr
+    true_branch: list[Statement]
+    elseifs: list[tuple[Expr, list[Statement]]]
+    false_branch: list[Statement]
 
     def children(self):
         return chain(
