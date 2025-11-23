@@ -15,10 +15,7 @@ def PrintStr(s: str):
 
 
 def run(input: str):
-    program = parse(input)
-    impl = program.globals.procedures["_main"].impl
-    assert impl is not None
-    return impl
+    return parse(input).main
 
 
 def test_single_line():

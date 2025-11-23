@@ -5,12 +5,10 @@ from qbparse.datatypes import TYPE_INTEGER
 
 def run(input: str, variable_name: str):
     program = parse(input)
-    impl = program.globals.procedures["_main"].impl
-    assert impl is not None
     variable = program.globals.find_variable(variable_name)
     assert variable is not None
     assert variable.name == variable_name
-    return (impl, variable)
+    return (program.main, variable)
 
 
 def test_implicit_scalar():

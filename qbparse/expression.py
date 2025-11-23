@@ -1,4 +1,4 @@
-from qbparse.ast import BinOp, Constant, Expr, LValue, UniOp, Var
+from qbparse.ast import BinOp, Call, Constant, Expr, LValue, UniOp, Var
 from qbparse.context import ParseContext
 from qbparse.datatypes import TYPE_STRING
 from qbparse.errors import ParseError
@@ -35,7 +35,7 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
           a token that cannot possibly be part of an expression.
     """
 
-    def start():
+    def start() -> Expr:
         token = ctx.tok
         next(ctx)
         match token.type, token.value:
@@ -55,7 +55,8 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
             case "NUM_LIT", _:
                 return Constant(token.value[0], token.value[1])
             case "PROCEDURE", _:
-                raise ParseError("Unimplemented procedure call")
+                ctx.reverse(token)
+                return do_func_call(ctx)
             case "VARIABLE", var:
                 return Var(var)
             case _:
@@ -95,3 +96,34 @@ def do_lvalue(ctx: ParseContext) -> LValue:
         raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
     next(ctx)
     return result
+
+
+def do_func_call(ctx: ParseContext) -> Call:
+    """
+    Expects: name of function
+    Results: token after )
+    Format: name [(args)]
+    """
+    target = ctx.tok.value
+    next(ctx)
+    if ctx.at_a("PUNCTUATION", "("):
+        next(ctx)
+        args = do_func_args(ctx)
+        ctx.consume("PUNCTUATION", ")")
+        return Call(target, args)
+    return Call(target)
+
+
+def do_func_args(ctx: ParseContext) -> list[Expr]:
+    """
+    Expects: start of first argument
+    Results: token after last argument
+    Format: comma-separated arguments
+    """
+    args = list[Expr]()
+    while True:
+        args.append(do_expr(ctx))
+        if ctx.at_a("PUNCTUATION", ","):
+            next(ctx)
+        else:
+            return args

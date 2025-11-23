@@ -15,6 +15,11 @@ class ParseContext:
         self.token_stream = Lexer(self.symbols)
         self.token_stream.input(input)
         self.reversed_tokens: list[LexToken] = []
+        self.tok = LexToken()
+        self.tok.lexer = self.token_stream
+        self.tok.lineno = 1
+        self.tok.type = ""
+        self.tok.value = ""
         next(self)
 
     def __next__(self):

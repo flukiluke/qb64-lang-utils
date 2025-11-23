@@ -1,15 +1,14 @@
 from pytest import raises
 
 from qbparse import parse
-from qbparse.ast import BinOp, Constant, Expr, Node, Print, UniOp, Var
-from qbparse.datatypes import TYPE_INTEGER
+from qbparse.ast import BinOp, Call, Constant, Expr, Node, Print, UniOp, Var
+from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING, TypeSignature
 from qbparse.errors import ParseError
+from qbparse.symbols import Procedure
 
 
 def check(input: str, expected: Node):
-    impl = parse("?" + input).globals.procedures["_main"].impl
-    assert impl is not None
-    expr = impl.find(Expr)
+    expr = parse("?" + input).main.find(Expr)
     assert expr is not None
     assert expr == expected
 
@@ -152,20 +151,61 @@ def test_errors():
 def test_existing_scalar():
     program = parse("x = 10 : ? x + 3")
     variable = program.globals.find_variable("x")
-    impl = program.globals.procedures["_main"].impl
     assert variable is not None
-    assert impl is not None
 
-    expr = impl.find(Print).find(Expr)
+    expr = program.main.find(Print).find(Expr)
     assert expr == BinOp("+", Var(variable), Constant(3, TYPE_INTEGER))
 
 
 def test_implicit_scalar():
     program = parse("? x + 3")
     variable = program.globals.find_variable("x")
-    impl = program.globals.procedures["_main"].impl
     assert variable is not None
-    assert impl is not None
 
-    expr = impl.find(Print).find(Expr)
+    expr = program.main.find(Print).find(Expr)
     assert expr == BinOp("+", Var(variable), Constant(3, TYPE_INTEGER))
+
+
+def test_function_call_unary():
+    program = parse('? lcase$("hello")')
+    proc = program.globals.find_procedure("lcase$")
+    assert proc is not None
+    expr = program.main.find(Print).find(Expr)
+    assert expr == Call(proc, [Constant("hello", TYPE_STRING)])
+
+
+def test_unary_function_call_bad_syntax():
+    raises(ParseError, parse, '? lcase$("hello"')
+    raises(ParseError, parse, '? lcase$ "hello"')
+    raises(ParseError, parse, '? lcase$ "hello")')
+    raises(ParseError, parse, '? lcase$ ("hello",)')
+
+
+def test_function_call_binary():
+    program = parse("")
+    program.globals.procedures["binfunc"] = Procedure(
+        "binfunc", TypeSignature(TYPE_INTEGER, [TYPE_INTEGER, TYPE_STRING])
+    )
+    program.add_parse('? binfunc(23, "hello")')
+    expr = program.main.find(Print).find(Expr)
+    assert expr == Call(
+        program.globals.procedures["binfunc"],
+        [Constant(23, TYPE_INTEGER), Constant("hello", TYPE_STRING)],
+    )
+
+
+def test_function_call_nested():
+    program = parse('? lcase$(lcase$("foo") + "bar")')
+    proc = program.globals.find_procedure("lcase$")
+    assert proc is not None
+    expr = program.main.find(Print).find(Expr)
+    assert expr == Call(
+        proc,
+        [
+            BinOp(
+                "+",
+                Call(proc, [Constant("foo", TYPE_STRING)]),
+                Constant("bar", TYPE_STRING),
+            )
+        ],
+    )

@@ -18,17 +18,17 @@ def do_print(ctx: ParseContext):
     while not ctx.at_line_terminator():
         match ctx.tok.type, ctx.tok.value:
             case "PUNCTUATION", ",":
-                result.params.append(Print.TAB_SEPARATOR)
+                result.args.append(Print.TAB_SEPARATOR)
                 final_newline = False
                 next(ctx)
             case "PUNCTUATION", ";":
                 final_newline = False
                 next(ctx)
             case _:
-                result.params.append(do_expr(ctx))
+                result.args.append(do_expr(ctx))
                 final_newline = True
     if final_newline:
-        result.params.append(Print.FINAL_NEWLINE)
+        result.args.append(Print.FINAL_NEWLINE)
     return result
 
 

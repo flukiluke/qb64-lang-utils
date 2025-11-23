@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
+from dataclasses import dataclass, field
 from itertools import chain
 from typing import Any
-from dataclasses import dataclass, field
 
-from qbparse.datatypes import TYPE_STRING, ExtendedFloat, Type
 import qbparse.symbols as symbols
+from qbparse.datatypes import TYPE_STRING, ExtendedFloat, Type
 
 
 class Node:
@@ -60,6 +60,7 @@ class LValue(Expr):
 class Var(LValue):
     target: symbols.Variable
 
+
 @dataclass
 class BinOp(Expr):
     name: str
@@ -68,6 +69,7 @@ class BinOp(Expr):
 
     def children(self):
         return (self.left, self.right)
+
 
 @dataclass
 class UniOp(Expr):
@@ -78,32 +80,40 @@ class UniOp(Expr):
         return (self.param,)
 
 
+@dataclass
 class Call(Expr, Statement):
-    pass
+    target: symbols.Procedure
+    args: list[Expr] = field(default_factory=lambda: [])
+
+    def children(self):
+        return self.args
 
 
 @dataclass
 class Assignment(Statement):
-    lval:  LValue
+    lval: LValue
     rval: Expr
 
     def children(self):
         return (self.lval, self.rval)
+
 
 @dataclass
 class Constant(Expr):
     value: str | int | float | ExtendedFloat
     type: Type
 
+
 @dataclass
 class Print(Statement):
     TAB_SEPARATOR = Constant("\t", TYPE_STRING)
     FINAL_NEWLINE = Constant("\n", TYPE_STRING)
 
-    params: list[Expr] = field(default_factory=lambda: [])
+    args: list[Expr] = field(default_factory=lambda: [])
 
     def children(self):
-        return self.params
+        return self.args
+
 
 @dataclass
 class If(Statement):
