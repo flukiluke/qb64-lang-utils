@@ -387,6 +387,8 @@ def test_id_custom_sigil():
     check_custom_sigil("foo~`10", "_unsigned _bit * 10")
     check_custom_sigil("foo$10", "string * 10")
     check_expr("foo$0", Token("ERROR"))
+    check_expr("foo`65", Token("ERROR"))
+    check_expr("foo~`65", Token("ERROR"))
 
 
 def test_check_punctuation():

@@ -123,9 +123,15 @@ class SymbolStore:
         if builtin := BUILTIN_SIGILS.get(sigil):
             return builtin
         if sigil.startswith("`"):
-            new_type = BitnType.of_signed(int(sigil[1:]))
+            width = int(sigil[1:])
+            if width > 64:
+                raise ParseError("_BIT values are limited to 64 bits")
+            new_type = BitnType.of_signed(width)
         elif sigil.startswith("~`"):
-            new_type = BitnType.of_unsigned(int(sigil[2:]))
+            width = int(sigil[2:])
+            if width > 64:
+                raise ParseError("_UNSIGNED _BIT values are limited to 64 bits")
+            new_type = BitnType.of_unsigned(width)
         elif sigil.startswith("$"):
             max_len = int(sigil[1:])
             if max_len == 0:

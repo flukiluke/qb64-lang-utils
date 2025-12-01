@@ -90,6 +90,15 @@ class Call(Expr, Statement):
 
 
 @dataclass
+class Cast(Expr):
+    expr: Expr
+    type: Type
+
+    def children(self):
+        return (self.expr,)
+
+
+@dataclass
 class Assignment(Statement):
     lval: LValue
     rval: Expr

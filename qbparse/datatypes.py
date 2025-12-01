@@ -76,7 +76,10 @@ class Type:
     name: str
 
     def __repr__(self):
-        return f"[Type {self.name}]"
+        return self.name
+
+    def is_number(self) -> bool:
+        return False
 
 
 @dataclass
@@ -85,7 +88,10 @@ class FloatType(Type):
     max: float | ExtendedFloat
 
     def __repr__(self):
-        return f"[Type {self.name}]"
+        return super().__repr__()
+
+    def is_number(self):
+        return True
 
 
 @dataclass
@@ -94,24 +100,30 @@ class IntegralType(Type):
     max: int
 
     def __repr__(self):
-        return f"[Type {self.name}]"
+        return super().__repr__()
+
+    def is_number(self):
+        return True
 
 
 @dataclass
 class StringType(Type):
     max_len: int | None = None
 
+    def __repr__(self):
+        return super().__repr__()
+
     @staticmethod
     def of_max_len(max_len: int):
         return StringType("string * " + str(max_len), max_len)
-
-    def __repr__(self):
-        return f"[Type {self.name}]"
 
 
 @dataclass
 class BitnType(IntegralType):
     width: int
+
+    def __repr__(self):
+        return super().__repr__()
 
     @staticmethod
     def of_signed(width: int):
@@ -123,8 +135,8 @@ class BitnType(IntegralType):
     def of_unsigned(width: int):
         return BitnType("_unsigned _bit * " + str(width), 0, 2**width - 1, width)
 
-    def __repr__(self):
-        return f"[Type {self.name}]"
+    def is_number(self):
+        return True
 
 
 class TypeSignature:
@@ -209,3 +221,27 @@ BUILTIN_SIGILS: dict[str, Type] = {
     "##": TYPE__FLOAT,
     "$": TYPE_STRING,
 }
+
+
+def can_cast(src: Type, dest: Type):
+    """
+    Can src be cast to dest, even with loss?
+    """
+    return can_safely_cast(src, dest) or (src.is_number() and dest.is_number())
+
+
+def can_safely_cast(src: Type, dest: Type):
+    """
+    Can src be cast to dest without loss of data?
+    """
+    if src == dest:
+        return True
+    if not src.is_number() or not dest.is_number():
+        return False
+    if src == TYPE__FLOAT:
+        return False
+    if dest == TYPE__FLOAT:
+        return True
+    assert isinstance(src, (IntegralType, FloatType))
+    assert isinstance(dest, (IntegralType, FloatType))
+    return src.min >= dest.min and src.max <= dest.max
