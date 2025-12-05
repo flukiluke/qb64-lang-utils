@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from itertools import chain
 from typing import Any
 
 import qbparse.symbols as symbols
-from qbparse.datatypes import TYPE_STRING, ExtendedFloat, Type
+from qbparse.datatypes import TYPE_STRING, ExtendedFloat, Type, TypeSignature
 
 
 class Node:
@@ -42,6 +43,8 @@ class Statement(Node):
 
 @dataclass
 class ProcDefinition(Node):
+    name: str
+    signature: TypeSignature
     statements: list[Statement] = field(default_factory=lambda: [])
 
     def children(self):
@@ -62,28 +65,15 @@ class Var(LValue):
 
 
 @dataclass
-class BinOp(Expr):
-    name: str
-    left: Expr
-    right: Expr
-
-    def children(self):
-        return (self.left, self.right)
-
-
-@dataclass
-class UniOp(Expr):
-    name: str
-    param: Expr
-
-    def children(self):
-        return (self.param,)
-
-
-@dataclass
 class Call(Expr, Statement):
+    class Style(Enum):
+        STANDARD = auto()
+        INFIX = auto()
+        PREFIX = auto()
+
     target: symbols.Procedure
     args: list[Expr] = field(default_factory=lambda: [])
+    style: Style = Style.STANDARD
 
     def children(self):
         return self.args

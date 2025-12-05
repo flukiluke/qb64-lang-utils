@@ -1,4 +1,4 @@
-from qbparse.ast import BinOp, Call, Constant, Expr, LValue, UniOp, Var
+from qbparse.ast import Call, Constant, Expr, LValue, Var
 from qbparse.context import ParseContext
 from qbparse.datatypes import TYPE_STRING
 from qbparse.errors import ParseError
@@ -44,9 +44,17 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
                 ctx.consume("PUNCTUATION", "(")
                 return result
             case "PUNCTUATION", "-":
-                return UniOp("negation", do_expr(ctx, PREC_NEGATION))
+                return Call(
+                    ctx.symbols.procedures["-"],
+                    [do_expr(ctx, PREC_NEGATION)],
+                    style=Call.Style.PREFIX,
+                )
             case "KEYWORD", "not":
-                return UniOp("not", do_expr(ctx, PRECEDENCE["not"]))
+                return Call(
+                    ctx.symbols.procedures["not"],
+                    [do_expr(ctx, PRECEDENCE["not"])],
+                    style=Call.Style.PREFIX,
+                )
             case "ID", _:
                 ctx.reverse(token)
                 return do_lvalue(ctx)
@@ -78,7 +86,11 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
         next(ctx)
         if token.type in ["KEYWORD", "PUNCTUATION"] and token.value in PRECEDENCE:
             right = do_expr(ctx, PRECEDENCE[token.value])
-            return BinOp(token.value, left, right)
+            return Call(
+                ctx.symbols.procedures[token.value],
+                [left, right],
+                style=Call.Style.INFIX,
+            )
         raise ParseError(f"Unpexpected {token.type} {token.value}")
 
     left = start()

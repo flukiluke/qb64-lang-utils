@@ -258,7 +258,10 @@ def Lexer(symbols: SymbolStore):
             if sigil is not None:
                 # The sigil must match the existing procedure, if present
                 typ = symbols.lookup_sigil(sigil)
-                if proc.signature and typ != proc.signature.ret:
+                for sig in proc.sigs():
+                    if typ == sig.ret:
+                        break
+                else:
                     t.type = "ERROR"
                     return t
             t.type = "PROCEDURE"

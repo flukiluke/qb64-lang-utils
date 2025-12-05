@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -40,9 +41,8 @@ class WalkContext:
 
     def start(self):
         for proc in self.program.globals.procedures.values():
-            if proc.impl is None:
-                continue
-            self.evaluate(proc.impl)
+            for impl in proc.impls():
+                self.evaluate(impl)
 
     def evaluate(self, node: Node) -> Type:
         old_parent = self.parent

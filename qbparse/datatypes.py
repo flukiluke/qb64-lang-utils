@@ -158,6 +158,9 @@ def bits2float(spec1: str, spec2: str, b: int):
 
 
 TYPE__NONE = Type("_none")
+TYPE__GEN_T = Type("_gen_t")
+TYPE__GEN_INT = IntegralType("_gen_int", min=0, max=0)
+TYPE__GEN_FLOAT = FloatType("_gen_float", min=0, max=0)
 TYPE__BIT = IntegralType("_bit", -(2**0), 2**0 - 1)
 TYPE__BYTE = IntegralType("_byte", -(2**7), 2**7 - 1)
 TYPE_INTEGER = IntegralType("integer", -(2**15), 2**15 - 1)
@@ -188,7 +191,6 @@ TYPE__FLOAT = FloatType(
 TYPE_STRING = StringType("string")
 
 BUILTIN_TYPES: dict[str, Type] = {
-    "_none": TYPE__NONE,
     "_bit": TYPE__BIT,
     "_byte": TYPE__BYTE,
     "integer": TYPE_INTEGER,
@@ -244,4 +246,6 @@ def can_safely_cast(src: Type, dest: Type):
         return True
     assert isinstance(src, (IntegralType, FloatType))
     assert isinstance(dest, (IntegralType, FloatType))
+    assert src not in [TYPE__GEN_T, TYPE__GEN_INT, TYPE__GEN_FLOAT]
+    assert dest not in [TYPE__GEN_T, TYPE__GEN_INT, TYPE__GEN_FLOAT]
     return src.min >= dest.min and src.max <= dest.max

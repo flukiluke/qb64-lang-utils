@@ -1,10 +1,15 @@
 from pytest import raises
 
 from qbparse import parse
-from qbparse.ast import BinOp, Call, Constant, Expr, Node, Print, UniOp, Var
+from qbparse.ast import Call, Constant, Expr, Node, Print, ProcDefinition, Var
 from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING, TypeSignature
 from qbparse.errors import ParseError
 from qbparse.symbols import Procedure
+
+from .helpers import builtin_proc
+
+INFIX = Call.Style.INFIX
+PREFIX = Call.Style.PREFIX
 
 
 def check(input: str, expected: Node):
@@ -16,10 +21,17 @@ def check(input: str, expected: Node):
 def test_binop():
     check(
         "2 + 3 - 4",
-        BinOp(
-            "-",
-            BinOp("+", Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)),
-            Constant(4, TYPE_INTEGER),
+        Call(
+            builtin_proc("-"),
+            [
+                Call(
+                    builtin_proc("+"),
+                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    INFIX,
+                ),
+                Constant(4, TYPE_INTEGER),
+            ],
+            INFIX,
         ),
     )
 
@@ -27,26 +39,49 @@ def test_binop():
 def test_binop_precedence():
     check(
         "2 - 3 * 4",
-        BinOp(
-            "-",
-            Constant(2, TYPE_INTEGER),
-            BinOp("*", Constant(3, TYPE_INTEGER), Constant(4, TYPE_INTEGER)),
+        Call(
+            builtin_proc("-"),
+            [
+                Constant(2, TYPE_INTEGER),
+                Call(
+                    builtin_proc("*"),
+                    [Constant(3, TYPE_INTEGER), Constant(4, TYPE_INTEGER)],
+                    INFIX,
+                ),
+            ],
+            INFIX,
         ),
     )
     check(
         "2 and 3 = 4 + 5 / 6",
-        BinOp(
-            "and",
-            Constant(2, TYPE_INTEGER),
-            BinOp(
-                "=",
-                Constant(3, TYPE_INTEGER),
-                BinOp(
-                    "+",
-                    Constant(4, TYPE_INTEGER),
-                    BinOp("/", Constant(5, TYPE_INTEGER), Constant(6, TYPE_INTEGER)),
+        Call(
+            builtin_proc("and"),
+            [
+                Constant(2, TYPE_INTEGER),
+                Call(
+                    builtin_proc("="),
+                    [
+                        Constant(3, TYPE_INTEGER),
+                        Call(
+                            builtin_proc("+"),
+                            [
+                                Constant(4, TYPE_INTEGER),
+                                Call(
+                                    builtin_proc("/"),
+                                    [
+                                        Constant(5, TYPE_INTEGER),
+                                        Constant(6, TYPE_INTEGER),
+                                    ],
+                                    INFIX,
+                                ),
+                            ],
+                            INFIX,
+                        ),
+                    ],
+                    INFIX,
                 ),
-            ),
+            ],
+            INFIX,
         ),
     )
 
@@ -54,39 +89,67 @@ def test_binop_precedence():
 def test_negation():
     check(
         "-2 * -3",
-        BinOp(
-            "*",
-            UniOp("negation", Constant(2, TYPE_INTEGER)),
-            UniOp("negation", Constant(3, TYPE_INTEGER)),
+        Call(
+            builtin_proc("*"),
+            [
+                Call(builtin_proc("-"), [Constant(2, TYPE_INTEGER)], PREFIX),
+                Call(builtin_proc("-"), [Constant(3, TYPE_INTEGER)], PREFIX),
+            ],
+            INFIX,
         ),
     )
     check(
         "-(2 > 3)",
-        UniOp(
-            "negation",
-            BinOp(">", Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)),
+        Call(
+            builtin_proc("-"),
+            [
+                Call(
+                    builtin_proc(">"),
+                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    INFIX,
+                )
+            ],
+            PREFIX,
         ),
     )
     check(
         "2 <> --4",
-        BinOp(
-            "<>",
-            Constant(2, TYPE_INTEGER),
-            UniOp("negation", UniOp("negation", Constant(4, TYPE_INTEGER))),
+        Call(
+            builtin_proc("<>"),
+            [
+                Constant(2, TYPE_INTEGER),
+                Call(
+                    builtin_proc("-"),
+                    [Call(builtin_proc("-"), [Constant(4, TYPE_INTEGER)], PREFIX)],
+                    PREFIX,
+                ),
+            ],
+            INFIX,
         ),
     )
     check(
         "2--4",
-        BinOp(
-            "-",
-            Constant(2, TYPE_INTEGER),
-            UniOp("negation", Constant(4, TYPE_INTEGER)),
+        Call(
+            builtin_proc("-"),
+            [
+                Constant(2, TYPE_INTEGER),
+                Call(builtin_proc("-"), [Constant(4, TYPE_INTEGER)], PREFIX),
+            ],
+            INFIX,
         ),
     )
     check(
         "-2^3",
-        UniOp(
-            "negation", BinOp("^", Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER))
+        Call(
+            builtin_proc("-"),
+            [
+                Call(
+                    builtin_proc("^"),
+                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    INFIX,
+                )
+            ],
+            PREFIX,
         ),
     )
 
@@ -94,20 +157,58 @@ def test_negation():
 def test_not():
     check(
         "2 and not 3",
-        BinOp(
-            "and", Constant(2, TYPE_INTEGER), UniOp("not", Constant(3, TYPE_INTEGER))
+        Call(
+            builtin_proc("and"),
+            [
+                Constant(2, TYPE_INTEGER),
+                Call(builtin_proc("not"), [Constant(3, TYPE_INTEGER)], PREFIX),
+            ],
+            INFIX,
         ),
     )
     check(
         "not 2 + 3",
-        UniOp("not", BinOp("+", Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER))),
+        Call(
+            builtin_proc("not"),
+            [
+                Call(
+                    builtin_proc("+"),
+                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    INFIX,
+                )
+            ],
+            PREFIX,
+        ),
     )
     check(
         "not not 2 and not - not 3",
-        BinOp(
-            "and",
-            UniOp("not", UniOp("not", Constant(2, TYPE_INTEGER))),
-            UniOp("not", UniOp("negation", UniOp("not", Constant(3, TYPE_INTEGER)))),
+        Call(
+            builtin_proc("and"),
+            [
+                Call(
+                    builtin_proc("not"),
+                    [Call(builtin_proc("not"), [Constant(2, TYPE_INTEGER)], PREFIX)],
+                    PREFIX,
+                ),
+                Call(
+                    builtin_proc("not"),
+                    [
+                        Call(
+                            builtin_proc("-"),
+                            [
+                                Call(
+                                    builtin_proc("not"),
+                                    [Constant(3, TYPE_INTEGER)],
+                                    PREFIX,
+                                )
+                            ],
+                            PREFIX,
+                        )
+                    ],
+                    PREFIX,
+                ),
+            ],
+            INFIX,
         ),
     )
 
@@ -115,25 +216,48 @@ def test_not():
 def test_parentheses():
     check(
         "(2 - 3) * 4",
-        BinOp(
-            "*",
-            BinOp("-", Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)),
-            Constant(4, TYPE_INTEGER),
+        Call(
+            builtin_proc("*"),
+            [
+                Call(
+                    builtin_proc("-"),
+                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    INFIX,
+                ),
+                Constant(4, TYPE_INTEGER),
+            ],
+            INFIX,
         ),
     )
     check(
         "-(2 + ((3 or 4) and ((5))))",
-        UniOp(
-            "negation",
-            BinOp(
-                "+",
-                Constant(2, TYPE_INTEGER),
-                BinOp(
-                    "and",
-                    BinOp("or", Constant(3, TYPE_INTEGER), Constant(4, TYPE_INTEGER)),
-                    Constant(5, TYPE_INTEGER),
-                ),
-            ),
+        Call(
+            builtin_proc("-"),
+            [
+                Call(
+                    builtin_proc("+"),
+                    [
+                        Constant(2, TYPE_INTEGER),
+                        Call(
+                            builtin_proc("and"),
+                            [
+                                Call(
+                                    builtin_proc("or"),
+                                    [
+                                        Constant(3, TYPE_INTEGER),
+                                        Constant(4, TYPE_INTEGER),
+                                    ],
+                                    INFIX,
+                                ),
+                                Constant(5, TYPE_INTEGER),
+                            ],
+                            INFIX,
+                        ),
+                    ],
+                    INFIX,
+                )
+            ],
+            PREFIX,
         ),
     )
 
@@ -154,7 +278,9 @@ def test_existing_scalar():
     assert variable is not None
 
     expr = program.main.find(Print).find(Expr)
-    assert expr == BinOp("+", Var(variable), Constant(3, TYPE_INTEGER))
+    assert expr == Call(
+        builtin_proc("+"), [Var(variable), Constant(3, TYPE_INTEGER)], INFIX
+    )
 
 
 def test_implicit_scalar():
@@ -163,7 +289,9 @@ def test_implicit_scalar():
     assert variable is not None
 
     expr = program.main.find(Print).find(Expr)
-    assert expr == BinOp("+", Var(variable), Constant(3, TYPE_INTEGER))
+    assert expr == Call(
+        builtin_proc("+"), [Var(variable), Constant(3, TYPE_INTEGER)], INFIX
+    )
 
 
 def test_function_call_unary():
@@ -183,8 +311,17 @@ def test_unary_function_call_bad_syntax():
 
 def test_function_call_binary():
     program = parse("")
-    program.globals.procedures["binfunc"] = Procedure(
-        "binfunc", TypeSignature(TYPE_INTEGER, [TYPE_INTEGER, TYPE_STRING])
+    program.globals.add_procedure(
+        Procedure(
+            "binfunc",
+            [
+                ProcDefinition(
+                    "binfunc",
+                    TypeSignature(TYPE_INTEGER, [TYPE_INTEGER, TYPE_STRING]),
+                    [],
+                )
+            ],
+        )
     )
     program.add_parse('? binfunc(23, "hello")')
     expr = program.main.find(Print).find(Expr)
@@ -202,10 +339,10 @@ def test_function_call_nested():
     assert expr == Call(
         proc,
         [
-            BinOp(
-                "+",
-                Call(proc, [Constant("foo", TYPE_STRING)]),
-                Constant("bar", TYPE_STRING),
+            Call(
+                builtin_proc("+"),
+                [Call(proc, [Constant("foo", TYPE_STRING)]),
+                Constant("bar", TYPE_STRING)], INFIX
             )
         ],
     )

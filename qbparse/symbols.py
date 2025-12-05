@@ -1,56 +1,15 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import qbparse.builtins as builtins
 from qbparse.datatypes import (
     BUILTIN_SIGILS,
-    TYPE__FLOAT,
     TYPE_SINGLE,
-    TYPE_STRING,
     BitnType,
     StringType,
     Type,
-    TypeSignature,
 )
 from qbparse.errors import ParseError
-
-if TYPE_CHECKING:
-    from qbparse.ast import ProcDefinition
-
-KEYWORDS = set(
-    [
-        # Declarations
-        "dim",
-        "as",
-        "const",
-        "sub",
-        "function",
-        # Conditionals
-        "if",
-        "then",
-        "else",
-        "elseif",
-        "endif",
-        "end",
-        # Loops
-        "do",
-        "while",
-        "loop",
-        "wend",
-        # Flow control
-        "goto",
-        "exit",
-        # Operators
-        "imp",
-        "eqv",
-        "xor",
-        "or",
-        "and",
-        "not",
-        "mod",
-        # I/O
-        "print",
-        "?",
-    ]
-)
+from qbparse.procedure import Procedure
 
 
 class Variable:
@@ -67,36 +26,14 @@ class Variable:
         return self.name == other.name and self.type == other.type
 
 
-class Procedure:
-    def __init__(self, name: str, signature: TypeSignature | None):
-        self.name = name
-        # signature & impl may be None for special cased procedures
-        self.signature = signature
-        self.impl: ProcDefinition | None = None
-
-    def __repr__(self):
-        return (
-            f"[Procedure name={self.name} signature={self.signature} impl={self.impl}]"
-        )
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.name == other.name and self.signature == other.signature
-
-
-BUILTIN_PROCS: dict[str, Procedure] = {
-    "val": Procedure("val", TypeSignature(TYPE__FLOAT, [TYPE_STRING])),
-    "lcase$": Procedure("lcase$", TypeSignature(TYPE_STRING, [TYPE_STRING])),
-}
-
-
 class SymbolStore:
     def __init__(self):
         self.variables: dict[str, dict[str, Variable]] = {}
         self.procedures: dict[str, Procedure] = {}
         self.types: dict[str, Type] = {}
         self.default_type = TYPE_SINGLE
+        for proc in builtins.PROCS:
+            self.add_procedure(proc)
 
     def __repr__(self):
         return (
@@ -105,10 +42,10 @@ class SymbolStore:
         )
 
     def is_keyword(self, name: str):
-        return name in KEYWORDS
+        return name in builtins.KEYWORDS
 
     def find_procedure(self, ident: str):
-        return self.procedures.get(ident) or BUILTIN_PROCS.get(ident)
+        return self.procedures.get(ident)
 
     def find_variable(self, ident: str, sigil: str | None = None):
         if ident not in self.variables:
@@ -149,3 +86,8 @@ class SymbolStore:
             raise ParseError("Duplicate variable")
         typeset[type.name] = Variable(name, type)
         return typeset[type.name]
+
+    def add_procedure(self, procedure: Procedure):
+        if procedure.name in self.procedures:
+            raise ParseError(f"Duplicate procedure definition of {procedure.name}")
+        self.procedures[procedure.name] = procedure

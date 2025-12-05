@@ -1,6 +1,8 @@
 from qbparse import parse
-from qbparse.ast import Assignment, BinOp, Constant, Var
+from qbparse.ast import Assignment, Call, Constant, Var
 from qbparse.datatypes import TYPE_INTEGER
+
+from .helpers import builtin_proc
 
 
 def run(input: str, variable_name: str):
@@ -28,9 +30,9 @@ def test_expression_rvalue():
     impl, variable = run("foo = 23 / 7", "foo")
     assert impl.find(Assignment) == Assignment(
         Var(variable),
-        BinOp(
-            "/",
-            Constant(23, TYPE_INTEGER),
-            Constant(7, TYPE_INTEGER),
+        Call(
+            builtin_proc("/"),
+            [Constant(23, TYPE_INTEGER), Constant(7, TYPE_INTEGER)],
+            style=Call.Style.INFIX,
         ),
     )
