@@ -1,13 +1,30 @@
+from collections.abc import Iterable
+
+from qbparse.ast import BuiltinProcDefinition as BPD
+from qbparse.ast import ProcDefinition
 from qbparse.datatypes import (
+    FLOAT_TYPES,
+    INTEGRAL_TYPES,
     TYPE__BYTE,
     TYPE__FLOAT,
-    TYPE__GEN_FLOAT,
-    TYPE__GEN_INT,
-    TYPE__GEN_T,
+    TYPE_ANY,
     TYPE_STRING,
+    Type,
 )
 from qbparse.datatypes import TypeSignature as TS
-from qbparse.procedure import BuiltinProcedure as BP
+from qbparse.symbols import Procedure as P
+
+
+def _generic(
+    ret: Type | None, params: list[Type | None], concretes: Iterable[Type]
+) -> list[ProcDefinition]:
+    results = list[ProcDefinition]()
+    for concrete in concretes:
+        results.append(
+            BPD(TS(ret if ret else concrete, [p if p else concrete for p in params]))
+        )
+    return results
+
 
 KEYWORDS = set(
     [
@@ -48,84 +65,84 @@ KEYWORDS = set(
 
 PROCS = [
     # Comparison operators
-    BP("=", [TS(TYPE__BYTE, [TYPE__GEN_T, TYPE__GEN_T])]),
-    BP(
+    P("=", [BPD(TS(TYPE__BYTE, [TYPE_ANY, TYPE_ANY]))]),
+    P(
         "<>",
         [
-            TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING]),
-            TS(TYPE__BYTE, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__BYTE, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            BPD(TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING])),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
-    BP(
+    P(
         "<",
         [
-            TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING]),
-            TS(TYPE__BYTE, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__BYTE, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            BPD(TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING])),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
-    BP(
+    P(
         ">",
         [
-            TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING]),
-            TS(TYPE__BYTE, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__BYTE, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            BPD(TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING])),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
-    BP(
+    P(
         "<=",
         [
-            TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING]),
-            TS(TYPE__BYTE, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__BYTE, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            BPD(TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING])),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
-    BP(
+    P(
         ">=",
         [
-            TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING]),
-            TS(TYPE__BYTE, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__BYTE, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            BPD(TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING])),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
     # Arithmetic
-    BP(
+    P(
         "+",
         [
-            TS(TYPE_STRING, [TYPE_STRING, TYPE_STRING]),
-            TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__GEN_FLOAT, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            BPD(TS(TYPE_STRING, [TYPE_STRING, TYPE_STRING])),
+            *_generic(None, [None, None], INTEGRAL_TYPES),
+            *_generic(None, [None, None], FLOAT_TYPES),
         ],
     ),
-    BP(
+    P(
         "-",
         [
-            TS(TYPE__GEN_INT, [TYPE__GEN_INT]),
-            TS(TYPE__GEN_FLOAT, [TYPE__GEN_FLOAT]),
-            TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__GEN_FLOAT, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            *_generic(None, [None], INTEGRAL_TYPES),
+            *_generic(None, [None], FLOAT_TYPES),
+            *_generic(None, [None, None], INTEGRAL_TYPES),
+            *_generic(None, [None, None], FLOAT_TYPES),
         ],
     ),
-    BP(
+    P(
         "*",
         [
-            TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT]),
-            TS(TYPE__GEN_FLOAT, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT]),
+            *_generic(None, [None, None], INTEGRAL_TYPES),
+            *_generic(None, [None, None], FLOAT_TYPES),
         ],
     ),
-    BP("/", [TS(TYPE__GEN_FLOAT, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT])]),
-    BP("\\", [TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT])]),
-    BP("^", [TS(TYPE__GEN_FLOAT, [TYPE__GEN_FLOAT, TYPE__GEN_FLOAT])]),
-    BP("mod", [TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT])]),
+    P("/", [*_generic(None, [None, None], FLOAT_TYPES)]),
+    P("\\", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    P("^", [*_generic(None, [None, None], FLOAT_TYPES)]),
+    P("mod", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
     # Bitwise relations
-    BP("imp", [TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT])]),
-    BP("eqv", [TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT])]),
-    BP("xor", [TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT])]),
-    BP("or", [TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT])]),
-    BP("and", [TS(TYPE__GEN_INT, [TYPE__GEN_INT, TYPE__GEN_INT])]),
-    BP("not", [TS(TYPE__GEN_INT, [TYPE__GEN_INT])]),
+    P("imp", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    P("eqv", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    P("xor", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    P("or", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    P("and", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    P("not", [*_generic(None, [None], INTEGRAL_TYPES)]),
     # Everything else
-    BP("val", [TS(TYPE__FLOAT, [TYPE_STRING])]),
-    BP("lcase$", [TS(TYPE_STRING, [TYPE_STRING])]),
+    P("val", [BPD(TS(TYPE__FLOAT, [TYPE_STRING]))]),
+    P("lcase$", [BPD(TS(TYPE_STRING, [TYPE_STRING]))]),
 ]

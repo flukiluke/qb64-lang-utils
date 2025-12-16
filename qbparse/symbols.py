@@ -1,15 +1,28 @@
-from typing import Any
+from __future__ import annotations
 
-import qbparse.builtins as builtins
-from qbparse.datatypes import (
-    BUILTIN_SIGILS,
-    TYPE_SINGLE,
-    BitnType,
-    StringType,
-    Type,
-)
-from qbparse.errors import ParseError
-from qbparse.procedure import Procedure
+from typing import TYPE_CHECKING, Any
+
+from qbparse.datatypes import Type
+
+if TYPE_CHECKING:
+    from qbparse.ast import ProcDefinition
+
+
+class Procedure:
+    def __init__(self, name: str, impls: list[ProcDefinition]):
+        self.name = name
+        self.impls = impls
+
+    def __repr__(self):
+        return f"Procedure(name={self.name}, signatures={self.sigs()})"
+
+    def __eq__(self, other: object):
+        if not isinstance(other, Procedure):
+            return NotImplemented
+        return self.name == other.name and self.sigs() == other.sigs()
+
+    def sigs(self):
+        return [i.signature for i in self.impls]
 
 
 class Variable:
@@ -24,70 +37,3 @@ class Variable:
         if type(self) is not type(other):
             return NotImplemented
         return self.name == other.name and self.type == other.type
-
-
-class SymbolStore:
-    def __init__(self):
-        self.variables: dict[str, dict[str, Variable]] = {}
-        self.procedures: dict[str, Procedure] = {}
-        self.types: dict[str, Type] = {}
-        self.default_type = TYPE_SINGLE
-        for proc in builtins.PROCS:
-            self.add_procedure(proc)
-
-    def __repr__(self):
-        return (
-            f"[SymbolStore variables={self.variables} procedures={self.procedures}"
-            f"types={self.types}]"
-        )
-
-    def is_keyword(self, name: str):
-        return name in builtins.KEYWORDS
-
-    def find_procedure(self, ident: str):
-        return self.procedures.get(ident)
-
-    def find_variable(self, ident: str, sigil: str | None = None):
-        if ident not in self.variables:
-            return None
-        vars = self.variables[ident]
-        type = self.lookup_sigil(sigil)
-        return vars.get(type.name)
-
-    def lookup_sigil(self, sigil: str | None):
-        if sigil is None:
-            return self.default_type
-        if builtin := BUILTIN_SIGILS.get(sigil):
-            return builtin
-        if sigil.startswith("`"):
-            width = int(sigil[1:])
-            if width > 64:
-                raise ParseError("_BIT values are limited to 64 bits")
-            new_type = BitnType.of_signed(width)
-        elif sigil.startswith("~`"):
-            width = int(sigil[2:])
-            if width > 64:
-                raise ParseError("_UNSIGNED _BIT values are limited to 64 bits")
-            new_type = BitnType.of_unsigned(width)
-        elif sigil.startswith("$"):
-            max_len = int(sigil[1:])
-            if max_len == 0:
-                raise ParseError("String maximum width cannot be 0")
-            new_type = StringType.of_max_len(max_len)
-        else:
-            raise ParseError("Unknown type " + sigil)
-        return self.types.setdefault(new_type.name, new_type)
-
-    def create_local(self, name: str, type: Type | None):
-        if type is None:
-            type = self.default_type
-        typeset = self.variables.setdefault(name, {})
-        if type.name in typeset:
-            raise ParseError("Duplicate variable")
-        typeset[type.name] = Variable(name, type)
-        return typeset[type.name]
-
-    def add_procedure(self, procedure: Procedure):
-        if procedure.name in self.procedures:
-            raise ParseError(f"Duplicate procedure definition of {procedure.name}")
-        self.procedures[procedure.name] = procedure

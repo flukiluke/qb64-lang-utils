@@ -4,22 +4,33 @@ from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from itertools import chain
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
-import qbparse.symbols as symbols
-from qbparse.datatypes import TYPE_STRING, ExtendedFloat, Type, TypeSignature
+if TYPE_CHECKING:
+    import qbparse.symbols as symbols
+
+from qbparse.datatypes import (
+    TYPE__NONE,
+    TYPE_STRING,
+    ExtendedFloat,
+    Type,
+    TypeSignature,
+)
 
 
+@dataclass
 class Node:
+    _T = TypeVar("_T", bound="Node")
+
     def children(self) -> Iterable[Node]:
         return ()
 
-    def find(self, kind: type[Node], props: dict[str, Any] = {}) -> Node:
+    def find(self, kind: type[_T], props: dict[str, Any] = {}) -> _T:
         return next(self.find_all(kind, props))
 
     def find_all(
-        self, kind: type[Node], props: dict[str, Any] = {}, nesting: bool = False
-    ) -> Generator[Node]:
+        self, kind: type[_T], props: dict[str, Any] = {}, nesting: bool = False
+    ) -> Generator[_T]:
         if isinstance(self, kind) and self._test_props(props):
             yield self
             if not nesting:
@@ -42,7 +53,7 @@ class Statement(Node):
 
 
 @dataclass
-class ProcDefinition(Node):
+class UserProcDefinition(Node):
     name: str
     signature: TypeSignature
     statements: list[Statement] = field(default_factory=lambda: [])
@@ -51,8 +62,22 @@ class ProcDefinition(Node):
         return self.statements
 
 
+@dataclass
+class BuiltinProcDefinition(Node):
+    """
+    Placeholder class for procedures with no explicit definition because
+    they are builtin
+    """
+
+    signature: TypeSignature
+
+
+ProcDefinition = UserProcDefinition | BuiltinProcDefinition
+
+
+@dataclass
 class Expr(Node):
-    pass
+    expr_type: Type = field(default_factory=lambda: TYPE__NONE, kw_only=True)
 
 
 class LValue(Expr):
@@ -74,6 +99,8 @@ class Call(Expr, Statement):
     target: symbols.Procedure
     args: list[Expr] = field(default_factory=lambda: [])
     style: Style = Style.STANDARD
+    # Calculated values
+    impl: ProcDefinition | None = None
 
     def children(self):
         return self.args

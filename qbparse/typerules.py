@@ -8,16 +8,25 @@ if TYPE_CHECKING:
 
 from qbparse.ast import (
     Assignment,
+    BuiltinProcDefinition,
     Call,
     Cast,
     Constant,
+    Expr,
     If,
     Node,
     Print,
     ProcDefinition,
+    UserProcDefinition,
     Var,
 )
-from qbparse.datatypes import TYPE__NONE, TYPE_STRING, Type, can_cast
+from qbparse.datatypes import (
+    TYPE__NONE,
+    TYPE_STRING,
+    Type,
+    can_cast,
+    can_safely_cast,
+)
 
 
 class WalkContext:
@@ -25,13 +34,16 @@ class WalkContext:
         self.program = program
         self.current = self.program.main
         self.parent = self.program.main
-        self.handlers: list[tuple[type[Node], Callable[[Any], Type | None]]] = [
-            (ProcDefinition, self.proc_definition),
+        self.expr_handlers: list[tuple[type[Expr], Callable[[Any], Type]]] = [
             (Var, self.var),
             (Call, self.call),
             (Cast, self.cast),
-            (Assignment, self.assignment),
             (Constant, self.constant),
+        ]
+        self.stmt_handlers: list[tuple[type[Node], Callable[[Any], Type | None]]] = [
+            (BuiltinProcDefinition, lambda _: TYPE__NONE),
+            (UserProcDefinition, self.proc_definition),
+            (Assignment, self.assignment),
             (Print, self.kw_print),
             (If, self.kw_if),
         ]
@@ -41,33 +53,50 @@ class WalkContext:
 
     def start(self):
         for proc in self.program.globals.procedures.values():
-            for impl in proc.impls():
+            for impl in proc.impls:
                 self.evaluate(impl)
 
-    def evaluate(self, node: Node) -> Type:
+    def evaluate(self, node: Node):
         old_parent = self.parent
         self.parent = self.current
         result = None
-        for kind, handler in self.handlers:
+        for kind, handler in (
+            self.expr_handlers if isinstance(node, Expr) else self.stmt_handlers
+        ):
             if isinstance(node, kind):
                 result = handler(node)
+                if result is None:
+                    result = TYPE__NONE
                 break
         else:
             raise ValueError(f"Unhandled node {node}")
+        if isinstance(node, Expr):
+            node.expr_type = result
         self.current = self.parent
         self.parent = old_parent
-        return result if result else TYPE__NONE
+        return result
 
-    def proc_definition(self, impl: ProcDefinition):
+    def proc_definition(self, impl: UserProcDefinition):
         for stmt in impl.statements:
             self.evaluate(stmt)
-        return TYPE__NONE
 
     def var(self, node: Var):
         return node.target.type
 
     def call(self, node: Call):
-        raise NotImplementedError()
+        arg_types = [self.evaluate(arg) for arg in node.args]
+        node.impl = _find_impl_match(node.target.impls, arg_types)
+        if node.impl is None:
+            self.add_error("Cannot resolve function call types")
+            return TYPE__NONE
+        new_args = list[Expr]()
+        for arg, param_type in zip(node.args, node.impl.signature.params):
+            if arg.expr_type != param_type:
+                new_args.append(Cast(arg, param_type))
+            else:
+                new_args.append(arg)
+        node.args = new_args
+        return node.impl.signature.ret
 
     def cast(self, node: Cast):
         type = self.evaluate(node.expr)
@@ -84,7 +113,6 @@ class WalkContext:
             )
         elif rtype != ltype:
             node.rval = Cast(node.rval, ltype)
-        return TYPE__NONE
 
     def constant(self, node: Constant):
         return node.type
@@ -94,7 +122,6 @@ class WalkContext:
             type = self.evaluate(arg)
             if not type.is_number() and type != TYPE_STRING:
                 self.add_error(f"Cannot print expression of type {type}")
-        return TYPE__NONE
 
     def kw_if(self, node: If):
         type = self.evaluate(node.guard)
@@ -109,9 +136,48 @@ class WalkContext:
                 self.add_error("Condition must be a numeric expression")
             for stmt in stmts:
                 self.evaluate(stmt)
-        return TYPE__NONE
 
 
 def typecheck(program: Program):
     ctx = WalkContext(program)
     ctx.start()
+
+
+def _find_impl_match(impls: list[ProcDefinition], arg_types: list[Type]):
+    """
+    Return the impl whose type signature best match the arg_types given,
+    or None if no impl matches.
+    The algorithm is:
+        1) Select all compatible impls. An impl is compatible if all arguments
+           can be cast (even with loss) to the expected type.
+            a) If there are no compatibles, return None.
+            b) If there is exactly 1 compatible, return it.
+        2) Of all compatible impls, return the first one where all casts are
+           lossless.
+        3) If no impl has all lossless casts, return the last one.
+    Rule 1b is the usual case for simple procedures. 2 allows overloaded
+    functions to be listed in order of increasing type width and the narrowest
+    version that doesn't lose data is picked. 3 is a fallback if a cast is
+    inevitable.
+    """
+    compatibles = [
+        impl for impl in impls if _impl_is_compatible(impl, arg_types, lossless=False)
+    ]
+    if len(compatibles) == 0:
+        return None
+    if len(compatibles) == 1:
+        return compatibles[0]
+    for impl in compatibles:
+        if _impl_is_compatible(impl, arg_types, lossless=True):
+            return impl
+    return compatibles[-1]
+
+
+def _impl_is_compatible(impl: ProcDefinition, arg_types: list[Type], lossless: bool):
+    if len(impl.signature.params) != len(arg_types):
+        return False
+    check_func = can_safely_cast if lossless else can_cast
+    for param, arg in zip(impl.signature.params, arg_types):
+        if not check_func(arg, param):
+            return False
+    return True

@@ -1,35 +1,31 @@
 from pytest import raises
 
 from qbparse import parse
-from qbparse.ast import Call, Constant, Expr, Node, Print, ProcDefinition, Var
-from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING, TypeSignature
+from qbparse.ast import Call, Cast, Constant, Expr, Print, UserProcDefinition, Var
+from qbparse.datatypes import TYPE_INTEGER, TYPE_SINGLE, TYPE_STRING, TypeSignature
 from qbparse.errors import ParseError
 from qbparse.symbols import Procedure
 
-from .helpers import builtin_proc
+from .helpers import Ast, builtin_proc, check
 
 INFIX = Call.Style.INFIX
 PREFIX = Call.Style.PREFIX
 
 
-def check(input: str, expected: Node):
-    expr = parse("?" + input).main.find(Expr)
-    assert expr is not None
-    assert expr == expected
-
-
 def test_binop():
     check(
         "2 + 3 - 4",
-        Call(
+        Ast(
+            Call,
             builtin_proc("-"),
             [
-                Call(
+                Ast(
+                    Call,
                     builtin_proc("+"),
-                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    [Ast(Constant, 2), Ast(Constant, 3)],
                     INFIX,
                 ),
-                Constant(4, TYPE_INTEGER),
+                Ast(Constant, 4),
             ],
             INFIX,
         ),
@@ -39,13 +35,15 @@ def test_binop():
 def test_binop_precedence():
     check(
         "2 - 3 * 4",
-        Call(
+        Ast(
+            Call,
             builtin_proc("-"),
             [
-                Constant(2, TYPE_INTEGER),
-                Call(
+                Ast(Constant, 2),
+                Ast(
+                    Call,
                     builtin_proc("*"),
-                    [Constant(3, TYPE_INTEGER), Constant(4, TYPE_INTEGER)],
+                    [Ast(Constant, 3), Ast(Constant, 4)],
                     INFIX,
                 ),
             ],
@@ -54,23 +52,27 @@ def test_binop_precedence():
     )
     check(
         "2 and 3 = 4 + 5 / 6",
-        Call(
+        Ast(
+            Call,
             builtin_proc("and"),
             [
-                Constant(2, TYPE_INTEGER),
-                Call(
+                Ast(Constant, 2),
+                Ast(
+                    Call,
                     builtin_proc("="),
                     [
-                        Constant(3, TYPE_INTEGER),
-                        Call(
+                        Ast(Constant, 3),
+                        Ast(
+                            Call,
                             builtin_proc("+"),
                             [
-                                Constant(4, TYPE_INTEGER),
-                                Call(
+                                Ast(Constant, 4),
+                                Ast(
+                                    Call,
                                     builtin_proc("/"),
                                     [
-                                        Constant(5, TYPE_INTEGER),
-                                        Constant(6, TYPE_INTEGER),
+                                        Cast(Ast(Constant, 5), TYPE_SINGLE),
+                                        Cast(Ast(Constant, 6), TYPE_SINGLE),
                                     ],
                                     INFIX,
                                 ),
@@ -89,23 +91,26 @@ def test_binop_precedence():
 def test_negation():
     check(
         "-2 * -3",
-        Call(
+        Ast(
+            Call,
             builtin_proc("*"),
             [
-                Call(builtin_proc("-"), [Constant(2, TYPE_INTEGER)], PREFIX),
-                Call(builtin_proc("-"), [Constant(3, TYPE_INTEGER)], PREFIX),
+                Ast(Call, builtin_proc("-"), [Ast(Constant, 2)], PREFIX),
+                Ast(Call, builtin_proc("-"), [Ast(Constant, 3)], PREFIX),
             ],
             INFIX,
         ),
     )
     check(
         "-(2 > 3)",
-        Call(
+        Ast(
+            Call,
             builtin_proc("-"),
             [
-                Call(
+                Ast(
+                    Call,
                     builtin_proc(">"),
-                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    [Ast(Constant, 2), Ast(Constant, 3)],
                     INFIX,
                 )
             ],
@@ -114,13 +119,15 @@ def test_negation():
     )
     check(
         "2 <> --4",
-        Call(
+        Ast(
+            Call,
             builtin_proc("<>"),
             [
-                Constant(2, TYPE_INTEGER),
-                Call(
+                Ast(Constant, 2),
+                Ast(
+                    Call,
                     builtin_proc("-"),
-                    [Call(builtin_proc("-"), [Constant(4, TYPE_INTEGER)], PREFIX)],
+                    [Ast(Call, builtin_proc("-"), [Ast(Constant, 4)], PREFIX)],
                     PREFIX,
                 ),
             ],
@@ -129,23 +136,26 @@ def test_negation():
     )
     check(
         "2--4",
-        Call(
+        Ast(
+            Call,
             builtin_proc("-"),
             [
-                Constant(2, TYPE_INTEGER),
-                Call(builtin_proc("-"), [Constant(4, TYPE_INTEGER)], PREFIX),
+                Ast(Constant, 2),
+                Ast(Call, builtin_proc("-"), [Ast(Constant, 4)], PREFIX),
             ],
             INFIX,
         ),
     )
     check(
         "-2^3",
-        Call(
+        Ast(
+            Call,
             builtin_proc("-"),
             [
-                Call(
+                Ast(
+                    Call,
                     builtin_proc("^"),
-                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    [Ast(Constant, 2), Ast(Constant, 3)],
                     INFIX,
                 )
             ],
@@ -157,23 +167,26 @@ def test_negation():
 def test_not():
     check(
         "2 and not 3",
-        Call(
+        Ast(
+            Call,
             builtin_proc("and"),
             [
-                Constant(2, TYPE_INTEGER),
-                Call(builtin_proc("not"), [Constant(3, TYPE_INTEGER)], PREFIX),
+                Ast(Constant, 2),
+                Ast(Call, builtin_proc("not"), [Ast(Constant, 3)], PREFIX),
             ],
             INFIX,
         ),
     )
     check(
         "not 2 + 3",
-        Call(
+        Ast(
+            Call,
             builtin_proc("not"),
             [
-                Call(
+                Ast(
+                    Call,
                     builtin_proc("+"),
-                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    [Ast(Constant, 2), Ast(Constant, 3)],
                     INFIX,
                 )
             ],
@@ -182,23 +195,28 @@ def test_not():
     )
     check(
         "not not 2 and not - not 3",
-        Call(
+        Ast(
+            Call,
             builtin_proc("and"),
             [
-                Call(
+                Ast(
+                    Call,
                     builtin_proc("not"),
-                    [Call(builtin_proc("not"), [Constant(2, TYPE_INTEGER)], PREFIX)],
+                    [Ast(Call, builtin_proc("not"), [Ast(Constant, 2)], PREFIX)],
                     PREFIX,
                 ),
-                Call(
+                Ast(
+                    Call,
                     builtin_proc("not"),
                     [
-                        Call(
+                        Ast(
+                            Call,
                             builtin_proc("-"),
                             [
-                                Call(
+                                Ast(
+                                    Call,
                                     builtin_proc("not"),
-                                    [Constant(3, TYPE_INTEGER)],
+                                    [Ast(Constant, 3)],
                                     PREFIX,
                                 )
                             ],
@@ -216,40 +234,46 @@ def test_not():
 def test_parentheses():
     check(
         "(2 - 3) * 4",
-        Call(
+        Ast(
+            Call,
             builtin_proc("*"),
             [
-                Call(
+                Ast(
+                    Call,
                     builtin_proc("-"),
-                    [Constant(2, TYPE_INTEGER), Constant(3, TYPE_INTEGER)],
+                    [Ast(Constant, 2), Ast(Constant, 3)],
                     INFIX,
                 ),
-                Constant(4, TYPE_INTEGER),
+                Ast(Constant, 4),
             ],
             INFIX,
         ),
     )
     check(
         "-(2 + ((3 or 4) and ((5))))",
-        Call(
+        Ast(
+            Call,
             builtin_proc("-"),
             [
-                Call(
+                Ast(
+                    Call,
                     builtin_proc("+"),
                     [
-                        Constant(2, TYPE_INTEGER),
-                        Call(
+                        Ast(Constant, 2),
+                        Ast(
+                            Call,
                             builtin_proc("and"),
                             [
-                                Call(
+                                Ast(
+                                    Call,
                                     builtin_proc("or"),
                                     [
-                                        Constant(3, TYPE_INTEGER),
-                                        Constant(4, TYPE_INTEGER),
+                                        Ast(Constant, 3),
+                                        Ast(Constant, 4),
                                     ],
                                     INFIX,
                                 ),
-                                Constant(5, TYPE_INTEGER),
+                                Ast(Constant, 5),
                             ],
                             INFIX,
                         ),
@@ -278,8 +302,11 @@ def test_existing_scalar():
     assert variable is not None
 
     expr = program.main.find(Print).find(Expr)
-    assert expr == Call(
-        builtin_proc("+"), [Var(variable), Constant(3, TYPE_INTEGER)], INFIX
+    assert expr == Ast(
+        Call,
+        builtin_proc("+"),
+        [Var(variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
+        INFIX,
     )
 
 
@@ -289,8 +316,11 @@ def test_implicit_scalar():
     assert variable is not None
 
     expr = program.main.find(Print).find(Expr)
-    assert expr == Call(
-        builtin_proc("+"), [Var(variable), Constant(3, TYPE_INTEGER)], INFIX
+    assert expr == Ast(
+        Call,
+        builtin_proc("+"),
+        [Var(variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
+        INFIX,
     )
 
 
@@ -299,7 +329,7 @@ def test_function_call_unary():
     proc = program.globals.find_procedure("lcase$")
     assert proc is not None
     expr = program.main.find(Print).find(Expr)
-    assert expr == Call(proc, [Constant("hello", TYPE_STRING)])
+    assert expr == Ast(Call, proc, [Ast(Constant, "hello")])
 
 
 def test_unary_function_call_bad_syntax():
@@ -315,7 +345,7 @@ def test_function_call_binary():
         Procedure(
             "binfunc",
             [
-                ProcDefinition(
+                UserProcDefinition(
                     "binfunc",
                     TypeSignature(TYPE_INTEGER, [TYPE_INTEGER, TYPE_STRING]),
                     [],
@@ -325,9 +355,10 @@ def test_function_call_binary():
     )
     program.add_parse('? binfunc(23, "hello")')
     expr = program.main.find(Print).find(Expr)
-    assert expr == Call(
+    assert expr == Ast(
+        Call,
         program.globals.procedures["binfunc"],
-        [Constant(23, TYPE_INTEGER), Constant("hello", TYPE_STRING)],
+        [Ast(Constant, 23, TYPE_INTEGER), Ast(Constant, "hello")],
     )
 
 
@@ -336,13 +367,18 @@ def test_function_call_nested():
     proc = program.globals.find_procedure("lcase$")
     assert proc is not None
     expr = program.main.find(Print).find(Expr)
-    assert expr == Call(
+    assert expr == Ast(
+        Call,
         proc,
         [
-            Call(
+            Ast(
+                Call,
                 builtin_proc("+"),
-                [Call(proc, [Constant("foo", TYPE_STRING)]),
-                Constant("bar", TYPE_STRING)], INFIX
+                [
+                    Ast(Call, proc, [Ast(Constant, "foo")]),
+                    Ast(Constant, "bar"),
+                ],
+                INFIX,
             )
         ],
     )

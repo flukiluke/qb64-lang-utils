@@ -12,3 +12,4 @@ wheels/
 # Other tools
 .pytest_cache/
 .ruff_cache/
+.vscode/

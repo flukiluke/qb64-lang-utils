@@ -4,7 +4,7 @@ from ply.lex import LexToken
 
 from qbparse.errors import ParseError
 from qbparse.lexer import Lexer
-from qbparse.symbols import SymbolStore
+from qbparse.store import SymbolStore
 
 TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 

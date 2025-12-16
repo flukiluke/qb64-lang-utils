@@ -19,7 +19,7 @@ from qbparse.datatypes import (
     Type,
 )
 from qbparse.errors import ParseError
-from qbparse.symbols import SymbolStore
+from qbparse.store import SymbolStore
 
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
 # ruff: noqa: F841
@@ -206,7 +206,7 @@ def Lexer(symbols: SymbolStore):
 
     @Token(
         rf"""(?P<num>{digit}+)
-             (?P<sigil>~?(`{digit}*|%%|&&|%&|%|&))?
+             (?P<sigil>~?(`{digit}*|%%|&&|%&|%|&|[#][#]|[#]|!))?
         """
     )
     def t_INT_LIT(t: LexToken):
@@ -218,7 +218,8 @@ def Lexer(symbols: SymbolStore):
                 t.value = detect_int_lit_type(num_part)
             else:
                 t.value = constrain_int_lit_value(
-                    num_part, cast(IntegralType, symbols.lookup_sigil(sigil))
+                    num_part,
+                    cast(IntegralType | FloatType, symbols.lookup_sigil(sigil)),
                 )
         except ValueError:
             t.type = "ERROR"
@@ -352,7 +353,9 @@ def detect_int_lit_type(value: int) -> tuple[int, Type]:
     raise ValueError()
 
 
-def constrain_int_lit_value(value: int, type: IntegralType):
+def constrain_int_lit_value(value: int, type: IntegralType | FloatType):
+    if type == TYPE__FLOAT:
+        return (ExtendedFloat(str(value)), type)
     if type.min <= value <= type.max:
         return (value, type)
     raise ValueError()

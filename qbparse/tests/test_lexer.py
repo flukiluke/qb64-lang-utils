@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from qbparse.ast import BuiltinProcDefinition
 from qbparse.datatypes import (
     TYPE__BIT,
     TYPE__BYTE,
@@ -21,8 +22,8 @@ from qbparse.datatypes import (
     TypeSignature,
 )
 from qbparse.lexer import Lexer
-from qbparse.procedure import BuiltinProcedure
-from qbparse.symbols import SymbolStore
+from qbparse.store import SymbolStore
+from qbparse.symbols import Procedure
 
 
 @dataclass
@@ -119,6 +120,12 @@ def test_int_lit_explicit_type():
     )
     check_expr("18446744073709551616~&&", Token("ERROR"))
     check_expr("1&&", Token("NUM_LIT", (1, TYPE__INTEGER64)))
+
+
+def test_int_lit_explicit_float_type():
+    check_expr("2!", Token("NUM_LIT", (2, TYPE_SINGLE)))
+    check_expr("2#", Token("NUM_LIT", (2, TYPE_DOUBLE)))
+    check_expr("2##", Token("NUM_LIT", (ExtendedFloat("2"), TYPE__FLOAT)))
 
 
 def test_dec_lit():
@@ -332,9 +339,13 @@ def test_keyword():
 
 def test_procedure():
     symbols = SymbolStore()
-    a_sub = BuiltinProcedure("a_sub", [TypeSignature(TYPE__NONE, [])])
-    a_function = BuiltinProcedure("a_function", [TypeSignature(TYPE_STRING, [])])
-    a_string_builtin = BuiltinProcedure("a_string_builtin$", [TypeSignature(TYPE_STRING, [])])
+    a_sub = Procedure("a_sub", [BuiltinProcDefinition(TypeSignature(TYPE__NONE, []))])
+    a_function = Procedure(
+        "a_function", [BuiltinProcDefinition(TypeSignature(TYPE_STRING, []))]
+    )
+    a_string_builtin = Procedure(
+        "a_string_builtin$", [BuiltinProcDefinition(TypeSignature(TYPE_STRING, []))]
+    )
     symbols.procedures["a_sub"] = a_sub
     symbols.procedures["a_function"] = a_function
     symbols.procedures["a_string_builtin$"] = a_string_builtin

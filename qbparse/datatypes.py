@@ -1,7 +1,6 @@
 import struct
 from dataclasses import dataclass
 from functools import total_ordering
-from typing import Any
 
 
 @total_ordering
@@ -139,18 +138,10 @@ class BitnType(IntegralType):
         return True
 
 
+@dataclass
 class TypeSignature:
-    def __init__(self, ret: Type, params: list[Type]):
-        self.ret = ret
-        self.params = params
-
-    def __repr__(self):
-        return f"[TypeSignature ret={self.ret} params={self.params}]"
-
-    def __eq__(self, other: Any):
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.ret == other.ret and self.params == other.params
+    ret: Type
+    params: list[Type]
 
 
 def bits2float(spec1: str, spec2: str, b: int):
@@ -158,9 +149,7 @@ def bits2float(spec1: str, spec2: str, b: int):
 
 
 TYPE__NONE = Type("_none")
-TYPE__GEN_T = Type("_gen_t")
-TYPE__GEN_INT = IntegralType("_gen_int", min=0, max=0)
-TYPE__GEN_FLOAT = FloatType("_gen_float", min=0, max=0)
+TYPE_ANY = Type("any")
 TYPE__BIT = IntegralType("_bit", -(2**0), 2**0 - 1)
 TYPE__BYTE = IntegralType("_byte", -(2**7), 2**7 - 1)
 TYPE_INTEGER = IntegralType("integer", -(2**15), 2**15 - 1)
@@ -171,6 +160,19 @@ TYPE__UNSIGNED__BYTE = IntegralType("_unsigned _byte", 0, 2**8 - 1)
 TYPE__UNSIGNED_INTEGER = IntegralType("_unsigned integer", 0, 2**16 - 1)
 TYPE__UNSIGNED_LONG = IntegralType("_unsigned long", 0, 2**32 - 1)
 TYPE__UNSIGNED__INTEGER64 = IntegralType("_unsigned _integer64", 0, 2**64 - 1)
+# These must be in increasing size order for function overloads to work
+INTEGRAL_TYPES = [
+    TYPE__BIT,
+    TYPE__UNSIGNED__BIT,
+    TYPE__BYTE,
+    TYPE__UNSIGNED__BYTE,
+    TYPE_INTEGER,
+    TYPE__UNSIGNED_INTEGER,
+    TYPE_LONG,
+    TYPE__UNSIGNED_LONG,
+    TYPE__INTEGER64,
+    TYPE__UNSIGNED__INTEGER64,
+]
 TYPE_SINGLE = FloatType(
     "single", bits2float("f", "L", 0xFF7FFFFF), bits2float("f", "L", 0x7F7FFFFF)
 )
@@ -188,6 +190,7 @@ TYPE__FLOAT = FloatType(
     ExtendedFloat("-1.18973149535723176502126", "4932"),
     ExtendedFloat("1.18973149535723176502126", "4932"),
 )
+FLOAT_TYPES = [TYPE_SINGLE, TYPE_DOUBLE, TYPE__FLOAT]
 TYPE_STRING = StringType("string")
 
 BUILTIN_TYPES: dict[str, Type] = {
@@ -246,6 +249,4 @@ def can_safely_cast(src: Type, dest: Type):
         return True
     assert isinstance(src, (IntegralType, FloatType))
     assert isinstance(dest, (IntegralType, FloatType))
-    assert src not in [TYPE__GEN_T, TYPE__GEN_INT, TYPE__GEN_FLOAT]
-    assert dest not in [TYPE__GEN_T, TYPE__GEN_INT, TYPE__GEN_FLOAT]
     return src.min >= dest.min and src.max <= dest.max
