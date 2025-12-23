@@ -1,23 +1,37 @@
 from qbparse import parse
 from qbparse.ast import BuiltinProcDefinition, Call, Cast, Constant
-from qbparse.datatypes import TYPE_INTEGER, TYPE_SINGLE, TypeSignature
+from qbparse.datatypes import (
+    TYPE__FLOAT,
+    TYPE__UNSIGNED_INTEGER,
+    TYPE_DOUBLE,
+    TYPE_INTEGER,
+    TYPE_LONG,
+    TYPE_SINGLE,
+    TYPE_STRING,
+    TypeSignature,
+)
 
 from .helpers import Ast
 
 
-def okay(input: str):
-    return len(parse(input).errors) == 0
+def check(input: str):
+    result = parse(input)
+    assert len(result.errors) == 0
+    return result
 
 
 def test_assignment():
-    assert okay("x = 3")
-    assert okay('x$ = "foo"')
-    assert not okay("x$ = 3")
-    assert okay("x = 3")
+    check("x = 3")
+    check('x$ = "foo"')
+    check("x = 3")
+    assert len(parse("x$ = 3").errors) != 0
 
 
 def test_operator_overload_int():
-    expr = parse("? 2% + 3%").main.find(Call)
+    """
+    Exact argument match
+    """
+    expr = check("? 2% + 3%").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -33,7 +47,10 @@ def test_operator_overload_int():
 
 
 def test_operator_overload_mixed_num():
-    expr = parse("? 2% + 3!").main.find(Call)
+    """
+    Promotion of one argument
+    """
+    expr = check("? 2% - 3!").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -46,3 +63,126 @@ def test_operator_overload_mixed_num():
         ),
         expr_type=TYPE_SINGLE,
     )
+
+
+def test_operator_overload_mixed_unsigned():
+    """
+    Promotion of unsigned to larger signed
+    """
+    expr = check("? 2& * 3~%").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Ast(Constant, 2, TYPE_LONG),
+            Cast(Ast(Constant, 3, TYPE__UNSIGNED_INTEGER), TYPE_LONG),
+        ],
+        impl=Ast(
+            BuiltinProcDefinition,
+            TypeSignature(TYPE_LONG, [TYPE_LONG, TYPE_LONG]),
+        ),
+        expr_type=TYPE_LONG,
+    )
+
+
+def test_operator_overload_no_match():
+    """
+    Incompatible arguments
+    """
+    assert len(parse('? "foo" + 3').errors) > 0
+
+
+def test_operator_overload_integer_to_float():
+    """
+    Promotion of integers for float-only function
+    """
+    expr = check("? 2% / 3~`4").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 2), TYPE_SINGLE),
+            Cast(Ast(Constant, 3), TYPE_SINGLE),
+        ],
+        impl=Ast(
+            BuiltinProcDefinition,
+            TypeSignature(TYPE_SINGLE, [TYPE_SINGLE, TYPE_SINGLE]),
+        ),
+        expr_type=TYPE_SINGLE,
+    )
+
+
+def test_operator_overload_long_to_float():
+    """
+    Promotion of long for float-only function
+    """
+    expr = check("? 2& / 3%").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 2), TYPE_DOUBLE),
+            Cast(Ast(Constant, 3), TYPE_DOUBLE),
+        ],
+        impl=Ast(
+            BuiltinProcDefinition,
+            TypeSignature(TYPE_DOUBLE, [TYPE_DOUBLE, TYPE_DOUBLE]),
+        ),
+        expr_type=TYPE_DOUBLE,
+    )
+
+
+def test_operator_overload_in64_to_float():
+    """
+    Promotion of _integer64 for float-only function
+    """
+    expr = check("? 2&& / 3~&&").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 2), TYPE__FLOAT),
+            Cast(Ast(Constant, 3), TYPE__FLOAT),
+        ],
+        impl=Ast(
+            BuiltinProcDefinition,
+            TypeSignature(TYPE__FLOAT, [TYPE__FLOAT, TYPE__FLOAT]),
+        ),
+        expr_type=TYPE__FLOAT,
+    )
+
+
+def test_operator_overload_mixed_to_float():
+    """
+    Promotion of integral and float types for float-only function
+    """
+    expr = check("? 2& / 3!").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 2), TYPE_DOUBLE),
+            Cast(Ast(Constant, 3), TYPE_DOUBLE),
+        ],
+        impl=Ast(
+            BuiltinProcDefinition,
+            TypeSignature(TYPE_DOUBLE, [TYPE_DOUBLE, TYPE_DOUBLE]),
+        ),
+        expr_type=TYPE_DOUBLE,
+    )
+
+
+def test_standard_function_calls():
+    expr = check('? lcase$("foo")').main.find(Call)
+    assert expr == Ast(Call, args=[Ast(Constant, "foo")], expr_type=TYPE_STRING)
+    expr = check("? _atan2(3, 4)").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[Cast(Ast(Constant, 3), TYPE_SINGLE), Cast(Ast(Constant, 4), TYPE_SINGLE)],
+        expr_type=TYPE_SINGLE,
+    )
+
+
+def test_function_wrong_num_arguments():
+    assert len(parse('? lcase$("foo","bar")').errors) > 0
+    assert len(parse("? _atan2(3)").errors) > 0
+
+
+def test_function_wrong_type_arguments():
+    assert len(parse("? lcase$(3)").errors) > 0
+    assert len(parse('? _atan2("foo")').errors) > 0

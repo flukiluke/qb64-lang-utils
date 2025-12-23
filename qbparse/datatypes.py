@@ -85,6 +85,9 @@ class Type:
 class FloatType(Type):
     min: float | ExtendedFloat
     max: float | ExtendedFloat
+    # Range of integers that can be exactly represented by this type
+    min_int: int
+    max_int: int
 
     def __repr__(self):
         return super().__repr__()
@@ -174,7 +177,11 @@ INTEGRAL_TYPES = [
     TYPE__UNSIGNED__INTEGER64,
 ]
 TYPE_SINGLE = FloatType(
-    "single", bits2float("f", "L", 0xFF7FFFFF), bits2float("f", "L", 0x7F7FFFFF)
+    "single",
+    bits2float("f", "L", 0xFF7FFFFF),
+    bits2float("f", "L", 0x7F7FFFFF),
+    -(2**24),
+    2**24,
 )
 # A number outside the double range will be converted to inf by Python so the range
 # checking doesn't actually need these values.
@@ -182,6 +189,8 @@ TYPE_DOUBLE = FloatType(
     "double",
     bits2float("d", "Q", 0xFFEFFFFFFFFFFFFF),
     bits2float("d", "Q", 0x7FEFFFFFFFFFFFFF),
+    -(2**53),
+    2**53,
 )
 # Originally intended to be a x87 80 bit float, but allowed to be a 128 bit float.
 # Limits assume the former (approximate values).
@@ -189,6 +198,8 @@ TYPE__FLOAT = FloatType(
     "_float",
     ExtendedFloat("-1.18973149535723176502126", "4932"),
     ExtendedFloat("1.18973149535723176502126", "4932"),
+    -(2**64),
+    2**64,
 )
 FLOAT_TYPES = [TYPE_SINGLE, TYPE_DOUBLE, TYPE__FLOAT]
 TYPE_STRING = StringType("string")
@@ -247,6 +258,10 @@ def can_safely_cast(src: Type, dest: Type):
         return False
     if dest == TYPE__FLOAT:
         return True
+    if isinstance(src, FloatType) and isinstance(dest, IntegralType):
+        return False
+    if isinstance(src, IntegralType) and isinstance(dest, FloatType):
+        return src.min >= dest.min_int and src.max <= dest.max_int
     assert isinstance(src, (IntegralType, FloatType))
     assert isinstance(dest, (IntegralType, FloatType))
     return src.min >= dest.min and src.max <= dest.max

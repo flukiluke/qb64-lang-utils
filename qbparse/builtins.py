@@ -142,6 +142,8 @@ PROCS = [
     P("or", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
     P("and", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
     P("not", [*_generic(None, [None], INTEGRAL_TYPES)]),
+    # Other maths
+    P("_atan2", [*_generic(None, [None, None], FLOAT_TYPES)]),
     # Everything else
     P("val", [BPD(TS(TYPE__FLOAT, [TYPE_STRING]))]),
     P("lcase$", [BPD(TS(TYPE_STRING, [TYPE_STRING]))]),

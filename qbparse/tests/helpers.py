@@ -54,7 +54,7 @@ def _test_props(other: object, props: dict[str, Any]):
     for prop, value in props.items():
         try:
             if getattr(other, prop) != value:
-                print(f"Mismatch on {prop}: {getattr(other, prop)} vs {value}")
+                print(f"Mismatch on {prop}:\n{getattr(other, prop)}\n\n{value}")
                 return False
         except AttributeError:
             return False
