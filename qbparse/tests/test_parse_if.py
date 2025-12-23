@@ -5,13 +5,15 @@ from qbparse.ast import Constant, If, Print, Statement
 from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING
 from qbparse.errors import ParseError
 
-ONE = Constant(1, TYPE_INTEGER)
-TWO = Constant(2, TYPE_INTEGER)
-THREE = Constant(3, TYPE_INTEGER)
+from .helpers import Ast
+
+ONE = Ast(Constant, 1, TYPE_INTEGER)
+TWO = Ast(Constant, 2, TYPE_INTEGER)
+THREE = Ast(Constant, 3, TYPE_INTEGER)
 
 
 def PrintStr(s: str):
-    return Print([Constant(s, TYPE_STRING)])
+    return Print([Ast(Constant, s, TYPE_STRING)])
 
 
 def run(input: str):

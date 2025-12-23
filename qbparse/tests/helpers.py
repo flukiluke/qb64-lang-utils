@@ -17,7 +17,7 @@ def check(input: str, expected: qbparse.ast.Node):
     assert expr == expected
 
 
-class Ast(qbparse.ast.Statement, qbparse.ast.Expr):
+class Ast(qbparse.ast.Statement, qbparse.ast.LValue):
     def __init__(self, kind: type[qbparse.ast.Node], *args: Any, **kwargs: Any):
         self.kind = kind
         self.props: dict[str, Any] = {}

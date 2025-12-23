@@ -66,7 +66,7 @@ def test_binop_precedence():
                             Call,
                             builtin_proc("+"),
                             [
-                                Ast(Constant, 4),
+                                Cast(Ast(Constant, 4), TYPE_SINGLE),
                                 Ast(
                                     Call,
                                     builtin_proc("/"),
@@ -155,7 +155,10 @@ def test_negation():
                 Ast(
                     Call,
                     builtin_proc("^"),
-                    [Ast(Constant, 2), Ast(Constant, 3)],
+                    [
+                        Cast(Ast(Constant, 2), TYPE_SINGLE),
+                        Cast(Ast(Constant, 3), TYPE_SINGLE),
+                    ],
                     INFIX,
                 )
             ],
@@ -305,7 +308,7 @@ def test_existing_scalar():
     assert expr == Ast(
         Call,
         builtin_proc("+"),
-        [Var(variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
+        [Ast(Var, variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
         INFIX,
     )
 
@@ -319,7 +322,7 @@ def test_implicit_scalar():
     assert expr == Ast(
         Call,
         builtin_proc("+"),
-        [Var(variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
+        [Ast(Var, variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
         INFIX,
     )
 

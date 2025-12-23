@@ -16,22 +16,22 @@ def run(input: str, variable_name: str):
 def test_implicit_scalar():
     impl, variable = run("x = 5", "x")
     assert impl.find(Assignment) == Assignment(
-        Var(variable), Cast(Ast(Constant, 5), TYPE_SINGLE)
+        Ast(Var, variable), Cast(Ast(Constant, 5), TYPE_SINGLE)
     )
 
 
 def test_existing_scalar():
     impl, variable = run("foo = 32 : foo = 17", "foo")
     assert list(impl.find_all(Assignment)) == [
-        Assignment(Var(variable), Cast(Ast(Constant, 32), TYPE_SINGLE)),
-        Assignment(Var(variable), Cast(Ast(Constant, 17), TYPE_SINGLE)),
+        Assignment(Ast(Var, variable), Cast(Ast(Constant, 32), TYPE_SINGLE)),
+        Assignment(Ast(Var, variable), Cast(Ast(Constant, 17), TYPE_SINGLE)),
     ]
 
 
 def test_expression_rvalue():
     impl, variable = run("foo = 23 / 7", "foo")
     assert impl.find(Assignment) == Assignment(
-        Var(variable),
+        Ast(Var, variable),
         Ast(
             Call,
             builtin_proc("/"),
