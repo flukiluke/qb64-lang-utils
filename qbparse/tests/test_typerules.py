@@ -2,12 +2,14 @@ from qbparse import parse
 from qbparse.ast import BuiltinProcDefinition, Call, Cast, Constant
 from qbparse.datatypes import (
     TYPE__FLOAT,
+    TYPE__INTEGER64,
     TYPE__UNSIGNED_INTEGER,
     TYPE_DOUBLE,
     TYPE_INTEGER,
     TYPE_LONG,
     TYPE_SINGLE,
     TYPE_STRING,
+    ExtendedFloat,
     TypeSignature,
 )
 
@@ -89,6 +91,36 @@ def test_operator_overload_no_match():
     Incompatible arguments
     """
     assert len(parse('? "foo" + 3').errors) > 0
+
+
+def test_operator_overload_float_to_integral():
+    """
+    Rounding of float types to integral
+    """
+    expr = check("? not 3!").main.find(Call)
+    assert expr == Ast(Call, args=[Cast(Ast(Constant, 3), TYPE__INTEGER64)])
+    expr = check("? 4.1# and 5.5##").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 4.1), TYPE__INTEGER64),
+            Cast(Ast(Constant, ExtendedFloat("5.5")), TYPE__INTEGER64),
+        ],
+    )
+
+
+def test_operator_overload_float_mixed_to_integral():
+    """
+    Rounding of float and integeral to integral
+    """
+    expr = check("? 3! and 4%").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 3), TYPE__INTEGER64),
+            Cast(Ast(Constant, 4), TYPE__INTEGER64),
+        ],
+    )
 
 
 def test_operator_overload_integer_to_float():

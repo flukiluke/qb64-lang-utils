@@ -21,8 +21,10 @@ from qbparse.ast import (
     Var,
 )
 from qbparse.datatypes import (
+    TYPE__INTEGER64,
     TYPE__NONE,
     TYPE_STRING,
+    FloatType,
     Type,
     can_cast,
     can_safely_cast,
@@ -153,12 +155,15 @@ def _find_impl_match(impls: list[ProcDefinition], arg_types: list[Type]):
             a) If there are no compatibles, return None.
             b) If there is exactly 1 compatible, return it.
         2) Of all compatible impls, return the first one where all casts are
-           lossless.
-        3) If no impl has all lossless casts, return the last one.
+           lossless. If no impl has all lossless casts, continue to 3.
+        3) Round all float arguments to the largest signed integral type
+           (i.e. _integer64) and return the first compatible impl that
+           now has all lossless casts.
+        4) If still no impl has all lossless casts, return the last one.
     Rule 1b is the usual case for simple procedures. 2 allows overloaded
     functions to be listed in order of increasing type width and the narrowest
-    version that doesn't lose data is picked. 3 is a fallback if a cast is
-    inevitable.
+    version that doesn't lose data is picked. 3 handles passing floats to integer-only
+    functions like bitwise operators. 4 is a fallback if a cast is inevitable.
     """
     compatibles = [
         impl for impl in impls if _impl_is_compatible(impl, arg_types, lossless=False)
@@ -167,6 +172,12 @@ def _find_impl_match(impls: list[ProcDefinition], arg_types: list[Type]):
         return None
     if len(compatibles) == 1:
         return compatibles[0]
+    for impl in compatibles:
+        if _impl_is_compatible(impl, arg_types, lossless=True):
+            return impl
+    arg_types = list(
+        map(lambda t: TYPE__INTEGER64 if isinstance(t, FloatType) else t, arg_types)
+    )
     for impl in compatibles:
         if _impl_is_compatible(impl, arg_types, lossless=True):
             return impl
