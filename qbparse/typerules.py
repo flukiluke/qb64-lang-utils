@@ -14,6 +14,7 @@ from qbparse.ast import (
     Constant,
     Expr,
     If,
+    Loop,
     Node,
     Print,
     ProcDefinition,
@@ -48,6 +49,7 @@ class WalkContext:
             (Assignment, self.assignment),
             (Print, self.kw_print),
             (If, self.kw_if),
+            (Loop, self.kw_loop),
         ]
 
     def add_error(self, text: str):
@@ -138,6 +140,13 @@ class WalkContext:
                 self.add_error("Condition must be a numeric expression")
             for stmt in stmts:
                 self.evaluate(stmt)
+
+    def kw_loop(self, node: Loop):
+        type = self.evaluate(node.guard)
+        if not type.is_number():
+            self.add_error("Loop guard must be a numeric expression")
+        for stmt in node.block:
+            self.evaluate(stmt)
 
 
 def typecheck(program: Program):

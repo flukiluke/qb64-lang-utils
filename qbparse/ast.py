@@ -156,3 +156,15 @@ class If(Statement):
             *[e[1] for e in self.elseifs],
             self.false_branch,
         )
+
+
+@dataclass
+class Loop(Statement):
+    # Loop while guard is true, UNTIL has a negation added
+    guard: Expr
+    block: list[Statement]
+    # True => DO WHILE/UNTIL or WHILE, False => LOOP WHILE/UNTIL
+    top_check: bool
+
+    def children(self):
+        return chain([self.guard], self.block)

@@ -44,6 +44,7 @@ KEYWORDS = set(
         # Loops
         "do",
         "while",
+        "until",
         "loop",
         "wend",
         # Flow control

@@ -1,7 +1,8 @@
 from collections.abc import Callable
 
-from qbparse.ast import Assignment, Expr, If, Print, Statement
+from qbparse.ast import Assignment, Call, Constant, Expr, If, Loop, Print, Statement
 from qbparse.context import ParseContext
+from qbparse.datatypes import TYPE__BYTE
 from qbparse.errors import ParseError
 from qbparse.expression import do_expr, do_lvalue
 
@@ -86,10 +87,63 @@ def do_if(ctx: ParseContext):
     return If(guard, thens, elseifs, elses)
 
 
+def do_do(ctx: ParseContext):
+    """
+    Expects: DO
+    Results: newline
+    """
+    next(ctx)
+    if ctx.at_a("KEYWORD", "while"):
+        next(ctx)
+        guard = do_expr(ctx)
+        block = do_block(ctx)
+        ctx.consume("KEYWORD", "loop")
+        return Loop(guard, block, top_check=True)
+    elif ctx.at_a("KEYWORD", "until"):
+        next(ctx)
+        guard = Call(
+            ctx.symbols.procedures["<>"], [do_expr(ctx), Constant(0, TYPE__BYTE)]
+        )
+        block = do_block(ctx)
+        ctx.consume("KEYWORD", "loop")
+        return Loop(guard, block, top_check=True)
+    elif ctx.at_a("NEWLINE"):
+        block = do_block(ctx)
+        ctx.consume("KEYWORD", "loop")
+        if ctx.at_a("KEYWORD", "while"):
+            next(ctx)
+            guard = do_expr(ctx)
+            return Loop(guard, block, top_check=False)
+        elif ctx.at_a("KEYWORD", "until"):
+            next(ctx)
+            guard = Call(
+                ctx.symbols.procedures["<>"], [do_expr(ctx), Constant(0, TYPE__BYTE)]
+            )
+            return Loop(guard, block, top_check=False)
+        elif ctx.at_line_terminator():
+            # Infinite loop
+            return Loop(Constant(1, TYPE__BYTE), block, top_check=False)
+    raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
+
+
+def do_while(ctx: ParseContext):
+    """
+    Expects: WHILE
+    Results: newline
+    """
+    next(ctx)
+    guard = do_expr(ctx)
+    block = do_block(ctx)
+    ctx.consume("KEYWORD", "wend")
+    return Loop(guard, block, top_check=True)
+
+
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "print": do_print,
     "?": do_print,
     "if": do_if,
+    "do": do_do,
+    "while": do_while,
 }
 
 
