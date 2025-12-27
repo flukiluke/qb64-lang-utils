@@ -59,7 +59,7 @@ class ParseContext:
             if self.tok.type != tok_type:
                 raise ParseError("Expected " + tok_type)
         else:
-            if self.tok.type != tok_type and self.tok.value != tok_value:
+            if self.tok.type != tok_type or self.tok.value != tok_value:
                 raise ParseError(f"Expected {tok_type} {tok_value}")
         return next(self)
 

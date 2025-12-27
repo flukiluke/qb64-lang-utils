@@ -41,7 +41,7 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
         match token.type, token.value:
             case "PUNCTUATION", "(":
                 result = do_expr(ctx)
-                ctx.consume("PUNCTUATION", "(")
+                ctx.consume("PUNCTUATION", ")")
                 return result
             case "PUNCTUATION", "-":
                 return Call(
