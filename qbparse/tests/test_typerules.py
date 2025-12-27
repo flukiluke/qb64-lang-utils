@@ -1,6 +1,7 @@
 from qbparse import parse
 from qbparse.ast import BuiltinProcDefinition, Call, Cast, Constant
 from qbparse.datatypes import (
+    TYPE__BYTE,
     TYPE__FLOAT,
     TYPE__INTEGER64,
     TYPE__UNSIGNED_INTEGER,
@@ -13,7 +14,7 @@ from qbparse.datatypes import (
     TypeSignature,
 )
 
-from .helpers import Ast
+from .helpers import Ast, builtin_proc
 
 
 def check(input: str):
@@ -28,6 +29,70 @@ def test_assignment():
     check("x = 3")
     assert len(parse("x$ = 3").errors) != 0
 
+
+def test_equality():
+    expr = check("? 1% = 2%").main.find(Call)
+    assert expr == Ast(
+        Call,
+        builtin_proc("="),
+        args=[
+            Ast(Constant, 1),
+            Ast(Constant, 2)
+        ],
+        expr_type=TYPE__BYTE
+    )
+    expr = check("? 1% = 2&").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 1), TYPE_LONG),
+            Ast(Constant, 2)
+        ],
+    )
+    expr = check("? 1& = 2%").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Ast(Constant, 1),
+            Cast(Ast(Constant, 2), TYPE_LONG)
+        ],
+    )
+    expr = check("? 1! = 2%").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Ast(Constant, 1),
+            Cast(Ast(Constant, 2), TYPE_SINGLE)
+        ],
+    )
+    expr = check("? 1! = 2#").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 1), TYPE_DOUBLE),
+            Ast(Constant, 2),
+        ],
+    )
+    expr = check("? 1&& = 2#").main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Cast(Ast(Constant, 1), TYPE__FLOAT),
+            Cast(Ast(Constant, 2), TYPE__FLOAT)
+        ],
+    )
+    expr = check('? "foo" = "bar"').main.find(Call)
+    assert expr == Ast(
+        Call,
+        args=[
+            Ast(Constant, "foo"),
+            Ast(Constant, "bar"),
+        ],
+    )
+
+def test_equality_errors():
+    assert len(parse('? "foo" = 2').errors) > 0
+    assert len(parse('? 2 = "foo"').errors) > 0
 
 def test_operator_overload_int():
     """

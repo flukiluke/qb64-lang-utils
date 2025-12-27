@@ -1,10 +1,12 @@
 from pytest import raises
 
 from qbparse import parse
-from qbparse.ast import Call, Cast, Constant, Expr, Print, UserProcDefinition, Var
-from qbparse.datatypes import TYPE_INTEGER, TYPE_SINGLE, TYPE_STRING, TypeSignature
-from qbparse.errors import ParseError
-from qbparse.symbols import Procedure
+from qbparse.ast import Call, Cast, Constant, Expr, Print, Var
+from qbparse.datatypes import (
+    TYPE__INTEGER64,
+    TYPE_INTEGER,
+    TYPE_SINGLE,
+)
 
 from .helpers import Ast, builtin_proc, check
 
@@ -57,11 +59,11 @@ def test_binop_precedence():
             builtin_proc("and"),
             [
                 Ast(Constant, 2),
-                Ast(
+                Cast(Ast(
                     Call,
                     builtin_proc("="),
                     [
-                        Ast(Constant, 3),
+                        Cast(Ast(Constant, 3), TYPE_SINGLE),
                         Ast(
                             Call,
                             builtin_proc("+"),
@@ -81,7 +83,7 @@ def test_binop_precedence():
                         ),
                     ],
                     INFIX,
-                ),
+                ), TYPE_INTEGER)
             ],
             INFIX,
         ),

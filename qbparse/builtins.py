@@ -7,6 +7,7 @@ from qbparse.datatypes import (
     INTEGRAL_TYPES,
     TYPE__BYTE,
     TYPE__FLOAT,
+    TYPE__INTEGER64,
     TYPE_ANY,
     TYPE_STRING,
     Type,
@@ -67,14 +68,7 @@ KEYWORDS = set(
 PROCS = [
     # Comparison operators
     P("=", [BPD(TS(TYPE__BYTE, [TYPE_ANY, TYPE_ANY]))]),
-    P(
-        "<>",
-        [
-            BPD(TS(TYPE__BYTE, [TYPE_STRING, TYPE_STRING])),
-            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
-            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
-        ],
-    ),
+    P("<>", [BPD(TS(TYPE__BYTE, [TYPE_ANY, TYPE_ANY]))]),
     P(
         "<",
         [
@@ -148,4 +142,5 @@ PROCS = [
     # Everything else
     P("val", [BPD(TS(TYPE__FLOAT, [TYPE_STRING]))]),
     P("lcase$", [BPD(TS(TYPE_STRING, [TYPE_STRING]))]),
+    P("left$", [BPD(TS(TYPE_STRING, [TYPE_STRING, TYPE__INTEGER64]))]),
 ]

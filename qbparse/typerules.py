@@ -22,6 +22,7 @@ from qbparse.ast import (
     Var,
 )
 from qbparse.datatypes import (
+    TYPE__FLOAT,
     TYPE__INTEGER64,
     TYPE__NONE,
     TYPE_STRING,
@@ -88,6 +89,8 @@ class WalkContext:
         return node.target.type
 
     def call(self, node: Call):
+        if node.target.name == "=" or node.target.name == "<>":
+            return self._equality_call(node)
         arg_types = [self.evaluate(arg) for arg in node.args]
         node.impl = _find_impl_match(node.target.impls, arg_types)
         if node.impl is None:
@@ -100,6 +103,26 @@ class WalkContext:
             else:
                 new_args.append(arg)
         node.args = new_args
+        return node.impl.signature.ret
+
+    def _equality_call(self, node: Call):
+        if len(node.args) != 2:
+            self.add_error(node.target.name + " operator must have 2 arguments")
+            return TYPE__NONE
+        node.impl = node.target.impls[0]
+        left = self.evaluate(node.args[0])
+        right = self.evaluate(node.args[1])
+        if left == right:
+            pass
+        elif not left.is_number() or not right.is_number():
+            self.add_error(f"Cannot apply {node.target.name} operator to {left} and {right}")
+            return TYPE__NONE
+        elif can_safely_cast(left, right):
+            node.args[0] = Cast(node.args[0], right)
+        elif can_safely_cast(right, left):
+            node.args[1] = Cast(node.args[1], left)
+        else:
+            node.args = [Cast(node.args[0], TYPE__FLOAT), Cast(node.args[1], TYPE__FLOAT)]
         return node.impl.signature.ret
 
     def cast(self, node: Cast):

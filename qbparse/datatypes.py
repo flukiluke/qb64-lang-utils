@@ -146,7 +146,6 @@ class TypeSignature:
     ret: Type
     params: list[Type]
 
-
 def bits2float(spec1: str, spec2: str, b: int):
     return struct.unpack(">" + spec1, struct.pack(">" + spec2, b))[0]
 
@@ -251,6 +250,8 @@ def can_safely_cast(src: Type, dest: Type):
     Can src be cast to dest without loss of data?
     """
     if src == dest:
+        return True
+    if dest == TYPE_ANY:
         return True
     if not src.is_number() or not dest.is_number():
         return False
