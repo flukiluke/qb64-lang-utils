@@ -7,6 +7,7 @@ from qbparse.datatypes import (
     TYPE_INTEGER,
     TYPE_SINGLE,
 )
+from qbparse.diagnostics import ParseError
 
 from .helpers import Ast, builtin_proc, check
 
@@ -59,31 +60,34 @@ def test_binop_precedence():
             builtin_proc("and"),
             [
                 Ast(Constant, 2),
-                Cast(Ast(
-                    Call,
-                    builtin_proc("="),
-                    [
-                        Cast(Ast(Constant, 3), TYPE_SINGLE),
-                        Ast(
-                            Call,
-                            builtin_proc("+"),
-                            [
-                                Cast(Ast(Constant, 4), TYPE_SINGLE),
-                                Ast(
-                                    Call,
-                                    builtin_proc("/"),
-                                    [
-                                        Cast(Ast(Constant, 5), TYPE_SINGLE),
-                                        Cast(Ast(Constant, 6), TYPE_SINGLE),
-                                    ],
-                                    INFIX,
-                                ),
-                            ],
-                            INFIX,
-                        ),
-                    ],
-                    INFIX,
-                ), TYPE_INTEGER)
+                Cast(
+                    Ast(
+                        Call,
+                        builtin_proc("="),
+                        [
+                            Cast(Ast(Constant, 3), TYPE_SINGLE),
+                            Ast(
+                                Call,
+                                builtin_proc("+"),
+                                [
+                                    Cast(Ast(Constant, 4), TYPE_SINGLE),
+                                    Ast(
+                                        Call,
+                                        builtin_proc("/"),
+                                        [
+                                            Cast(Ast(Constant, 5), TYPE_SINGLE),
+                                            Cast(Ast(Constant, 6), TYPE_SINGLE),
+                                        ],
+                                        INFIX,
+                                    ),
+                                ],
+                                INFIX,
+                            ),
+                        ],
+                        INFIX,
+                    ),
+                    TYPE_INTEGER,
+                ),
             ],
             INFIX,
         ),
@@ -345,25 +349,14 @@ def test_unary_function_call_bad_syntax():
 
 
 def test_function_call_binary():
-    program = parse("")
-    program.globals.add_procedure(
-        Procedure(
-            "binfunc",
-            [
-                UserProcDefinition(
-                    "binfunc",
-                    TypeSignature(TYPE_INTEGER, [TYPE_INTEGER, TYPE_STRING]),
-                    [],
-                )
-            ],
-        )
-    )
-    program.add_parse('? binfunc(23, "hello")')
-    expr = program.main.find(Print).find(Expr)
+    expr = parse('? left$("Hello", 23)').main.find(Print).find(Expr)
     assert expr == Ast(
         Call,
-        program.globals.procedures["binfunc"],
-        [Ast(Constant, 23, TYPE_INTEGER), Ast(Constant, "hello")],
+        builtin_proc("left$"),
+        [
+            Ast(Constant, "Hello"),
+            Cast(Ast(Constant, 23, TYPE_INTEGER), TYPE__INTEGER64),
+        ],
     )
 
 

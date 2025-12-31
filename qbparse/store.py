@@ -1,6 +1,6 @@
 import qbparse.builtins as builtins
 from qbparse.datatypes import BUILTIN_SIGILS, TYPE_SINGLE, BitnType, StringType, Type
-from qbparse.errors import ParseError
+from qbparse.diagnostics import ParseError
 from qbparse.symbols import Procedure, Variable
 
 
@@ -22,38 +22,32 @@ class SymbolStore:
     def is_keyword(self, name: str):
         return name in builtins.KEYWORDS
 
-    def find_procedure(self, ident: str):
+    def find_procedure(self, ident: str) -> Procedure | None:
         return self.procedures.get(ident)
 
-    def find_variable(self, ident: str, sigil: str | None = None):
+    def find_variable(self, ident: str, sigil: str | None = None) -> Variable | None:
         if ident not in self.variables:
             return None
         vars = self.variables[ident]
         type = self.lookup_sigil(sigil)
         return vars.get(type.name)
 
-    def lookup_sigil(self, sigil: str | None):
+    def lookup_sigil(self, sigil: str | None) -> Type:
         if sigil is None:
             return self.default_type
         if builtin := BUILTIN_SIGILS.get(sigil):
             return builtin
         if sigil.startswith("`"):
             width = int(sigil[1:])
-            if width > 64:
-                raise ParseError("_BIT values are limited to 64 bits")
             new_type = BitnType.of_signed(width)
         elif sigil.startswith("~`"):
             width = int(sigil[2:])
-            if width > 64:
-                raise ParseError("_UNSIGNED _BIT values are limited to 64 bits")
             new_type = BitnType.of_unsigned(width)
         elif sigil.startswith("$"):
             max_len = int(sigil[1:])
-            if max_len == 0:
-                raise ParseError("String maximum width cannot be 0")
             new_type = StringType.of_max_len(max_len)
         else:
-            raise ParseError("Unknown type " + sigil)
+            assert False, "Unknown type " + sigil
         return self.types.setdefault(new_type.name, new_type)
 
     def create_local(self, name: str, type: Type | None):

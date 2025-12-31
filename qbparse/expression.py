@@ -1,7 +1,8 @@
+import qbparse.diagnostics as diag
 from qbparse.ast import Call, Constant, Expr, LValue, Var
 from qbparse.context import ParseContext
 from qbparse.datatypes import TYPE_STRING
-from qbparse.errors import ParseError
+from qbparse.diagnostics import ParseError
 
 PRECEDENCE = {
     "imp": 2,
@@ -68,7 +69,9 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
             case "VARIABLE", var:
                 return Var(var)
             case _:
-                raise ParseError(f"Unexpected {token.type} {token.value}")
+                ctx.diags.raise_error(
+                    diag.E_UNEXPECTED_ITEM, token, token.value, "an expression"
+                )
 
     def binding_power():
         match ctx.tok.type, ctx.tok.value:

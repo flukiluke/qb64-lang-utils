@@ -1,8 +1,9 @@
 import re
-from typing import cast
+from typing import Literal, cast
 
 from ply.lex import LexToken, Token, lex
 
+import qbparse.diagnostics as diag
 from qbparse.datatypes import (
     TYPE__FLOAT,
     TYPE__INTEGER64,
@@ -18,7 +19,6 @@ from qbparse.datatypes import (
     IntegralType,
     Type,
 )
-from qbparse.errors import ParseError
 from qbparse.store import SymbolStore
 
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
@@ -46,6 +46,7 @@ tokens = (
     "DEC_LIT",
     "INT_LIT",
     "PUNCTUATION",
+    "BAD_CHAR",
 )
 
 ws = "[ \t]"
@@ -63,59 +64,70 @@ id_body = rf"""
             """
 
 
-def Lexer(symbols: SymbolStore):
+def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     t_ignore = ws
 
     def t_error(t: LexToken):
+        t.length = len(t.value)
         t.type = "ERROR"
         t.lexer.skip(len(t.value))
+        t.value = diags.create(diag.E_UNKNOWN_CHARACTERS, t, t.value)
         return t
 
     @Token(nl)
     def t_NEWLINE(t: LexToken):
+        t.length = len(t.value)
         t.lexer.lineno += 1
         t.value = "\n"
         return t
 
     @Token(r"'.*(\n|$)")
     def t_COMMENT(t: LexToken):
+        t.length = len(t.value)
         t.type = "NEWLINE"
         t.value = "'"
         return t
 
     @Token(rf"REM({ws}+.*)?(\n|$)")
     def t_REMARK(t: LexToken):
+        t.length = len(t.value)
         t.type = "NEWLINE"
         t.value = "rem"
         return t
 
     @Token(f"^{ws}*(?P<n>{digit}+){ws}*(?P<l>{id_body}){ws}*:")
     def t_LINE_NUM_LABEL(t: LexToken):
+        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("n", "l")
         return t
 
     @Token(f"^{ws}*(?P<a>{digit}+)")
     def t_LINE_NUM(t: LexToken):
+        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("a")
         return t
 
     @Token(f"^{ws}*(?P<a>{id_body}){ws}*:")
     def t_LINE_LABEL(t: LexToken):
+        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("a")
         return t
 
     @Token(":")
     def t_LINE_SPLIT(t: LexToken):
+        t.length = len(t.value)
         t.type = "NEWLINE"
         return t
 
     @Token(f"_{ws}*{nl}")
     def t_LINE_JOIN(t: LexToken):
+        t.length = len(t.value)
         t.lexer.lineno += 1
         # No token produced
 
     @Token('"(?P<s>[^"\r\n]*)"')
     def t_STRING_LIT(t: LexToken):
+        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("s")
         return t
 
@@ -129,6 +141,7 @@ def Lexer(symbols: SymbolStore):
         """
     )
     def t_EXP_LIT(t: LexToken):
+        t.length = len(t.value)
         t.type = "NUM_LIT"
         match = t.lexer.lexmatch
         mantissa = match.group("man")
@@ -147,7 +160,14 @@ def Lexer(symbols: SymbolStore):
             t.value = (value, type)
         else:
             t.type = "ERROR"
-            t.value = "Literal outside range of requested type"
+            t.value = diags.create(
+                diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+                t,
+                t.value,
+                type.name,
+                type.min,
+                type.max,
+            )
         return t
 
     @Token(
@@ -158,6 +178,7 @@ def Lexer(symbols: SymbolStore):
         """
     )
     def t_BASE_LIT(t: LexToken):
+        t.length = len(t.value)
         t.type = "NUM_LIT"
         num_part = t.lexer.lexmatch.group("num")
         match num_part[1].upper():
@@ -171,16 +192,30 @@ def Lexer(symbols: SymbolStore):
                 base = 10
         value = int(num_part[2:], base)
         sigil = t.lexer.lexmatch.group("sigil")
-        try:
-            if sigil is None:
-                t.value = detect_base_int_type(value)
-            else:
-                t.value = constrain_base_int_value(
-                    value, cast(IntegralType, symbols.lookup_sigil(sigil))
+        if sigil is None:
+            t.value = detect_base_int_type(value) or diags.create(
+                diag.E_NUM_LIT_MAX_BIG,
+                t,
+                t.value,
+                num_to_base(TYPE__INTEGER64.min, base),
+                num_to_base(TYPE__UNSIGNED__INTEGER64.max, base),
+            )
+        else:
+            try:
+                validate_sigil(sigil, t, diags)
+                type = cast(IntegralType, symbols.lookup_sigil(sigil))
+                t.value = constrain_base_int_value(value, type) or diags.create(
+                    diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+                    t,
+                    t.value,
+                    type.name,
+                    num_to_base(type.min, base),
+                    num_to_base(type.max, base),
                 )
-        except ValueError:
+            except diag.DiagnosticError as e:
+                t.value = e.diagnostic
+        if not isinstance(t.value, tuple):
             t.type = "ERROR"
-            t.value = "Literal outside range of requested type"
         return t
 
     @Token(
@@ -189,19 +224,24 @@ def Lexer(symbols: SymbolStore):
         """
     )
     def t_DEC_LIT(t: LexToken):
+        t.length = len(t.value)
         t.type = "NUM_LIT"
         num_part = t.lexer.lexmatch.group("num")
         sigil = t.lexer.lexmatch.group("sigil")
-        try:
-            if sigil is None:
-                t.value = detect_dec_lit_type(num_part)
-            else:
-                t.value = constrain_dec_lit_value(
-                    num_part, cast(FloatType, symbols.lookup_sigil(sigil))
-                )
-        except ValueError:
+        if sigil is None:
+            t.value = detect_dec_lit_type(num_part)
+        else:
+            type = cast(FloatType, symbols.lookup_sigil(sigil))
+            t.value = constrain_dec_lit_value(num_part, type) or diags.create(
+                diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+                t,
+                t.value,
+                type.name,
+                type.min,
+                type.max,
+            )
+        if not isinstance(t.value, tuple):
             t.type = "ERROR"
-            t.value = "Literal outside range of requested type"
         return t
 
     @Token(
@@ -210,20 +250,37 @@ def Lexer(symbols: SymbolStore):
         """
     )
     def t_INT_LIT(t: LexToken):
+        t.length = len(t.value)
         t.type = "NUM_LIT"
         num_part = int(t.lexer.lexmatch.group("num"))
         sigil = t.lexer.lexmatch.group("sigil")
-        try:
-            if sigil is None:
-                t.value = detect_int_lit_type(num_part)
-            else:
+        if sigil is None:
+            t.value = detect_int_lit_type(num_part) or diags.create(
+                diag.E_NUM_LIT_MAX_BIG,
+                t,
+                t.value,
+                TYPE__INTEGER64.min,
+                TYPE__UNSIGNED__INTEGER64.max,
+            )
+        else:
+            try:
+                validate_sigil(sigil, t, diags)
+                type = cast(IntegralType | FloatType, symbols.lookup_sigil(sigil))
                 t.value = constrain_int_lit_value(
                     num_part,
-                    cast(IntegralType | FloatType, symbols.lookup_sigil(sigil)),
+                    type,
+                ) or diags.create(
+                    diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+                    t,
+                    t.value,
+                    type.name,
+                    type.min,
+                    type.max,
                 )
-        except ValueError:
+            except diag.DiagnosticError as e:
+                t.value = e.diagnostic
+        if not isinstance(t.value, tuple):
             t.type = "ERROR"
-            t.value = "Literal outside range of requested type"
         return t
 
     @Token(
@@ -238,8 +295,16 @@ def Lexer(symbols: SymbolStore):
         """
     )
     def t_ID(t: LexToken):
+        t.length = len(t.value)
         name = t.lexer.lexmatch.group("name").lower()
         sigil = t.lexer.lexmatch.group("sigil")
+        if sigil is not None:
+            try:
+                validate_sigil(sigil, t, diags)
+            except diag.DiagnosticError as e:
+                t.type = "ERROR"
+                t.value = e.diagnostic
+                return t
         # The presence or absence of the $ is critical for detecting some builtins.
         # `if` is a keyword, but `if$ = 3` is valid. Similarly `left$` is a function,
         # but `left = 3` is valid.
@@ -250,7 +315,9 @@ def Lexer(symbols: SymbolStore):
                 return t
             elif not sigil.startswith("$"):
                 t.type = "ERROR"
-                t.lexer.skip(len(t.value))
+                t.value = diags.create(
+                    diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("name")
+                )
                 return t
             # case of sigil "$" falls through below
         if (proc := symbols.find_procedure(name)) or (
@@ -264,6 +331,17 @@ def Lexer(symbols: SymbolStore):
                         break
                 else:
                     t.type = "ERROR"
+                    alts = " or ".join(
+                        [s.ret.sigil for s in proc.sigs() if s.ret.sigil]
+                        + ["no suffix"]
+                    )
+                    t.value = diags.create(
+                        diag.E_EXISTING_DEF_SIGIL_CLASH,
+                        t,
+                        sigil,
+                        t.lexer.lexmatch.group("name"),
+                        alts,
+                    )
                     return t
             t.type = "PROCEDURE"
             t.value = proc
@@ -273,32 +351,36 @@ def Lexer(symbols: SymbolStore):
             t.value = var
             return t
         # otherwise remain as ID
-        try:
-            t.value = (name, symbols.lookup_sigil(sigil))
-        except ParseError as e:
-            t.type = "ERROR"
-            t.value = str(e)
+        t.value = (name, symbols.lookup_sigil(sigil))
         return t
 
     @Token(r"""<= | >= | <>
-                        | <  | > | =
-                        | \( | \)
-                        | \* | / 
-                        | \^ | \\
-                        | \+ | -
-                        | ;  | ,
-                        | \. | [#]
+             | <  | >  | =
+             | \( | \)
+             | \* | / 
+             | \^ | \\
+             | \+ | -
+             | ;  | ,
+             | \. | [#]
     """)
     def t_PUNCTUATION(t: LexToken):
+        t.length = len(t.value)
+        return t
+
+    @Token(".")
+    def t_BAD_CHAR(t: LexToken):
+        t.length = len(t.value)
+        t.type = "ERROR"
+        t.value = diags.create(diag.E_UNKNOWN_CHARACTERS, t, t.value)
         return t
 
     return lex(reflags=re.VERBOSE | re.IGNORECASE)
 
 
-def detect_base_int_type(value: int) -> tuple[int, Type]:
+def detect_base_int_type(value: int) -> tuple[int, Type] | None:
     """
     Identify the type of a value using rules for base notation numbers,
-    returning the type and the number. Raise ValueError if number is outside
+    returning the type and the number. Return None if number is outside
     the representable range.
     """
     for signed, unsigned in [
@@ -310,17 +392,17 @@ def detect_base_int_type(value: int) -> tuple[int, Type]:
             return (value, signed)
         if unsigned.min <= value <= unsigned.max:
             return (-int(unsigned.max) + value - 1, signed)
-    raise ValueError()
+    return None
 
 
 def constrain_base_int_value(
     value: int, type: IntegralType
-) -> tuple[int, IntegralType]:
+) -> tuple[int, IntegralType] | None:
     if type.min <= value <= type.max:
         return (value, type)
     if type.min < 0 and value <= type.max * 2 + 1:
         return (value - (int(type.max) * 2 + 1) - 1, type)
-    raise ValueError()
+    return None
 
 
 def detect_dec_lit_type(value: str) -> tuple[float | ExtendedFloat, Type]:
@@ -332,7 +414,9 @@ def detect_dec_lit_type(value: str) -> tuple[float | ExtendedFloat, Type]:
     return (ExtendedFloat(value), TYPE__FLOAT)
 
 
-def constrain_dec_lit_value(value: str, type: FloatType):
+def constrain_dec_lit_value(
+    value: str, type: FloatType
+) -> tuple[float | ExtendedFloat, Type] | None:
     v = float(value)
     inf = float("inf")
     if type == TYPE_SINGLE:
@@ -343,19 +427,51 @@ def constrain_dec_lit_value(value: str, type: FloatType):
             return (v, type)
     elif type == TYPE__FLOAT:
         return (ExtendedFloat(value), type)
-    raise ValueError()
+    return None
 
 
-def detect_int_lit_type(value: int) -> tuple[int, Type]:
+def detect_int_lit_type(value: int) -> tuple[int, Type] | None:
     for type in [TYPE_INTEGER, TYPE_LONG, TYPE__INTEGER64, TYPE__UNSIGNED__INTEGER64]:
         if type.min <= value <= type.max:
             return (value, type)
-    raise ValueError()
+    return None
 
 
-def constrain_int_lit_value(value: int, type: IntegralType | FloatType):
+def constrain_int_lit_value(
+    value: int, type: IntegralType | FloatType
+) -> tuple[int | ExtendedFloat, Type] | None:
     if type == TYPE__FLOAT:
         return (ExtendedFloat(str(value)), type)
     if type.min <= value <= type.max:
         return (value, type)
-    raise ValueError()
+    return None
+
+
+def num_to_base(value: int, base: Literal[2] | Literal[8] | Literal[10] | Literal[16]):
+    sign = ""
+    if value < 0:
+        sign = "-"
+    value = abs(value)
+    if base == 2:
+        return sign + "&B" + bin(value)[2:]
+    elif base == 8:
+        return sign + "&O" + oct(value)[2:]
+    elif base == 10:
+        return sign + str(value)
+    elif base == 16:
+        return sign + "&H" + hex(value)[2:].upper()
+
+
+def validate_sigil(sigil: str, t: LexToken, diags: diag.DiagnosticStore):
+    if sigil.startswith("`") and len(sigil) > 1:
+        width = int(sigil[1:])
+        if width > 64 or width < 1:
+            raise diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "`", 1, 64)
+    elif sigil.startswith("~`") and len(sigil) > 2:
+        width = int(sigil[2:])
+        if width > 64 or width < 1:
+            raise diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "~`", 1, 64)
+    elif sigil.startswith("$") and len(sigil) > 1:
+        width = int(sigil[1:])
+        if width > 2**64 - 1 or width < 1:
+            raise diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "$", 1, 2**64 - 1)

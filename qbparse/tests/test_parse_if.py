@@ -3,7 +3,7 @@ from pytest import raises
 from qbparse import parse
 from qbparse.ast import Constant, If, Print, Statement
 from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING
-from qbparse.errors import ParseError
+from qbparse.diagnostics import ParseError
 
 from .helpers import Ast
 

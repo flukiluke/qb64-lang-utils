@@ -1,9 +1,10 @@
 from collections.abc import Callable
 
+import qbparse.diagnostics as diag
 from qbparse.ast import Assignment, Call, Constant, Expr, If, Loop, Print, Statement
 from qbparse.context import ParseContext
 from qbparse.datatypes import TYPE__BYTE
-from qbparse.errors import ParseError
+from qbparse.diagnostics import ParseError
 from qbparse.expression import do_expr, do_lvalue
 
 
@@ -188,7 +189,12 @@ def do_block(ctx: ParseContext) -> list[Statement]:
     block: list[Statement] = []
     ctx.skip("NEWLINE")
     while not is_eob():
-        stmt = do_stmt(ctx)
+        try:
+            stmt = do_stmt(ctx)
+        except diag.DiagnosticError:
+            stmt = None
+            while not ctx.at_line_terminator():
+                next(ctx)
         if stmt:
             block.append(stmt)
         ctx.skip("NEWLINE")

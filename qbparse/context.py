@@ -2,7 +2,7 @@ import os
 
 from ply.lex import LexToken
 
-from qbparse.errors import ParseError
+from qbparse.diagnostics import DiagnosticStore, ParseError
 from qbparse.lexer import Lexer
 from qbparse.store import SymbolStore
 
@@ -10,9 +10,10 @@ TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 
 
 class ParseContext:
-    def __init__(self, input: str, symbols: SymbolStore):
+    def __init__(self, input: str, symbols: SymbolStore, diags: DiagnosticStore):
         self.symbols = symbols
-        self.token_stream = Lexer(self.symbols)
+        self.diags = diags
+        self.token_stream = Lexer(self.symbols, self.diags)
         self.token_stream.input(input)
         self.reversed_tokens: list[LexToken] = []
         self.tok = LexToken()
@@ -34,9 +35,10 @@ class ParseContext:
             eof = LexToken()
             eof.lexer = self.tok.lexer
             eof.lexpos = self.tok.lexer.lexlen
+            eof.length = 0
             eof.lineno = self.tok.lineno
             eof.type = "EOF"
-            eof.value = ""
+            eof.value = "<end of file>"
             self.tok = eof
         if TRACE_TOKENS:
             print(">", self.tok)

@@ -2,7 +2,7 @@ from pytest import raises
 
 from qbparse import parse
 from qbparse.ast import Call, Constant, Loop, Print
-from qbparse.errors import ParseError
+from qbparse.diagnostics import ParseError
 from qbparse.tests.helpers import Ast, builtin_proc
 
 

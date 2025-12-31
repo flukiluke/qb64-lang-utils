@@ -73,6 +73,7 @@ class ExtendedFloat:
 @dataclass
 class Type:
     name: str
+    sigil: str
 
     def __repr__(self):
         return self.name
@@ -117,7 +118,7 @@ class StringType(Type):
 
     @staticmethod
     def of_max_len(max_len: int):
-        return StringType("string * " + str(max_len), max_len)
+        return StringType("string * " + str(max_len), "$" + str(max_len), max_len)
 
 
 @dataclass
@@ -130,12 +131,18 @@ class BitnType(IntegralType):
     @staticmethod
     def of_signed(width: int):
         return BitnType(
-            "_bit * " + str(width), -(2 ** (width - 1)), 2 ** (width - 1) - 1, width
+            "_bit * " + str(width),
+            "`" + str(width),
+            -(2 ** (width - 1)),
+            2 ** (width - 1) - 1,
+            width,
         )
 
     @staticmethod
     def of_unsigned(width: int):
-        return BitnType("_unsigned _bit * " + str(width), 0, 2**width - 1, width)
+        return BitnType(
+            "_unsigned _bit * " + str(width), "~`" + str(width), 0, 2**width - 1, width
+        )
 
     def is_number(self):
         return True
@@ -146,22 +153,23 @@ class TypeSignature:
     ret: Type
     params: list[Type]
 
+
 def bits2float(spec1: str, spec2: str, b: int):
     return struct.unpack(">" + spec1, struct.pack(">" + spec2, b))[0]
 
 
-TYPE__NONE = Type("_none")
-TYPE_ANY = Type("any")
-TYPE__BIT = IntegralType("_bit", -(2**0), 2**0 - 1)
-TYPE__BYTE = IntegralType("_byte", -(2**7), 2**7 - 1)
-TYPE_INTEGER = IntegralType("integer", -(2**15), 2**15 - 1)
-TYPE_LONG = IntegralType("long", -(2**31), 2**31 - 1)
-TYPE__INTEGER64 = IntegralType("_integer64", -(2**63), 2**63 - 1)
-TYPE__UNSIGNED__BIT = IntegralType("_unsigned _bit", 0, 2**0)
-TYPE__UNSIGNED__BYTE = IntegralType("_unsigned _byte", 0, 2**8 - 1)
-TYPE__UNSIGNED_INTEGER = IntegralType("_unsigned integer", 0, 2**16 - 1)
-TYPE__UNSIGNED_LONG = IntegralType("_unsigned long", 0, 2**32 - 1)
-TYPE__UNSIGNED__INTEGER64 = IntegralType("_unsigned _integer64", 0, 2**64 - 1)
+TYPE__NONE = Type("_none", "")
+TYPE_ANY = Type("any", "")
+TYPE__BIT = IntegralType("_bit", "`", -(2**0), 2**0 - 1)
+TYPE__BYTE = IntegralType("_byte", "%%", -(2**7), 2**7 - 1)
+TYPE_INTEGER = IntegralType("integer", "%", -(2**15), 2**15 - 1)
+TYPE_LONG = IntegralType("long", "&", -(2**31), 2**31 - 1)
+TYPE__INTEGER64 = IntegralType("_integer64", "&&", -(2**63), 2**63 - 1)
+TYPE__UNSIGNED__BIT = IntegralType("_unsigned _bit", "~`", 0, 2**0)
+TYPE__UNSIGNED__BYTE = IntegralType("_unsigned _byte", "~%%", 0, 2**8 - 1)
+TYPE__UNSIGNED_INTEGER = IntegralType("_unsigned integer", "~%", 0, 2**16 - 1)
+TYPE__UNSIGNED_LONG = IntegralType("_unsigned long", "~&", 0, 2**32 - 1)
+TYPE__UNSIGNED__INTEGER64 = IntegralType("_unsigned _integer64", "~&&", 0, 2**64 - 1)
 # These must be in increasing size order for function overloads to work
 INTEGRAL_TYPES = [
     TYPE__BIT,
@@ -177,6 +185,7 @@ INTEGRAL_TYPES = [
 ]
 TYPE_SINGLE = FloatType(
     "single",
+    "!",
     bits2float("f", "L", 0xFF7FFFFF),
     bits2float("f", "L", 0x7F7FFFFF),
     -(2**24),
@@ -186,6 +195,7 @@ TYPE_SINGLE = FloatType(
 # checking doesn't actually need these values.
 TYPE_DOUBLE = FloatType(
     "double",
+    "#",
     bits2float("d", "Q", 0xFFEFFFFFFFFFFFFF),
     bits2float("d", "Q", 0x7FEFFFFFFFFFFFFF),
     -(2**53),
@@ -195,13 +205,14 @@ TYPE_DOUBLE = FloatType(
 # Limits assume the former (approximate values).
 TYPE__FLOAT = FloatType(
     "_float",
+    "##",
     ExtendedFloat("-1.18973149535723176502126", "4932"),
     ExtendedFloat("1.18973149535723176502126", "4932"),
     -(2**64),
     2**64,
 )
 FLOAT_TYPES = [TYPE_SINGLE, TYPE_DOUBLE, TYPE__FLOAT]
-TYPE_STRING = StringType("string")
+TYPE_STRING = StringType("string", "$")
 
 BUILTIN_TYPES: dict[str, Type] = {
     "_bit": TYPE__BIT,

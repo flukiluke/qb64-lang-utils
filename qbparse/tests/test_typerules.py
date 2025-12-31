@@ -35,35 +35,23 @@ def test_equality():
     assert expr == Ast(
         Call,
         builtin_proc("="),
-        args=[
-            Ast(Constant, 1),
-            Ast(Constant, 2)
-        ],
-        expr_type=TYPE__BYTE
+        args=[Ast(Constant, 1), Ast(Constant, 2)],
+        expr_type=TYPE__BYTE,
     )
     expr = check("? 1% = 2&").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[
-            Cast(Ast(Constant, 1), TYPE_LONG),
-            Ast(Constant, 2)
-        ],
+        args=[Cast(Ast(Constant, 1), TYPE_LONG), Ast(Constant, 2)],
     )
     expr = check("? 1& = 2%").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[
-            Ast(Constant, 1),
-            Cast(Ast(Constant, 2), TYPE_LONG)
-        ],
+        args=[Ast(Constant, 1), Cast(Ast(Constant, 2), TYPE_LONG)],
     )
     expr = check("? 1! = 2%").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[
-            Ast(Constant, 1),
-            Cast(Ast(Constant, 2), TYPE_SINGLE)
-        ],
+        args=[Ast(Constant, 1), Cast(Ast(Constant, 2), TYPE_SINGLE)],
     )
     expr = check("? 1! = 2#").main.find(Call)
     assert expr == Ast(
@@ -76,10 +64,7 @@ def test_equality():
     expr = check("? 1&& = 2#").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[
-            Cast(Ast(Constant, 1), TYPE__FLOAT),
-            Cast(Ast(Constant, 2), TYPE__FLOAT)
-        ],
+        args=[Cast(Ast(Constant, 1), TYPE__FLOAT), Cast(Ast(Constant, 2), TYPE__FLOAT)],
     )
     expr = check('? "foo" = "bar"').main.find(Call)
     assert expr == Ast(
@@ -90,9 +75,11 @@ def test_equality():
         ],
     )
 
+
 def test_equality_errors():
     assert len(parse('? "foo" = 2').errors) > 0
     assert len(parse('? 2 = "foo"').errors) > 0
+
 
 def test_operator_overload_int():
     """

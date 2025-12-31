@@ -115,14 +115,19 @@ class WalkContext:
         if left == right:
             pass
         elif not left.is_number() or not right.is_number():
-            self.add_error(f"Cannot apply {node.target.name} operator to {left} and {right}")
+            self.add_error(
+                f"Cannot apply {node.target.name} operator to {left} and {right}"
+            )
             return TYPE__NONE
         elif can_safely_cast(left, right):
             node.args[0] = Cast(node.args[0], right)
         elif can_safely_cast(right, left):
             node.args[1] = Cast(node.args[1], left)
         else:
-            node.args = [Cast(node.args[0], TYPE__FLOAT), Cast(node.args[1], TYPE__FLOAT)]
+            node.args = [
+                Cast(node.args[0], TYPE__FLOAT),
+                Cast(node.args[1], TYPE__FLOAT),
+            ]
         return node.impl.signature.ret
 
     def cast(self, node: Cast):
