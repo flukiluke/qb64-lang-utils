@@ -111,9 +111,11 @@ def test_loop_string_guard():
 def test_multi_guard():
     prog = parse("""
         do while x > 1
+            print "hi"
         loop until x > 1
     """)
-    assert prog.diagnostics.has(diag.E_UNEXPECTED_KEYWORD)
+    assert prog.diagnostics.has(diag.E_TOO_MANY_LOOP_GUARDS)
+    assert prog.main.find(Loop) == Ast(Loop, Ast(Call), [Ast(Print)], top_check=True)
 
 
 def test_missing_guard():
@@ -121,5 +123,25 @@ def test_missing_guard():
         while
             print "hi"
         wend
+    """)
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
+
+
+def test_bad_guard():
+    prog = parse("""
+        do for 10
+            print "hi"
+        loop
+    """)
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
+
+
+def test_bad_nesting():
+    prog = parse("""
+        while 1
+            do
+                print "hi"
+            wend
+        loop
     """)
     assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)

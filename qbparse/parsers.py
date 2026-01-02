@@ -93,38 +93,42 @@ def do_do(ctx: ParseContext):
     Expects: DO
     Results: newline
     """
-    next(ctx)
-    if ctx.at_a("KEYWORD", "while"):
-        next(ctx)
-        guard = do_expr(ctx)
-        block = do_block(ctx)
-        ctx.consume("KEYWORD", "loop")
-        return Loop(guard, block, top_check=True)
-    elif ctx.at_a("KEYWORD", "until"):
-        next(ctx)
-        guard = Call(
-            ctx.symbols.procedures["<>"], [do_expr(ctx), Constant(0, TYPE__BYTE)]
-        )
-        block = do_block(ctx)
-        ctx.consume("KEYWORD", "loop")
-        return Loop(guard, block, top_check=True)
-    elif ctx.at_a("NEWLINE"):
-        block = do_block(ctx)
-        ctx.consume("KEYWORD", "loop")
+
+    def loop_guard() -> Expr | None:
         if ctx.at_a("KEYWORD", "while"):
             next(ctx)
-            guard = do_expr(ctx)
-            return Loop(guard, block, top_check=False)
+            return do_expr(ctx)
         elif ctx.at_a("KEYWORD", "until"):
             next(ctx)
-            guard = Call(
+            return Call(
                 ctx.symbols.procedures["<>"], [do_expr(ctx), Constant(0, TYPE__BYTE)]
             )
-            return Loop(guard, block, top_check=False)
-        elif ctx.at_line_terminator():
-            # Infinite loop
-            return Loop(Constant(1, TYPE__BYTE), block, top_check=False)
-    ctx.diags.raise_error(diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "something")
+        elif ctx.at_a("NEWLINE"):
+            return None
+        else:
+            ctx.diags.raise_error(
+                diag.E_UNEXPECTED_ITEM,
+                ctx.tok,
+                ctx.tok.value,
+                "while or until or <newline>",
+            )
+
+    next(ctx)
+    top = loop_guard()
+    block = do_block(ctx)
+    loop_tok = ctx.tok
+    ctx.consume("KEYWORD", "loop")
+    bottom = loop_guard()
+    if top and bottom:
+        ctx.diags.create(diag.E_TOO_MANY_LOOP_GUARDS, loop_tok)
+        guard = top
+    elif top:
+        guard = top
+    elif bottom:
+        guard = bottom
+    else:
+        guard = Constant(1, TYPE__BYTE)
+    return Loop(guard, block, top_check=(top is not None))
 
 
 def do_while(ctx: ParseContext):

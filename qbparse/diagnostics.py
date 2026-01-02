@@ -101,3 +101,6 @@ E_EXISTING_DEF_SIGIL_CLASH = DiagTemplate(
 E_BAD_SIGIL_WIDTH = DiagTemplate(
     _Level.ERROR, "The {} suffix only allows fixed-widths in range [{} to {}]."
 )
+E_TOO_MANY_LOOP_GUARDS = DiagTemplate(
+    _Level.ERROR, "Loop cannot have conditions at both top and bottom."
+)
