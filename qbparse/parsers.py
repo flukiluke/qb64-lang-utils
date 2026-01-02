@@ -124,7 +124,7 @@ def do_do(ctx: ParseContext):
         elif ctx.at_line_terminator():
             # Infinite loop
             return Loop(Constant(1, TYPE__BYTE), block, top_check=False)
-    raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
+    ctx.diags.raise_error(diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "something")
 
 
 def do_while(ctx: ParseContext):
@@ -208,7 +208,7 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
         case "KEYWORD":
             handler = KEYWORD_PARSERS.get(ctx.tok.value)
             if handler is None:
-                raise ParseError("Unexpected keyword " + ctx.tok.value)
+                ctx.diags.raise_error(diag.E_UNEXPECTED_KEYWORD, ctx.tok, ctx.tok.value)
             result = handler(ctx)
         case "VARIABLE":
             # Asignment to existing variable

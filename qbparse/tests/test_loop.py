@@ -1,8 +1,6 @@
-from pytest import raises
-
+import qbparse.diagnostics as diag
 from qbparse import parse
 from qbparse.ast import Call, Constant, Loop, Print
-from qbparse.diagnostics import ParseError
 from qbparse.tests.helpers import Ast, builtin_proc
 
 
@@ -111,23 +109,17 @@ def test_loop_string_guard():
 
 
 def test_multi_guard():
-    raises(
-        ParseError,
-        parse,
-        """
+    prog = parse("""
         do while x > 1
         loop until x > 1
-    """,
-    )
+    """)
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_KEYWORD)
 
 
 def test_missing_guard():
-    raises(
-        ParseError,
-        parse,
-        """
+    prog = parse("""
         while
-           print "hi"
+            print "hi"
         wend
-    """,
-    )
+    """)
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)

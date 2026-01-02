@@ -2,7 +2,6 @@ import qbparse.diagnostics as diag
 from qbparse.ast import Call, Constant, Expr, LValue, Var
 from qbparse.context import ParseContext
 from qbparse.datatypes import TYPE_STRING
-from qbparse.diagnostics import ParseError
 
 PRECEDENCE = {
     "imp": 2,
@@ -75,8 +74,17 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
     def binding_power():
         match ctx.tok.type, ctx.tok.value:
-            case (("STRING_LIT" | "NUM_LIT"), _):
-                raise ParseError("Unexpected literal")
+            case ("STRING_LIT", _):
+                ctx.diags.raise_error(
+                    diag.E_UNEXPECTED_ITEM,
+                    ctx.tok,
+                    '"' + ctx.tok.value + '"',
+                    "an operator",
+                )
+            case ("NUM_LIT", _):
+                ctx.diags.raise_error(
+                    diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value[0], "an operator"
+                )
             case "PUNCTUATION", ")":
                 return 0
             case (("PUNCTUATION" | "KEYWORD"), op) if op in PRECEDENCE:
@@ -87,14 +95,12 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
     def trailing(left: Expr):
         token = ctx.tok
         next(ctx)
-        if token.type in ["KEYWORD", "PUNCTUATION"] and token.value in PRECEDENCE:
-            right = do_expr(ctx, PRECEDENCE[token.value])
-            return Call(
-                ctx.symbols.procedures[token.value],
-                [left, right],
-                style=Call.Style.INFIX,
-            )
-        raise ParseError(f"Unpexpected {token.type} {token.value}")
+        right = do_expr(ctx, PRECEDENCE[token.value])
+        return Call(
+            ctx.symbols.procedures[token.value],
+            [left, right],
+            style=Call.Style.INFIX,
+        )
 
     left = start()
     while right_binding < binding_power():
@@ -108,7 +114,7 @@ def do_lvalue(ctx: ParseContext) -> LValue:
     elif ctx.tok.type == "ID":
         result = Var(ctx.symbols.create_local(*ctx.tok.value))
     else:
-        raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
+        assert False, "LValue with non variable or ID"
     next(ctx)
     return result
 

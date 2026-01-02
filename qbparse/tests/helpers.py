@@ -3,6 +3,7 @@ from typing import Any
 
 import qbparse.ast
 from qbparse import builtins, parse
+from qbparse.diagnostics import DiagTemplate
 
 
 def builtin_proc(name: str):
@@ -12,9 +13,18 @@ def builtin_proc(name: str):
     raise ValueError("No such builtin procedure " + name)
 
 
-def check(input: str, expected: qbparse.ast.Node):
-    expr = parse("?" + input).main.find(qbparse.ast.Expr)
-    assert expr == expected
+def check(
+    input: str,
+    expected: qbparse.ast.Node | None = None,
+    d: DiagTemplate | None = None,
+):
+    prog = parse("?" + input)
+    if d is not None:
+        assert prog.diagnostics.has(d)
+    else:
+        expr = prog.main.find(qbparse.ast.Expr)
+        assert expr == expected
+        assert len(prog.diagnostics.diagnostics) == 0
 
 
 class Ast(qbparse.ast.Statement, qbparse.ast.LValue):

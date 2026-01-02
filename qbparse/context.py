@@ -2,7 +2,7 @@ import os
 
 from ply.lex import LexToken
 
-from qbparse.diagnostics import DiagnosticStore, ParseError
+import qbparse.diagnostics as diag
 from qbparse.lexer import Lexer
 from qbparse.store import SymbolStore
 
@@ -10,7 +10,7 @@ TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 
 
 class ParseContext:
-    def __init__(self, input: str, symbols: SymbolStore, diags: DiagnosticStore):
+    def __init__(self, input: str, symbols: SymbolStore, diags: diag.DiagnosticStore):
         self.symbols = symbols
         self.diags = diags
         self.token_stream = Lexer(self.symbols, self.diags)
@@ -59,10 +59,14 @@ class ParseContext:
     def consume(self, tok_type: str, tok_value: str | None = None):
         if tok_value is None:
             if self.tok.type != tok_type:
-                raise ParseError("Expected " + tok_type)
+                self.diags.raise_error(
+                    diag.E_UNEXPECTED_ITEM, self.tok, self.tok.type, tok_type
+                )
         else:
             if self.tok.type != tok_type or self.tok.value != tok_value:
-                raise ParseError(f"Expected {tok_type} {tok_value}")
+                self.diags.raise_error(
+                    diag.E_UNEXPECTED_ITEM, self.tok, self.tok.value, tok_value
+                )
         return next(self)
 
     def at_line_terminator(self):

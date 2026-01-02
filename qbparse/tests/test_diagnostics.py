@@ -1,37 +1,7 @@
 from qbparse import parse
 from qbparse.ast import If, Print
-from qbparse.diagnostics import E_UNEXPECTED_ITEM, DiagnosticStore
-from qbparse.lexer import Lexer
-from qbparse.store import SymbolStore
+from qbparse.diagnostics import E_UNEXPECTED_ITEM
 from qbparse.tests.helpers import Ast
-
-
-def testBadCharacter():
-    lex = Lexer(SymbolStore(), DiagnosticStore())
-    lex.input('@ "hello"')
-    print(list(lex))
-    assert False
-
-
-def testLimitFloat():
-    lex = Lexer(SymbolStore(), DiagnosticStore())
-    lex.input("? 1e200")
-    print(list(lex))
-    assert False
-
-
-def testLimitBaseImplicit():
-    lex = Lexer(SymbolStore(), DiagnosticStore())
-    lex.input("? &h010000000000000000")
-    print(list(lex))
-    assert False
-
-
-def testLimitBaseExplicit():
-    lex = Lexer(SymbolStore(), DiagnosticStore())
-    lex.input("? &b10`")
-    print(list(lex))
-    assert False
 
 
 def test_bad_expr_drops_line():

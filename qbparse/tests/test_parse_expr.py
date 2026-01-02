@@ -1,5 +1,4 @@
-from pytest import raises
-
+import qbparse.diagnostics as diag
 from qbparse import parse
 from qbparse.ast import Call, Cast, Constant, Expr, Print, Var
 from qbparse.datatypes import (
@@ -7,7 +6,6 @@ from qbparse.datatypes import (
     TYPE_INTEGER,
     TYPE_SINGLE,
 )
-from qbparse.diagnostics import ParseError
 
 from .helpers import Ast, builtin_proc, check
 
@@ -296,13 +294,14 @@ def test_parentheses():
 
 
 def test_errors():
-    raises(ParseError, parse, "? 2 +")
-    raises(ParseError, parse, "? 2 + (3")
-    raises(ParseError, parse, "? 2 + .")
-    raises(ParseError, parse, "? 2 + (3.")
-    raises(ParseError, parse, "? 2)")
-    raises(ParseError, parse, "? 2 + * 3")
-    raises(ParseError, parse, "? 2 + (*) 3")
+    check("2 +", d=diag.E_UNEXPECTED_ITEM)
+    check("2 + (3", d=diag.E_UNEXPECTED_ITEM)
+    check("2 + .", d=diag.E_UNEXPECTED_ITEM)
+    check("2 + (3.", d=diag.E_UNEXPECTED_ITEM)
+    check("2)", d=diag.E_UNEXPECTED_ITEM)
+    check("2 + * 3", d=diag.E_UNEXPECTED_ITEM)
+    check("2 + (*) 3", d=diag.E_UNEXPECTED_ITEM)
+    check("2 3", d=diag.E_UNEXPECTED_ITEM)
 
 
 def test_existing_scalar():
@@ -342,10 +341,10 @@ def test_function_call_unary():
 
 
 def test_unary_function_call_bad_syntax():
-    raises(ParseError, parse, '? lcase$("hello"')
-    raises(ParseError, parse, '? lcase$ "hello"')
-    raises(ParseError, parse, '? lcase$ "hello")')
-    raises(ParseError, parse, '? lcase$ ("hello",)')
+    check('lcase$("hello"', d=diag.E_UNEXPECTED_ITEM)
+    check('lcase$ "hello"', d=diag.E_UNEXPECTED_ITEM)
+    check('lcase$ "hello")', d=diag.E_UNEXPECTED_ITEM)
+    check('lcase$("hello",)', d=diag.E_UNEXPECTED_ITEM)
 
 
 def test_function_call_binary():

@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from enum import Enum
 from typing import Any
 
@@ -35,7 +36,17 @@ class _Diagnostic:
         self.startpos = startpos
         self.textlen = textlen
         self.template = template
-        self.message = template.message.format(*args)
+        human_args = self.humanise(args)
+        self.message = template.message.format(*human_args)
+
+    def humanise(self, args: Iterable[Any]):
+        result = list[str]()
+        for arg in args:
+            if isinstance(arg, str):
+                result.append(arg.replace("\n", "<newline>").replace("\t", "<tab>"))
+            else:
+                result.append(arg)
+        return result
 
     def __repr__(self):
         return (
@@ -78,8 +89,9 @@ E_NUM_LIT_OUTSIDE_GIVEN_RANGE = DiagTemplate(
     "Allowed range is [{} to {}].",
 )
 E_UNEXPECTED_ITEM = DiagTemplate(
-    _Level.ERROR, "The item '{}' is unexpected here. Expected '{}' instead."
+    _Level.ERROR, "The item {} is unexpected here. Expected {} instead."
 )
+E_UNEXPECTED_KEYWORD = DiagTemplate(_Level.ERROR, "The keyword {} is unexpected here.")
 E_KW_BAD_SIGIL = DiagTemplate(
     _Level.ERROR, "The {} suffix cannot be used on the keyword '{}'."
 )

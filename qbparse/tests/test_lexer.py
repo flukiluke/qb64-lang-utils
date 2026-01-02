@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-import qbparse.diagnostics as diags
+import qbparse.diagnostics as diag
 from qbparse.ast import BuiltinProcDefinition
 from qbparse.datatypes import (
     TYPE__BIT,
@@ -39,13 +39,12 @@ def check(
     text: str,
     expecteds: Token | list[Token],
     symbols: SymbolStore | None = None,
-    diag: DiagTemplate | None = None,
+    d: DiagTemplate | None = None,
 ):
     diags = DiagnosticStore()
     lex = Lexer(symbols if symbols else SymbolStore(), diags)
     lex.input(text)
     actuals = list(lex)
-    print(diags.diagnostics)
     if isinstance(expecteds, Token):
         expecteds = [expecteds]
     assert len(actuals) == len(expecteds)
@@ -56,15 +55,15 @@ def check(
         if expected.lineno is not None:
             assert actual.lineno == expected.lineno
         if expected.type == "ERROR":
-            assert diag is not None
-    if diag is not None:
-        assert diags.has(diag)
+            assert d is not None
+    if d is not None:
+        assert diags.has(d)
     else:
         assert len(diags.diagnostics) == 0
 
 
 def check_expr(text: str, expected: Token, diag: DiagTemplate | None = None):
-    check("? " + text, [Token("KEYWORD", "?"), expected], diag=diag)
+    check("? " + text, [Token("KEYWORD", "?"), expected], d=diag)
 
 
 def check_bitn(input: str, kind: str, value: int, sigil: str):
@@ -95,29 +94,29 @@ def test_int_lit_type_detection():
         "18446744073709551615",
         Token("NUM_LIT", (18446744073709551615, TYPE__UNSIGNED__INTEGER64)),
     )
-    check_expr("18446744073709551616", Token("ERROR"), diag=diags.E_NUM_LIT_MAX_BIG)
+    check_expr("18446744073709551616", Token("ERROR"), diag=diag.E_NUM_LIT_MAX_BIG)
 
 
 def test_int_lit_explicit_type():
     check_expr("0`", Token("NUM_LIT", (0, TYPE__BIT)))
-    check_expr("1`", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("1`", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("0~`", Token("NUM_LIT", (0, TYPE__UNSIGNED__BIT)))
     check_expr("1~`", Token("NUM_LIT", (1, TYPE__UNSIGNED__BIT)))
-    check_expr("2~`", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("2~`", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("127%%", Token("NUM_LIT", (0x7F, TYPE__BYTE)))
-    check_expr("128%%", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("128%%", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("128~%%", Token("NUM_LIT", (0x80, TYPE__UNSIGNED__BYTE)))
-    check_expr("256~%%", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("256~%%", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("32767%", Token("NUM_LIT", (0x7FFF, TYPE_INTEGER)))
-    check_expr("32768%", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("32768%", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("32768~%", Token("NUM_LIT", (0x8000, TYPE__UNSIGNED_INTEGER)))
     check_expr("65535~%", Token("NUM_LIT", (0xFFFF, TYPE__UNSIGNED_INTEGER)))
-    check_expr("65536%", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("65536%", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("2147483647&", Token("NUM_LIT", (0x7FFFFFFF, TYPE_LONG)))
-    check_expr("2147483648&", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("2147483648&", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("2147483648~&", Token("NUM_LIT", (0x80000000, TYPE__UNSIGNED_LONG)))
     check_expr("4294967295~&", Token("NUM_LIT", (0xFFFFFFFF, TYPE__UNSIGNED_LONG)))
-    check_expr("4294967296~&", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("4294967296~&", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr(
         "9223372036854775807&&",
         Token("NUM_LIT", (0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64)),
@@ -125,7 +124,7 @@ def test_int_lit_explicit_type():
     check_expr(
         "9223372036854775808&&",
         Token("ERROR"),
-        diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+        diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
     )
     check_expr(
         "9223372036854775808~&&",
@@ -138,7 +137,7 @@ def test_int_lit_explicit_type():
     check_expr(
         "18446744073709551616~&&",
         Token("ERROR"),
-        diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+        diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
     )
     check_expr("1&&", Token("NUM_LIT", (1, TYPE__INTEGER64)))
 
@@ -181,7 +180,7 @@ def test_dec_lit_explicit_type():
     check_expr(
         "1234567890123456789012345678901234567890.0!",
         Token("ERROR"),
-        diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+        diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
     )
     check_expr(
         "1234567890123456789012345678901234567890.0#",
@@ -231,42 +230,40 @@ def test_base_lit_type_detection():
         "&hffffffffffffffff",
         Token("NUM_LIT", (-1, TYPE__INTEGER64)),
     )
-    check_expr("&h10000000000000000", Token("ERROR"), diag=diags.E_NUM_LIT_MAX_BIG)
+    check_expr("&h10000000000000000", Token("ERROR"), diag=diag.E_NUM_LIT_MAX_BIG)
 
 
 def test_base_lit_explicit_bitn():
     check_bitn("&b1`1", "NUM_LIT", -1, "`1")
-    check_expr("&b10`1", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("&b10`1", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_bitn("&b1`4", "NUM_LIT", 1, "`4")
     check_bitn("&b1010`4", "NUM_LIT", -6, "`4")
     check_bitn("&b1~`1", "NUM_LIT", 1, "~`1")
-    check_expr("&b10~`1", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("&b10~`1", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_bitn("&b1010~`4", "NUM_LIT", 10, "~`4")
 
 
 def test_base_lit_explicit_type():
     check_expr("&b0`", Token("NUM_LIT", (0, TYPE__BIT)))
     check_expr("&b1`", Token("NUM_LIT", (-1, TYPE__BIT)))
-    check_expr("&b10`", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("&b10`", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("&o0~`", Token("NUM_LIT", (0, TYPE__UNSIGNED__BIT)))
     check_expr("&o1~`", Token("NUM_LIT", (1, TYPE__UNSIGNED__BIT)))
-    check_expr("&o2~`", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("&o2~`", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("&h7f%%", Token("NUM_LIT", (0x7F, TYPE__BYTE)))
     check_expr("&h80%%", Token("NUM_LIT", (-0x80, TYPE__BYTE)))
     check_expr("&h80~%%", Token("NUM_LIT", (0x80, TYPE__UNSIGNED__BYTE)))
-    check_expr("&h100~%%", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("&h100~%%", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("&h7fff%", Token("NUM_LIT", (0x7FFF, TYPE_INTEGER)))
     check_expr("&h8000%", Token("NUM_LIT", (-0x8000, TYPE_INTEGER)))
     check_expr("&h8000~%", Token("NUM_LIT", (0x8000, TYPE__UNSIGNED_INTEGER)))
     check_expr("&hffff~%", Token("NUM_LIT", (0xFFFF, TYPE__UNSIGNED_INTEGER)))
-    check_expr("&h10000%", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("&h10000%", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr("&h7fffffff&", Token("NUM_LIT", (0x7FFFFFFF, TYPE_LONG)))
     check_expr("&h80000000&", Token("NUM_LIT", (-0x80000000, TYPE_LONG)))
     check_expr("&h80000000~&", Token("NUM_LIT", (0x80000000, TYPE__UNSIGNED_LONG)))
     check_expr("&hffffffff~&", Token("NUM_LIT", (0xFFFFFFFF, TYPE__UNSIGNED_LONG)))
-    check_expr(
-        "&h100000000~&", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE
-    )
+    check_expr("&h100000000~&", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr(
         "&h7fffffffffffffff&&",
         Token("NUM_LIT", (0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64)),
@@ -286,7 +283,7 @@ def test_base_lit_explicit_type():
     check_expr(
         "&h10000000000000000~&&",
         Token("ERROR"),
-        diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+        diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
     )
     check_expr("&b1&&", Token("NUM_LIT", (1, TYPE__INTEGER64)))
 
@@ -305,7 +302,7 @@ def test_exp_e_lit():
         check_expr(f"25.{c}", Token("NUM_LIT", (25, expected_type)))
         check_expr(f"25{c}-2", Token("NUM_LIT", (0.25, expected_type)))
         check_expr(f"2.5{c}-10", Token("NUM_LIT", (2.5e-10, expected_type)))
-    check_expr("3e39", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("3e39", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
 
 
 def test_exp_d_lit():
@@ -322,7 +319,7 @@ def test_exp_d_lit():
         check_expr(f"25.{c}", Token("NUM_LIT", (25, expected_type)))
         check_expr(f"25{c}-2", Token("NUM_LIT", (0.25, expected_type)))
         check_expr(f"2.5{c}-10", Token("NUM_LIT", (2.5e-10, expected_type)))
-    check_expr("1.8d308", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("1.8d308", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
 
 
 def test_exp_f_lit():
@@ -354,7 +351,7 @@ def test_exp_f_lit():
         check_expr(
             f"2.5{c}-10", Token("NUM_LIT", (ExtendedFloat("2.5", "-10"), expected_type))
         )
-    check_expr("1.2f4932", Token("ERROR"), diag=diags.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
+    check_expr("1.2f4932", Token("ERROR"), diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
 
 
 def test_string_lit():
@@ -364,7 +361,7 @@ def test_string_lit():
 def test_keyword():
     check("?", Token("KEYWORD", "?"))
     check("if", Token("KEYWORD", "if"))
-    check("if%", Token("ERROR"), diag=diags.E_KW_BAD_SIGIL)
+    check("if%", Token("ERROR"), d=diag.E_KW_BAD_SIGIL)
     check("if$", Token("ID", ("if", TYPE_STRING)))
 
 
@@ -382,10 +379,10 @@ def test_procedure():
     symbols.procedures["a_string_builtin$"] = a_string_builtin
 
     check("a_sub", Token("PROCEDURE", a_sub), symbols)
-    check("a_sub!", Token("ERROR"), symbols, diag=diags.E_EXISTING_DEF_SIGIL_CLASH)
+    check("a_sub!", Token("ERROR"), symbols, d=diag.E_EXISTING_DEF_SIGIL_CLASH)
     check("a_function", Token("PROCEDURE", a_function), symbols)
     check("a_function$", Token("PROCEDURE", a_function), symbols)
-    check("a_function!", Token("ERROR"), symbols, diag=diags.E_EXISTING_DEF_SIGIL_CLASH)
+    check("a_function!", Token("ERROR"), symbols, d=diag.E_EXISTING_DEF_SIGIL_CLASH)
     check("a_string_builtin", Token("ID", ("a_string_builtin", TYPE_SINGLE)), symbols)
     check("a_string_builtin$", Token("PROCEDURE", a_string_builtin), symbols)
 
@@ -429,9 +426,9 @@ def test_id_custom_sigil():
     check_custom_sigil("foo`10", "_bit * 10")
     check_custom_sigil("foo~`10", "_unsigned _bit * 10")
     check_custom_sigil("foo$10", "string * 10")
-    check_expr("foo$0", Token("ERROR"), diag=diags.E_BAD_SIGIL_WIDTH)
-    check_expr("foo`65", Token("ERROR"), diag=diags.E_BAD_SIGIL_WIDTH)
-    check_expr("foo~`65", Token("ERROR"), diag=diags.E_BAD_SIGIL_WIDTH)
+    check_expr("foo$0", Token("ERROR"), diag=diag.E_BAD_SIGIL_WIDTH)
+    check_expr("foo`65", Token("ERROR"), diag=diag.E_BAD_SIGIL_WIDTH)
+    check_expr("foo~`65", Token("ERROR"), diag=diag.E_BAD_SIGIL_WIDTH)
 
 
 def test_check_punctuation():
@@ -524,4 +521,17 @@ def test_line_join():
             Token("ID", ("bar", TYPE_SINGLE), 2),
             Token("ID", ("baz", TYPE_SINGLE), 3),
         ],
+    )
+
+
+def test_bad_character():
+    check(
+        '@ "hello"',
+        [Token("ERROR"), Token("STRING_LIT")],
+        d=diag.E_UNKNOWN_CHARACTERS,
+    )
+    check(
+        '? "hello""',
+        [Token("KEYWORD"), Token("STRING_LIT"), Token("ERROR")],
+        d=diag.E_UNKNOWN_CHARACTERS,
     )
