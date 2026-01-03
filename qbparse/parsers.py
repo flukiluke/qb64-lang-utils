@@ -83,8 +83,12 @@ def do_if(ctx: ParseContext):
             elses = do_block(ctx)
         if ctx.at_a("KEYWORD", "endif"):
             next(ctx)
-        else:
+        elif ctx.prev.type == "KEYWORD" and ctx.prev.value == "end":
             ctx.consume("KEYWORD", "if")
+        else:
+            ctx.diags.raise_error(
+                diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end if"
+            )
     return If(guard, thens, elseifs, elses)
 
 
@@ -180,12 +184,11 @@ def do_block(ctx: ParseContext) -> list[Statement]:
             ):
                 return True
             case "KEYWORD", "end":
-                end = ctx.tok
                 next(ctx)
                 if not ctx.at_line_terminator():
                     return True
                 else:
-                    ctx.reverse(end)
+                    ctx.reverse()
                     return False
             case _:
                 return False
@@ -230,11 +233,10 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
 
 
 def do_unknown_var_or_procedure(ctx: ParseContext) -> Statement:
-    tok = ctx.tok
     next(ctx)
     if ctx.at_a("PUNCTUATION", "="):
         # Assignment to an implicitly declared scalar variable
-        ctx.reverse(tok)
+        ctx.reverse()
         return do_assignment(ctx)
     elif ctx.at_a("PUNCTUATION", "("):
         # This could be either an implicit array declaration or a

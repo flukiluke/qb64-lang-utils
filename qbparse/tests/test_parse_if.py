@@ -1,9 +1,7 @@
-from pytest import raises
-
+import qbparse.diagnostics as diag
 from qbparse import parse
 from qbparse.ast import Constant, If, Print, Statement
 from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING
-from qbparse.diagnostics import ParseError
 
 from .helpers import Ast
 
@@ -39,7 +37,8 @@ def test_single_line():
 
 
 def test_double_else():
-    raises(ParseError, parse, 'if 1 then print "a"; else print "b"; else print "c";')
+    prog = parse('if 1 then print "a"; else print "b"; else print "c";')
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_KEYWORD)
 
 
 def test_single_line_else():
@@ -163,9 +162,7 @@ def test_elseif():
 
 
 def test_else_last():
-    raises(
-        ParseError,
-        parse,
+    prog = parse(
         """
         if 1 then
             print "a"
@@ -175,6 +172,7 @@ def test_else_last():
             print "c"
     """,
     )
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
 
 
 def test_single_line_colons():

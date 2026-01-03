@@ -16,6 +16,8 @@ class ParseContext:
         self.token_stream = Lexer(self.symbols, self.diags)
         self.token_stream.input(input)
         self.reversed_tokens: list[LexToken] = []
+        self._prev_prev = LexToken()
+        self.prev = LexToken()
         self.tok = LexToken()
         self.tok.lexer = self.token_stream
         self.tok.lineno = 1
@@ -24,6 +26,8 @@ class ParseContext:
         next(self)
 
     def __next__(self):
+        self._prev_prev = self.prev
+        self.prev = self.tok
         if len(self.reversed_tokens):
             self.tok = self.reversed_tokens.pop()
             if TRACE_TOKENS:
@@ -44,11 +48,12 @@ class ParseContext:
             print(">", self.tok)
         return self.tok
 
-    def reverse(self, tok: LexToken):
+    def reverse(self):
         if TRACE_TOKENS:
             print("<<<", self.tok)
         self.reversed_tokens.append(self.tok)
-        self.tok = tok
+        self.tok = self.prev
+        self.prev = self._prev_prev
         if TRACE_TOKENS:
             print(">", self.tok)
 

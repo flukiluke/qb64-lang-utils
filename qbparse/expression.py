@@ -56,14 +56,14 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
                     style=Call.Style.PREFIX,
                 )
             case "ID", _:
-                ctx.reverse(token)
+                ctx.reverse()
                 return do_lvalue(ctx)
             case "STRING_LIT", _:
                 return Constant(token.value, TYPE_STRING)
             case "NUM_LIT", _:
                 return Constant(token.value[0], token.value[1])
             case "PROCEDURE", _:
-                ctx.reverse(token)
+                ctx.reverse()
                 return do_func_call(ctx)
             case "VARIABLE", var:
                 return Var(var)
