@@ -12,7 +12,6 @@ class Program:
     def __init__(self, input: str):
         self.input = input
         self.diagnostics = DiagnosticStore()
-        self.errors = list[str]()
         self.globals = SymbolStore()
         self.main = UserProcDefinition("_main", TypeSignature(TYPE__NONE, []))
         self.globals.add_procedure(Procedure("_main", [self.main]))

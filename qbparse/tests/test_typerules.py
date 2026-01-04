@@ -1,3 +1,4 @@
+import qbparse.diagnostics as diag
 from qbparse import parse
 from qbparse.ast import BuiltinProcDefinition, Call, Cast, Constant
 from qbparse.datatypes import (
@@ -19,7 +20,7 @@ from .helpers import Ast, builtin_proc
 
 def check(input: str):
     result = parse(input)
-    assert len(result.errors) == 0
+    assert len(result.diagnostics.diagnostics) == 0
     return result
 
 
@@ -27,7 +28,7 @@ def test_assignment():
     check("x = 3")
     check('x$ = "foo"')
     check("x = 3")
-    assert len(parse("x$ = 3").errors) != 0
+    assert parse("x$ = 3").diagnostics.has(diag.E_ASSIGNMENT_MISMATCH)
 
 
 def test_equality():
@@ -77,8 +78,8 @@ def test_equality():
 
 
 def test_equality_errors():
-    assert len(parse('? "foo" = 2').errors) > 0
-    assert len(parse('? 2 = "foo"').errors) > 0
+    assert parse('? "foo" = 2').diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)
+    assert parse('? 2 = "foo"').diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)
 
 
 def test_operator_overload_int():
@@ -142,7 +143,7 @@ def test_operator_overload_no_match():
     """
     Incompatible arguments
     """
-    assert len(parse('? "foo" + 3').errors) > 0
+    assert parse('? "foo" + 3').diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)
 
 
 def test_operator_overload_float_to_integral():
@@ -263,10 +264,11 @@ def test_standard_function_calls():
 
 
 def test_function_wrong_num_arguments():
-    assert len(parse('? lcase$("foo","bar")').errors) > 0
-    assert len(parse("? _atan2(3)").errors) > 0
+    assert parse('? lcase$("foo","bar")').diagnostics.has(diag.E_TOO_MANY_ARGUMENTS)
+    assert parse("? lcase$").diagnostics.has(diag.E_NOT_ENOUGH_ARGUMENTS)
+    assert parse("? _atan2(3)").diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)
 
 
 def test_function_wrong_type_arguments():
-    assert len(parse("? lcase$(3)").errors) > 0
-    assert len(parse('? _atan2("foo")').errors) > 0
+    assert parse("? lcase$(3)").diagnostics.has(diag.E_ARG_TYPE_MISMATCH)
+    assert parse('? _atan2("foo")').diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)

@@ -105,7 +105,7 @@ def test_nested_loop():
 
 
 def test_loop_string_guard():
-    assert len(parse('while "foo": wend').errors) > 0
+    assert parse('while "foo": wend').diagnostics.has(diag.E_NON_NUMERIC_CONDITION)
 
 
 def test_multi_guard():

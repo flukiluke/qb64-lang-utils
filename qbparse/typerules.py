@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
+
+import qbparse.diagnostics as diag
 
 if TYPE_CHECKING:
     from qbparse import Program
@@ -25,6 +27,7 @@ from qbparse.datatypes import (
     TYPE__FLOAT,
     TYPE__INTEGER64,
     TYPE__NONE,
+    TYPE_ANY,
     TYPE_STRING,
     FloatType,
     Type,
@@ -52,9 +55,6 @@ class WalkContext:
             (If, self.kw_if),
             (Loop, self.kw_loop),
         ]
-
-    def add_error(self, text: str):
-        self.program.errors.append(text)
 
     def start(self):
         for proc in self.program.globals.procedures.values():
@@ -89,16 +89,19 @@ class WalkContext:
         return node.target.type
 
     def call(self, node: Call):
+        for arg in node.args:
+            self.evaluate(arg)
         if node.target.name == "=" or node.target.name == "<>":
-            return self._equality_call(node)
-        arg_types = [self.evaluate(arg) for arg in node.args]
-        node.impl = _find_impl_match(node.target.impls, arg_types)
+            node.impl = self._equality_call(node)
+        elif len(node.target.impls) == 1:
+            node.impl = self._single_impl_call(node)
+        else:
+            node.impl = self._find_impl_match(node)
         if node.impl is None:
-            self.add_error("Cannot resolve function call types")
             return TYPE__NONE
         new_args = list[Expr]()
         for arg, param_type in zip(node.args, node.impl.signature.params):
-            if arg.expr_type != param_type:
+            if arg.expr_type != param_type and param_type != TYPE_ANY:
                 new_args.append(Cast(arg, param_type))
             else:
                 new_args.append(arg)
@@ -106,19 +109,23 @@ class WalkContext:
         return node.impl.signature.ret
 
     def _equality_call(self, node: Call):
-        if len(node.args) != 2:
-            self.add_error(node.target.name + " operator must have 2 arguments")
-            return TYPE__NONE
-        node.impl = node.target.impls[0]
-        left = self.evaluate(node.args[0])
-        right = self.evaluate(node.args[1])
+        """
+        The = and <> are implicitly defined for all types, so they don't have an
+        explicit list of impls. As long as we can cast both arguments to the same
+        type the operation is OK.
+        """
+        left = node.args[0].expr_type
+        right = node.args[1].expr_type
         if left == right:
             pass
         elif not left.is_number() or not right.is_number():
-            self.add_error(
-                f"Cannot apply {node.target.name} operator to {left} and {right}"
+            self.program.diagnostics.create(
+                diag.E_NO_MATCHING_OVERLOAD,
+                node,
+                node.target.name + " operator",
+                left.name + " and " + right.name,
             )
-            return TYPE__NONE
+            return None
         elif can_safely_cast(left, right):
             node.args[0] = Cast(node.args[0], right)
         elif can_safely_cast(right, left):
@@ -128,20 +135,113 @@ class WalkContext:
                 Cast(node.args[0], TYPE__FLOAT),
                 Cast(node.args[1], TYPE__FLOAT),
             ]
-        return node.impl.signature.ret
+        return node.target.impls[0]
+
+    def _single_impl_call(self, node: Call):
+        params = node.target.impls[0].signature.params
+        if len(node.args) < len(params):
+            self.program.diagnostics.create(
+                diag.E_NOT_ENOUGH_ARGUMENTS,
+                node,
+                node.target.name,
+                len(params),
+                len(node.args),
+            )
+            return None
+        elif len(node.args) > len(params):
+            self.program.diagnostics.create(
+                diag.E_TOO_MANY_ARGUMENTS,
+                node,
+                node.target.name,
+                len(params),
+                len(node.args),
+            )
+            return None
+        args_ok = True
+        for param, arg in zip(params, node.args):
+            if not can_cast(param, arg.expr_type):
+                self.program.diagnostics.create(
+                    diag.E_ARG_TYPE_MISMATCH, arg, arg.expr_type, param
+                )
+                args_ok = False
+        if args_ok:
+            return node.target.impls[0]
+        return None
+
+    def _find_impl_match(self, node: Call):
+        """
+        Return the impl whose type signature best match the argument types,
+        or None if no impl matches.
+        The algorithm is:
+            1) Select all compatible impls. An impl is compatible if all arguments
+            can be cast (even with loss) to the expected type.
+                a) If there are no compatibles, return None.
+                b) If there is exactly 1 compatible, return it.
+            2) Of all compatible impls, return the first one where all casts are
+            lossless. If no impl has all lossless casts, continue to 3.
+            3) Round all float arguments to the largest signed integral type
+            (i.e. _integer64) and return the first compatible impl that
+            now has all lossless casts.
+            4) If still no impl has all lossless casts, return the last one.
+        Rule 1b is the usual case for simple procedures. 2 allows overloaded
+        functions to be listed in order of increasing type width and the narrowest
+        version that doesn't lose data is picked. 3 handles passing floats to
+        integer-only functions like bitwise operators. 4 is a fallback if a cast is
+        inevitable.
+        """
+        impls = node.target.impls
+        arg_types = [arg.expr_type for arg in node.args]
+        compatibles = [
+            impl
+            for impl in impls
+            if self._impl_is_compatible(impl, arg_types, lossless=False)
+        ]
+        if len(compatibles) == 0:
+            self.program.diagnostics.create(
+                diag.E_NO_MATCHING_OVERLOAD,
+                node,
+                node.target.name,
+                ", ".join([t.name for t in arg_types]),
+            )
+            return None
+        if len(compatibles) == 1:
+            return compatibles[0]
+        for impl in compatibles:
+            if self._impl_is_compatible(impl, arg_types, lossless=True):
+                return impl
+        arg_types = list(
+            map(lambda t: TYPE__INTEGER64 if isinstance(t, FloatType) else t, arg_types)
+        )
+        for impl in compatibles:
+            if self._impl_is_compatible(impl, arg_types, lossless=True):
+                return impl
+        return compatibles[-1]
+
+    def _impl_is_compatible(
+        self, impl: ProcDefinition, arg_types: Sequence[Type], lossless: bool
+    ):
+        if len(impl.signature.params) != len(arg_types):
+            return False
+        check_func = can_safely_cast if lossless else can_cast
+        for param, arg in zip(impl.signature.params, arg_types):
+            if not check_func(arg, param):
+                return False
+        return True
 
     def cast(self, node: Cast):
         type = self.evaluate(node.expr)
         if not can_cast(type, node.type):
-            self.add_error(f"Cannot convert expression from {type} to {node.type}")
+            self.program.diagnostics.create(
+                diag.E_ARG_TYPE_MISMATCH, node, type.name, node.type.name
+            )
         return node.type
 
     def assignment(self, node: Assignment):
         rtype = self.evaluate(node.rval)
         ltype = self.evaluate(node.lval)
         if not can_cast(rtype, ltype):
-            self.add_error(
-                f"Cannot assign expression of type {rtype} to variable of type {ltype}"
+            self.program.diagnostics.create(
+                diag.E_ASSIGNMENT_MISMATCH, node, rtype.name, ltype.name
             )
         elif rtype != ltype:
             node.rval = Cast(node.rval, ltype)
@@ -153,26 +253,28 @@ class WalkContext:
         for arg in node.args:
             type = self.evaluate(arg)
             if not type.is_number() and type != TYPE_STRING:
-                self.add_error(f"Cannot print expression of type {type}")
+                self.program.diagnostics.create(
+                    diag.E_UNPRINTABLE_TYPE, node, type.name
+                )
 
     def kw_if(self, node: If):
         type = self.evaluate(node.guard)
         if not type.is_number():
-            self.add_error("Condition must be a numeric expression")
+            self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, node.guard)
         for stmt in node.true_branch:
             self.evaluate(stmt)
         for stmt in node.false_branch:
             self.evaluate(stmt)
         for condition, stmts in node.elseifs:
             if not self.evaluate(condition).is_number():
-                self.add_error("Condition must be a numeric expression")
+                self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, condition)
             for stmt in stmts:
                 self.evaluate(stmt)
 
     def kw_loop(self, node: Loop):
         type = self.evaluate(node.guard)
         if not type.is_number():
-            self.add_error("Loop guard must be a numeric expression")
+            self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, node.guard)
         for stmt in node.block:
             self.evaluate(stmt)
 
@@ -180,52 +282,3 @@ class WalkContext:
 def typecheck(program: Program):
     ctx = WalkContext(program)
     ctx.start()
-
-
-def _find_impl_match(impls: list[ProcDefinition], arg_types: list[Type]):
-    """
-    Return the impl whose type signature best match the arg_types given,
-    or None if no impl matches.
-    The algorithm is:
-        1) Select all compatible impls. An impl is compatible if all arguments
-           can be cast (even with loss) to the expected type.
-            a) If there are no compatibles, return None.
-            b) If there is exactly 1 compatible, return it.
-        2) Of all compatible impls, return the first one where all casts are
-           lossless. If no impl has all lossless casts, continue to 3.
-        3) Round all float arguments to the largest signed integral type
-           (i.e. _integer64) and return the first compatible impl that
-           now has all lossless casts.
-        4) If still no impl has all lossless casts, return the last one.
-    Rule 1b is the usual case for simple procedures. 2 allows overloaded
-    functions to be listed in order of increasing type width and the narrowest
-    version that doesn't lose data is picked. 3 handles passing floats to integer-only
-    functions like bitwise operators. 4 is a fallback if a cast is inevitable.
-    """
-    compatibles = [
-        impl for impl in impls if _impl_is_compatible(impl, arg_types, lossless=False)
-    ]
-    if len(compatibles) == 0:
-        return None
-    if len(compatibles) == 1:
-        return compatibles[0]
-    for impl in compatibles:
-        if _impl_is_compatible(impl, arg_types, lossless=True):
-            return impl
-    arg_types = list(
-        map(lambda t: TYPE__INTEGER64 if isinstance(t, FloatType) else t, arg_types)
-    )
-    for impl in compatibles:
-        if _impl_is_compatible(impl, arg_types, lossless=True):
-            return impl
-    return compatibles[-1]
-
-
-def _impl_is_compatible(impl: ProcDefinition, arg_types: list[Type], lossless: bool):
-    if len(impl.signature.params) != len(arg_types):
-        return False
-    check_func = can_safely_cast if lossless else can_cast
-    for param, arg in zip(impl.signature.params, arg_types):
-        if not check_func(arg, param):
-            return False
-    return True

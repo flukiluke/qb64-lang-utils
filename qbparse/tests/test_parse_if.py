@@ -247,19 +247,16 @@ def test_nested_if():
 
 
 def test_bad_guard():
-    assert len(parse('if "foo" then print "bar"').errors) > 0
-    assert (
-        len(
-            parse("""
-                     if 1 then
-                        print "hi"
-                     elseif "foo" then
-                        print "bar"
-                        end if
-                     """).errors
-        )
-        > 0
+    assert parse('if "foo" then print "bar"').diagnostics.has(
+        diag.E_NON_NUMERIC_CONDITION
     )
+    assert parse("""
+            if 1 then
+                print "hi"
+            elseif "foo" then
+                print "bar"
+            end if
+            """).diagnostics.has(diag.E_NON_NUMERIC_CONDITION)
 
 
 # TODO: IF x THEN 100 ELSE 200

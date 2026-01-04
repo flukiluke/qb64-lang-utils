@@ -4,6 +4,8 @@ from typing import Any
 
 from ply.lex import LexToken
 
+from qbparse.ast import Node
+
 
 class ParseError(Exception):
     pass
@@ -64,8 +66,11 @@ class DiagnosticStore:
     def __init__(self):
         self.diagnostics = list[_Diagnostic]()
 
-    def create(self, template: DiagTemplate, source: LexToken, *args: Any):
-        diag = _Diagnostic(template, source.lexpos, source.length, *args)
+    def create(self, template: DiagTemplate, source: LexToken | Node, *args: Any):
+        if isinstance(source, LexToken):
+            diag = _Diagnostic(template, source.lexpos, source.length, *args)
+        else:
+            diag = _Diagnostic(template, 0, 0, *args)
         self.diagnostics.append(diag)
         return diag
 
@@ -103,4 +108,23 @@ E_BAD_SIGIL_WIDTH = DiagTemplate(
 )
 E_TOO_MANY_LOOP_GUARDS = DiagTemplate(
     _Level.ERROR, "Loop cannot have conditions at both top and bottom."
+)
+E_TOO_MANY_ARGUMENTS = DiagTemplate(
+    _Level.ERROR, "The procedure {} only takes {} arguments, but {} have been given."
+)
+E_NOT_ENOUGH_ARGUMENTS = DiagTemplate(
+    _Level.ERROR, "The procedure {} takes {} arguments, but only {} have been given."
+)
+E_ARG_TYPE_MISMATCH = DiagTemplate(
+    _Level.ERROR, "Argument of type {} cannot be cast to required type {}"
+)
+E_NO_MATCHING_OVERLOAD = DiagTemplate(
+    _Level.ERROR, "{} cannot be applied to argument(s) of type {}"
+)
+E_ASSIGNMENT_MISMATCH = DiagTemplate(
+    _Level.ERROR, "Cannot convert expression of type {} to {} for assignment"
+)
+E_UNPRINTABLE_TYPE = DiagTemplate(_Level.ERROR, "Cannot print expression of type {}")
+E_NON_NUMERIC_CONDITION = DiagTemplate(
+    _Level.ERROR, "Condition must be a numeric expression"
 )
