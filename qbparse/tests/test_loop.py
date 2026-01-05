@@ -9,8 +9,7 @@ def test_do_while():
         """
         do while x > 1
             print "hi"
-        loop
-    """
+        loop"""
     ).main.find(Loop)
     assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [Ast(Print)], top_check=True)
 
@@ -144,4 +143,23 @@ def test_bad_nesting():
             wend
         loop
     """)
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
+
+
+def test_missing_newline_while():
+    prog = parse("while x > 1 ? 2 : wend")
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
+
+    prog = parse("while x > 1 : wend ? 2")
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
+
+
+def test_missing_newline_do():
+    prog = parse("""do while x > 1 ? 2 : loop""")
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
+
+    prog = parse("do ? 2 : loop")
+    assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)
+
+    prog = parse("do\nloop ? 4")
     assert prog.diagnostics.has(diag.E_UNEXPECTED_ITEM)

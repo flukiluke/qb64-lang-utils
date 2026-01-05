@@ -11,7 +11,6 @@ from qbparse.expression import do_expr, do_lvalue
 def do_print(ctx: ParseContext):
     """
     Expects: PRINT or ?
-    Results: token after last expression, comma or semicolon
     Format: PRINT|? (expr|,|;)*
     """
     result = Print(lex_start=ctx.tok.lexpos, lex_len=ctx.tok.length)
@@ -38,7 +37,6 @@ def do_if(ctx: ParseContext):
     """
     Expects: IF
     Results: newline
-    """
 
     def single_line_block(then_section: bool) -> list[Statement]:
         stmts: list[Statement] = []
@@ -60,7 +58,7 @@ def do_if(ctx: ParseContext):
     ctx.consume("KEYWORD", "then")
     # A REM after THEN acts as a command; we remain in single-line if mode
     if ctx.at_a("NEWLINE", "rem"):
-        next(ctx)
+        # Do not advance token so we leave it at a NEWLINE
         return If(
             guard,
             [],
@@ -103,7 +101,6 @@ def do_if(ctx: ParseContext):
 def do_do(ctx: ParseContext):
     """
     Expects: DO
-    Results: newline
     """
 
     def loop_guard() -> Expr | None:
@@ -117,7 +114,7 @@ def do_do(ctx: ParseContext):
                 [do_expr(ctx), Constant(0, TYPE__BYTE)],
                 lex_start=ctx.prev.lexpos,
             )
-        elif ctx.at_a("NEWLINE"):
+        elif ctx.at_line_terminator():
             return None
         else:
             ctx.diags.raise_error(
@@ -130,6 +127,7 @@ def do_do(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     next(ctx)
     top = loop_guard()
+    ctx.consume("NEWLINE")
     block = do_block(ctx)
     loop_tok = ctx.tok
     ctx.consume("KEYWORD", "loop")
@@ -156,11 +154,11 @@ def do_do(ctx: ParseContext):
 def do_while(ctx: ParseContext):
     """
     Expects: WHILE
-    Results: newline
     """
     lex_start = ctx.tok.lexpos
     next(ctx)
     guard = do_expr(ctx)
+    ctx.consume("NEWLINE")
     block = do_block(ctx)
     ctx.consume("KEYWORD", "wend")
     return Loop(
@@ -242,6 +240,8 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
             if handler is None:
                 ctx.diags.raise_error(diag.E_UNEXPECTED_KEYWORD, ctx.tok, ctx.tok.value)
             result = handler(ctx)
+            if not ctx.at_line_terminator():
+                ctx.diags.raise_error(diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end of statement")
         case "VARIABLE":
             # Asignment to existing variable
             result = do_assignment(ctx)
@@ -276,7 +276,6 @@ def do_unknown_var_or_procedure(ctx: ParseContext) -> Statement:
 def do_assignment(ctx: ParseContext):
     """
     Expects: first token of lvalue
-    Results: token after rvalue
     """
     lval = do_lvalue(ctx)
     ctx.consume("PUNCTUATION", "=")
