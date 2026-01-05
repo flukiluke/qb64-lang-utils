@@ -1,11 +1,21 @@
 from collections.abc import Callable
 
 import qbparse.diagnostics as diag
-from qbparse.ast import Assignment, Call, Constant, Expr, If, Loop, Print, Statement
+from qbparse.ast import (
+    Assignment,
+    Call,
+    Constant,
+    Expr,
+    For,
+    If,
+    Loop,
+    Print,
+    Statement,
+)
 from qbparse.context import ParseContext
 from qbparse.datatypes import TYPE__BYTE
 from qbparse.diagnostics import ParseError
-from qbparse.expression import do_expr, do_lvalue
+from qbparse.expression import do_bare_var, do_expr, do_lvalue
 
 
 def do_print(ctx: ParseContext):
@@ -36,7 +46,7 @@ def do_print(ctx: ParseContext):
 def do_if(ctx: ParseContext):
     """
     Expects: IF
-    Results: newline
+    """
 
     def single_line_block(then_section: bool) -> list[Statement]:
         stmts: list[Statement] = []
@@ -170,12 +180,57 @@ def do_while(ctx: ParseContext):
     )
 
 
+def do_for(ctx: ParseContext):
+    """
+    Expects: FOR
+    """
+    lex_start = ctx.tok.lexpos
+    next(ctx)
+    var = do_bare_var(ctx)
+    ctx.consume("PUNCTUATION", "=")
+    start_value = do_expr(ctx)
+    ctx.consume("KEYWORD", "to")
+    end_value = do_expr(ctx)
+    if ctx.at_a("KEYWORD", "step"):
+        next(ctx)
+        step_value = do_expr(ctx)
+    elif ctx.at_a("NEWLINE"):
+        step_value = Constant(1, var.target.type)
+    else:
+        ctx.diags.raise_error(
+            diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "step or <newline>"
+        )
+    ctx.consume("NEWLINE")
+    block = do_block(ctx)
+    ctx.consume("KEYWORD", "next")
+    if not ctx.at_line_terminator():
+        next_var_tok = ctx.tok
+        next_var = do_bare_var(ctx)
+        if var.target != next_var.target:
+            ctx.diags.raise_error(
+                diag.E_FOR_NEXT_VAR_MISMATCH,
+                next_var_tok,
+                next_var.target.name,
+                var.target.name,
+            )
+    return For(
+        var,
+        start_value,
+        end_value,
+        step_value,
+        block,
+        lex_start=lex_start,
+        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+    )
+
+
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "print": do_print,
     "?": do_print,
     "if": do_if,
     "do": do_do,
     "while": do_while,
+    "for": do_for,
 }
 
 
@@ -241,7 +296,9 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
                 ctx.diags.raise_error(diag.E_UNEXPECTED_KEYWORD, ctx.tok, ctx.tok.value)
             result = handler(ctx)
             if not ctx.at_line_terminator():
-                ctx.diags.raise_error(diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end of statement")
+                ctx.diags.raise_error(
+                    diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end of statement"
+                )
         case "VARIABLE":
             # Asignment to existing variable
             result = do_assignment(ctx)

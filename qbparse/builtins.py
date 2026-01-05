@@ -29,6 +29,8 @@ def _generic(
 
 KEYWORDS = set(
     [
+        # Misc
+        "to",
         # Declarations
         "dim",
         "as",
@@ -48,6 +50,9 @@ KEYWORDS = set(
         "until",
         "loop",
         "wend",
+        "for",
+        "next",
+        "step",
         # Flow control
         "goto",
         "exit",

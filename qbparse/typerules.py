@@ -15,6 +15,7 @@ from qbparse.ast import (
     Cast,
     Constant,
     Expr,
+    For,
     If,
     Loop,
     Node,
@@ -54,6 +55,7 @@ class WalkContext:
             (Print, self.kw_print),
             (If, self.kw_if),
             (Loop, self.kw_loop),
+            (For, self.kw_for),
         ]
 
     def start(self):
@@ -275,6 +277,28 @@ class WalkContext:
         type = self.evaluate(node.guard)
         if not type.is_number():
             self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, node.guard)
+        for stmt in node.block:
+            self.evaluate(stmt)
+
+    def kw_for(self, node: For):
+        var_type = self.evaluate(node.iterator)
+        if not var_type.is_number():
+            self.program.diagnostics.create(diag.E_NON_NUMERIC_VARIABLE, node.iterator)
+        start_type = self.evaluate(node.start_value)
+        if not start_type.is_number():
+            self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, node.start_value)
+        end_type = self.evaluate(node.end_value)
+        if not end_type.is_number():
+            self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, node.end_value)
+        step_type = self.evaluate(node.step)
+        if not step_type.is_number():
+            self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, node.step)
+        if start_type != var_type:
+            node.start_value = Cast(node.start_value, var_type)
+        if end_type != var_type:
+            node.end_value = Cast(node.end_value, var_type)
+        if step_type != var_type:
+            node.step = Cast(node.step, var_type)
         for stmt in node.block:
             self.evaluate(stmt)
 

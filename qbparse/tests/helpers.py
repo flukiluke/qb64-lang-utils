@@ -38,7 +38,7 @@ def run_var(input: str, variable_name: str):
     variable = program.globals.find_variable(variable_name)
     assert variable is not None
     assert variable.name == variable_name
-    assert program.diagnostics.has_none()
+    assert program.diagnostics.has_none(), program.diagnostics.diagnostics
     return (program.main, variable)
 
 

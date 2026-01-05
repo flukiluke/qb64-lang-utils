@@ -145,3 +145,11 @@ E_UNPRINTABLE_TYPE = DiagTemplate(_Level.ERROR, "Cannot print expression of type
 E_NON_NUMERIC_CONDITION = DiagTemplate(
     _Level.ERROR, "Condition must be a numeric expression"
 )
+E_NON_NUMERIC_VARIABLE = DiagTemplate(_Level.ERROR, "Variable must be a numeric type")
+E_NON_NUMERIC_EXPR = DiagTemplate(
+    _Level.ERROR, "Expression must produce a numeric value"
+)
+E_EXPECTED_VAR_NAME = DiagTemplate(_Level.ERROR, "Expected a variable name")
+E_FOR_NEXT_VAR_MISMATCH = DiagTemplate(
+    _Level.ERROR, "Incorrect variable {}, expected {}"
+)

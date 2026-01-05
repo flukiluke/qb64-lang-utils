@@ -123,6 +123,10 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
 
 def do_lvalue(ctx: ParseContext) -> LValue:
+    return do_bare_var(ctx)
+
+
+def do_bare_var(ctx: ParseContext) -> Var:
     if ctx.tok.type == "VARIABLE":
         result = Var(ctx.tok.value, lex_start=ctx.tok.lexpos, lex_len=ctx.tok.length)
     elif ctx.tok.type == "ID":
@@ -132,7 +136,7 @@ def do_lvalue(ctx: ParseContext) -> LValue:
             lex_len=ctx.tok.length,
         )
     else:
-        assert False, "LValue with non variable or ID"
+        ctx.diags.raise_error(diag.E_EXPECTED_VAR_NAME, ctx.tok)
     next(ctx)
     return result
 

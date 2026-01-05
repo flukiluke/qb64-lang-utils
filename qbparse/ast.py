@@ -187,3 +187,15 @@ class Loop(Statement):
 
     def children(self):
         return chain([self.guard], self.block)
+
+
+@dataclass
+class For(Statement):
+    iterator: Var
+    start_value: Expr
+    end_value: Expr
+    step: Expr
+    block: list[Statement]
+
+    def children(self):
+        return chain([self.iterator], self.block)
