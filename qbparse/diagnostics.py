@@ -34,9 +34,9 @@ class DiagTemplate:
 
 
 class _Diagnostic:
-    def __init__(self, template: DiagTemplate, startpos: int, textlen: int, *args: Any):
+    def __init__(self, template: DiagTemplate, startpos: int, endpos: int, *args: Any):
         self.startpos = startpos
-        self.textlen = textlen
+        self.endpos = endpos
         self.template = template
         human_args = self.humanise(args)
         self.message = template.message.format(*human_args)
@@ -51,9 +51,13 @@ class _Diagnostic:
         return result
 
     def __repr__(self):
+        if self.startpos == -1 or self.endpos == -1:
+            location = "<unknown location>"
+        else:
+            location = f"{self.startpos}-{self.endpos}"
         return (
-            f"{self.startpos}+{self.textlen}: "
-            f"{self.template.level_name()} {self.template.id()}: {self.message}"
+            f"{location}: {self.template.level_name()} "
+            f"{self.template.id()}: {self.message}"
         )
 
 
@@ -68,14 +72,24 @@ class DiagnosticStore:
 
     def create(self, template: DiagTemplate, source: LexToken | Node, *args: Any):
         if isinstance(source, LexToken):
-            diag = _Diagnostic(template, source.lexpos, source.length, *args)
+            diag = _Diagnostic(
+                template, source.lexpos, source.lexpos + source.length, *args
+            )
         else:
-            diag = _Diagnostic(template, 0, 0, *args)
+            pos_range = source.get_lex_range()
+            if pos_range is None:
+                start_pos = -1
+                end_pos = -1
+            else:
+                start_pos, end_pos = pos_range
+            diag = _Diagnostic(template, start_pos, end_pos, *args)
         self.diagnostics.append(diag)
         return diag
 
     def raise_error(self, template: DiagTemplate, source: LexToken, *args: Any):
-        diag = _Diagnostic(template, source.lexpos, source.length, *args)
+        diag = _Diagnostic(
+            template, source.lexpos, source.lexpos + source.length, *args
+        )
         self.diagnostics.append(diag)
         raise DiagnosticError(diag)
 

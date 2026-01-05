@@ -48,25 +48,39 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
                     ctx.symbols.procedures["-"],
                     [do_expr(ctx, PREC_NEGATION)],
                     style=Call.Style.PREFIX,
+                    lex_start=token.lexpos,
+                    lex_len=token.length,
                 )
             case "KEYWORD", "not":
                 return Call(
                     ctx.symbols.procedures["not"],
                     [do_expr(ctx, PRECEDENCE["not"])],
                     style=Call.Style.PREFIX,
+                    lex_start=token.lexpos,
+                    lex_len=token.length,
                 )
             case "ID", _:
                 ctx.reverse()
                 return do_lvalue(ctx)
             case "STRING_LIT", _:
-                return Constant(token.value, TYPE_STRING)
+                return Constant(
+                    token.value,
+                    TYPE_STRING,
+                    lex_start=token.lexpos,
+                    lex_len=token.length,
+                )
             case "NUM_LIT", _:
-                return Constant(token.value[0], token.value[1])
+                return Constant(
+                    token.value[0],
+                    token.value[1],
+                    lex_start=token.lexpos,
+                    lex_len=token.length,
+                )
             case "PROCEDURE", _:
                 ctx.reverse()
                 return do_func_call(ctx)
             case "VARIABLE", var:
-                return Var(var)
+                return Var(var, lex_start=token.lexpos, lex_len=token.length)
             case _:
                 ctx.diags.raise_error(
                     diag.E_UNEXPECTED_ITEM, token, token.value, "an expression"
@@ -110,9 +124,13 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
 def do_lvalue(ctx: ParseContext) -> LValue:
     if ctx.tok.type == "VARIABLE":
-        result = Var(ctx.tok.value)
+        result = Var(ctx.tok.value, lex_start=ctx.tok.lexpos, lex_len=ctx.tok.length)
     elif ctx.tok.type == "ID":
-        result = Var(ctx.symbols.create_local(*ctx.tok.value))
+        result = Var(
+            ctx.symbols.create_local(*ctx.tok.value),
+            lex_start=ctx.tok.lexpos,
+            lex_len=ctx.tok.length,
+        )
     else:
         assert False, "LValue with non variable or ID"
     next(ctx)
@@ -126,13 +144,20 @@ def do_func_call(ctx: ParseContext) -> Call:
     Format: name [(args)]
     """
     target = ctx.tok.value
+    lex_start = ctx.tok.lexpos
+    lex_len = ctx.tok.length
     next(ctx)
     if ctx.at_a("PUNCTUATION", "("):
         next(ctx)
         args = do_func_args(ctx)
         ctx.consume("PUNCTUATION", ")")
-        return Call(target, args)
-    return Call(target)
+        return Call(
+            target,
+            args,
+            lex_start=lex_start,
+            lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        )
+    return Call(target, lex_start=lex_start, lex_len=lex_len)
 
 
 def do_func_args(ctx: ParseContext) -> list[Expr]:

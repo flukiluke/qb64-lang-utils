@@ -30,3 +30,8 @@ select = [
     # isort
     "I",
 ]
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*"
+]

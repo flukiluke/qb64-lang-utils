@@ -14,8 +14,8 @@ def do_print(ctx: ParseContext):
     Results: token after last expression, comma or semicolon
     Format: PRINT|? (expr|,|;)*
     """
+    result = Print(lex_start=ctx.tok.lexpos, lex_len=ctx.tok.length)
     next(ctx)
-    result = Print()
     final_newline = True
     while not ctx.at_line_terminator():
         match ctx.tok.type, ctx.tok.value:
@@ -54,13 +54,21 @@ def do_if(ctx: ParseContext):
             ctx.skip("NEWLINE", ":")
         return stmts
 
+    lex_start = ctx.tok.lexpos
     next(ctx)
     guard = do_expr(ctx)
     ctx.consume("KEYWORD", "then")
     # A REM after THEN acts as a command; we remain in single-line if mode
     if ctx.at_a("NEWLINE", "rem"):
         next(ctx)
-        return If(guard, [], [], [])
+        return If(
+            guard,
+            [],
+            [],
+            [],
+            lex_start=lex_start,
+            lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        )
 
     elses = []
     elseifs: list[tuple[Expr, list[Statement]]] = []
@@ -89,7 +97,7 @@ def do_if(ctx: ParseContext):
             ctx.diags.raise_error(
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end if"
             )
-    return If(guard, thens, elseifs, elses)
+    return If(guard, thens, elseifs, elses, lex_start=lex_start)
 
 
 def do_do(ctx: ParseContext):
@@ -105,7 +113,9 @@ def do_do(ctx: ParseContext):
         elif ctx.at_a("KEYWORD", "until"):
             next(ctx)
             return Call(
-                ctx.symbols.procedures["<>"], [do_expr(ctx), Constant(0, TYPE__BYTE)]
+                ctx.symbols.procedures["<>"],
+                [do_expr(ctx), Constant(0, TYPE__BYTE)],
+                lex_start=ctx.prev.lexpos,
             )
         elif ctx.at_a("NEWLINE"):
             return None
@@ -117,11 +127,13 @@ def do_do(ctx: ParseContext):
                 "while or until or <newline>",
             )
 
+    lex_start = ctx.tok.lexpos
     next(ctx)
     top = loop_guard()
     block = do_block(ctx)
     loop_tok = ctx.tok
     ctx.consume("KEYWORD", "loop")
+    lex_end = ctx.prev.lexpos + ctx.prev.length
     bottom = loop_guard()
     if top and bottom:
         ctx.diags.create(diag.E_TOO_MANY_LOOP_GUARDS, loop_tok)
@@ -132,7 +144,13 @@ def do_do(ctx: ParseContext):
         guard = bottom
     else:
         guard = Constant(1, TYPE__BYTE)
-    return Loop(guard, block, top_check=(top is not None))
+    return Loop(
+        guard,
+        block,
+        top_check=(top is not None),
+        lex_start=lex_start,
+        lex_len=(lex_end - lex_start),
+    )
 
 
 def do_while(ctx: ParseContext):
@@ -140,11 +158,18 @@ def do_while(ctx: ParseContext):
     Expects: WHILE
     Results: newline
     """
+    lex_start = ctx.tok.lexpos
     next(ctx)
     guard = do_expr(ctx)
     block = do_block(ctx)
     ctx.consume("KEYWORD", "wend")
-    return Loop(guard, block, top_check=True)
+    return Loop(
+        guard,
+        block,
+        top_check=True,
+        lex_start=lex_start,
+        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+    )
 
 
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {

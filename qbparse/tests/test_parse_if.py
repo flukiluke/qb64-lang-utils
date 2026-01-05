@@ -11,7 +11,7 @@ THREE = Ast(Constant, 3, TYPE_INTEGER)
 
 
 def PrintStr(s: str):
-    return Print([Ast(Constant, s, TYPE_STRING)])
+    return Ast(Print, [Ast(Constant, s, TYPE_STRING)])
 
 
 def run(input: str):
@@ -21,13 +21,15 @@ def run(input: str):
 def test_single_line():
     stmts = list(run('if 1 then print "a";\nif 1 then print "b";').find_all(If))
     assert stmts == [
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("a")],
             [],
             [],
         ),
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("b")],
             [],
@@ -46,20 +48,22 @@ def test_single_line_else():
         run('if 1 then print "x"; else print "y";\nprint 2;').find_all(Statement)
     )
     assert stmts == [
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("x")],
             [],
             [PrintStr("y")],
         ),
-        Print([TWO]),
+        Ast(Print, [TWO]),
     ]
 
 
 def test_trailing_else():
     stmts = list(run('if 1 then print "x"; else\nprint "y";').find_all(Statement))
     assert stmts == [
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("x")],
             [],
@@ -92,25 +96,29 @@ def test_multi_line():
 """).find_all(Statement)
     )
     assert stmts == [
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("x"), PrintStr("y")],
             [],
             [],
         ),
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("a")],
             [],
             [PrintStr("b"), PrintStr("c")],
         ),
-        If(
+        Ast(
+            If,
             ONE,
             [],
             [],
             [PrintStr("d")],
         ),
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("e")],
             [],
@@ -137,13 +145,15 @@ def test_elseif():
     """).find_all(Statement)
     )
     assert stmts == [
-        If(
+        Ast(
+            If,
             ONE,
             [PrintStr("a")],
             [(TWO, [PrintStr("b")])],
             [],
         ),
-        If(
+        Ast(
+            If,
             ONE,
             [],
             [
@@ -188,13 +198,13 @@ def test_single_line_colons():
     """).find_all(Statement)
     )
     assert stmts == [
-        If(ONE, [PrintStr("a"), PrintStr("b")], [], []),
-        If(ONE, [], [], []),
-        If(ONE, [PrintStr("c")], [], []),
-        If(ONE, [PrintStr("d"), PrintStr("e")], [], []),
-        If(ONE, [PrintStr("f")], [], []),
-        If(ONE, [PrintStr("g")], [], [PrintStr("h"), PrintStr("i")]),
-        If(ONE, [PrintStr("j")], [], [PrintStr("k")]),
+        Ast(If, ONE, [PrintStr("a"), PrintStr("b")], [], []),
+        Ast(If, ONE, [], [], []),
+        Ast(If, ONE, [PrintStr("c")], [], []),
+        Ast(If, ONE, [PrintStr("d"), PrintStr("e")], [], []),
+        Ast(If, ONE, [PrintStr("f")], [], []),
+        Ast(If, ONE, [PrintStr("g")], [], [PrintStr("h"), PrintStr("i")]),
+        Ast(If, ONE, [PrintStr("j")], [], [PrintStr("k")]),
     ]
 
 
@@ -213,9 +223,9 @@ def test_rem():
             """).find_all(Statement)
     )
     assert stmts == [
-        If(ONE, [], [], []),
-        If(ONE, [PrintStr("a")], [], []),
-        If(ONE, [], [], [PrintStr("b")]),
+        Ast(If, ONE, [], [], []),
+        Ast(If, ONE, [PrintStr("a")], [], []),
+        Ast(If, ONE, [], [], [PrintStr("b")]),
     ]
 
 
@@ -234,13 +244,14 @@ def test_nested_if():
             """).find_all(Statement)
     )
     assert stmts == [
-        If(
+        Ast(
+            If,
             ONE,
             [
                 PrintStr("a"),
-                If(TWO, [PrintStr("b")], [], [PrintStr("c")]),
+                Ast(If, TWO, [PrintStr("b")], [], [PrintStr("c")]),
             ],
-            [(TWO, [If(THREE, [PrintStr("d")], [], [])])],
+            [(TWO, [Ast(If, THREE, [PrintStr("d")], [], [])])],
             [],
         )
     ]
