@@ -155,6 +155,7 @@ def test_missing_newline():
 def test_bad_var():
     assert parse("for = 1 to 10 : next i").diagnostics.has(diag.E_EXPECTED_VAR_NAME)
     assert parse("for 2 = 1 to 10 : next i").diagnostics.has(diag.E_EXPECTED_VAR_NAME)
+    assert parse("for i = 1 to 10 : next j").diagnostics.has(diag.E_FOR_NEXT_VAR_MISMATCH)
 
 
 def test_non_numerics():
