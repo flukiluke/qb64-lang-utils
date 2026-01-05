@@ -13,6 +13,12 @@ def builtin_proc(name: str):
     raise ValueError("No such builtin procedure " + name)
 
 
+def parse_clean(input: str):
+    program = parse(input)
+    assert program.diagnostics.has_none()
+    return program
+
+
 def check(
     input: str,
     expected: qbparse.ast.Node | None = None,
@@ -24,7 +30,16 @@ def check(
     else:
         expr = prog.main.find(qbparse.ast.Expr)
         assert expr == expected
-        assert len(prog.diagnostics.diagnostics) == 0
+        assert prog.diagnostics.has_none()
+
+
+def run_var(input: str, variable_name: str):
+    program = parse(input)
+    variable = program.globals.find_variable(variable_name)
+    assert variable is not None
+    assert variable.name == variable_name
+    assert program.diagnostics.has_none()
+    return (program.main, variable)
 
 
 class Ast(qbparse.ast.Statement, qbparse.ast.LValue):

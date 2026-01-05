@@ -1,11 +1,11 @@
 import qbparse.diagnostics as diag
 from qbparse import parse
 from qbparse.ast import Call, Constant, Loop, Print
-from qbparse.tests.helpers import Ast, builtin_proc
+from qbparse.tests.helpers import Ast, builtin_proc, parse_clean
 
 
 def test_do_while():
-    loop = parse(
+    loop = parse_clean(
         """
         do while x > 1
             print "hi"
@@ -16,7 +16,7 @@ def test_do_while():
 
 
 def test_do_until():
-    loop = parse(
+    loop = parse_clean(
         """
         do until x > 1
             print "hi"
@@ -32,7 +32,7 @@ def test_do_until():
 
 
 def test_loop_while():
-    loop = parse(
+    loop = parse_clean(
         """
         do
             print "hi"
@@ -45,7 +45,7 @@ def test_loop_while():
 
 
 def test_loop_until():
-    loop = parse(
+    loop = parse_clean(
         """
         do
             print "hi"
@@ -61,7 +61,7 @@ def test_loop_until():
 
 
 def test_infinite_loop():
-    loop = parse(
+    loop = parse_clean(
         """
         do:print "hi"
         loop
@@ -71,7 +71,7 @@ def test_infinite_loop():
 
 
 def test_while():
-    loop = parse(
+    loop = parse_clean(
         """
         while x > 1
             print "hi"
@@ -82,12 +82,12 @@ def test_while():
 
 
 def test_empty_loop():
-    loop = parse("while x > 1:wend").main.find(Loop)
+    loop = parse_clean("while x > 1:wend").main.find(Loop)
     assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [], top_check=True)
 
 
 def test_nested_loop():
-    loop = parse(
+    loop = parse_clean(
         """
         do while x > 1
             do

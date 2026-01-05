@@ -3,7 +3,7 @@ from qbparse import parse
 from qbparse.ast import Constant, If, Print, Statement
 from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING
 
-from .helpers import Ast
+from .helpers import Ast, parse_clean
 
 ONE = Ast(Constant, 1, TYPE_INTEGER)
 TWO = Ast(Constant, 2, TYPE_INTEGER)
@@ -14,12 +14,10 @@ def PrintStr(s: str):
     return Ast(Print, [Ast(Constant, s, TYPE_STRING)])
 
 
-def run(input: str):
-    return parse(input).main
-
-
 def test_single_line():
-    stmts = list(run('if 1 then print "a";\nif 1 then print "b";').find_all(If))
+    stmts = list(
+        parse_clean('if 1 then print "a";\nif 1 then print "b";').main.find_all(If)
+    )
     assert stmts == [
         Ast(
             If,
@@ -45,7 +43,9 @@ def test_double_else():
 
 def test_single_line_else():
     stmts = list(
-        run('if 1 then print "x"; else print "y";\nprint 2;').find_all(Statement)
+        parse_clean('if 1 then print "x"; else print "y";\nprint 2;').main.find_all(
+            Statement
+        )
     )
     assert stmts == [
         Ast(
@@ -60,7 +60,9 @@ def test_single_line_else():
 
 
 def test_trailing_else():
-    stmts = list(run('if 1 then print "x"; else\nprint "y";').find_all(Statement))
+    stmts = list(
+        parse_clean('if 1 then print "x"; else\nprint "y";').main.find_all(Statement)
+    )
     assert stmts == [
         Ast(
             If,
@@ -75,7 +77,7 @@ def test_trailing_else():
 
 def test_multi_line():
     stmts = list(
-        run("""
+        parse_clean("""
             if 1 then
                 print "x";
                 print "y";
@@ -93,7 +95,7 @@ def test_multi_line():
                 print "e";
             else
             end if
-""").find_all(Statement)
+""").main.find_all(Statement)
     )
     assert stmts == [
         Ast(
@@ -129,7 +131,7 @@ def test_multi_line():
 
 def test_elseif():
     stmts = list(
-        run("""
+        parse_clean("""
             if 1 then
                 print "a";
             elseif 2 then
@@ -142,7 +144,7 @@ def test_elseif():
             else
                 print "f";
             endif
-    """).find_all(Statement)
+    """).main.find_all(Statement)
     )
     assert stmts == [
         Ast(
@@ -187,7 +189,7 @@ def test_else_last():
 
 def test_single_line_colons():
     stmts = list(
-        run("""
+        parse_clean("""
             if 1 then print "a";:print "b";
             if 1 then :
             if 1 then :print "c";:
@@ -195,7 +197,7 @@ def test_single_line_colons():
             if 1 then print "f"; else :
             if 1 then print "g"; else print "h"; :print "i";
             if 1 then print "j"; else :print "k";:
-    """).find_all(Statement)
+    """).main.find_all(Statement)
     )
     assert stmts == [
         Ast(If, ONE, [PrintStr("a"), PrintStr("b")], [], []),
@@ -210,7 +212,7 @@ def test_single_line_colons():
 
 def test_rem():
     stmts = list(
-        run("""
+        parse_clean("""
             if 1 then rem
             if 1 then
                 print "a";
@@ -220,7 +222,7 @@ def test_rem():
             else rem
                 print "b";
             end if
-            """).find_all(Statement)
+            """).main.find_all(Statement)
     )
     assert stmts == [
         Ast(If, ONE, [], [], []),
@@ -231,7 +233,7 @@ def test_rem():
 
 def test_nested_if():
     stmts = list(
-        run("""
+        parse_clean("""
             if 1 then
                 print "a";
                 if 2 then
@@ -241,7 +243,7 @@ def test_nested_if():
                 end if
             elseif 2 then if 3 then print "d";
             end if
-            """).find_all(Statement)
+            """).main.find_all(Statement)
     )
     assert stmts == [
         Ast(

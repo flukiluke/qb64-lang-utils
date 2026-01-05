@@ -1,5 +1,4 @@
 import qbparse.diagnostics as diag
-from qbparse import parse
 from qbparse.ast import Call, Cast, Constant, Expr, Print, Var
 from qbparse.datatypes import (
     TYPE__INTEGER64,
@@ -7,7 +6,7 @@ from qbparse.datatypes import (
     TYPE_SINGLE,
 )
 
-from .helpers import Ast, builtin_proc, check
+from .helpers import Ast, builtin_proc, check, parse_clean, run_var
 
 INFIX = Call.Style.INFIX
 PREFIX = Call.Style.PREFIX
@@ -305,11 +304,8 @@ def test_errors():
 
 
 def test_existing_scalar():
-    program = parse("x = 10 : ? x + 3")
-    variable = program.globals.find_variable("x")
-    assert variable is not None
-
-    expr = program.main.find(Print).find(Expr)
+    impl, variable = run_var("x = 10 : ? x + 3", "x")
+    expr = impl.find(Print).find(Expr)
     assert expr == Ast(
         Call,
         builtin_proc("+"),
@@ -319,11 +315,8 @@ def test_existing_scalar():
 
 
 def test_implicit_scalar():
-    program = parse("? x + 3")
-    variable = program.globals.find_variable("x")
-    assert variable is not None
-
-    expr = program.main.find(Print).find(Expr)
+    impl, variable = run_var("? x + 3", "x")
+    expr = impl.find(Print).find(Expr)
     assert expr == Ast(
         Call,
         builtin_proc("+"),
@@ -333,7 +326,7 @@ def test_implicit_scalar():
 
 
 def test_function_call_unary():
-    program = parse('? lcase$("hello")')
+    program = parse_clean('? lcase$("hello")')
     proc = program.globals.find_procedure("lcase$")
     assert proc is not None
     expr = program.main.find(Print).find(Expr)
@@ -348,7 +341,7 @@ def test_unary_function_call_bad_syntax():
 
 
 def test_function_call_binary():
-    expr = parse('? left$("Hello", 23)').main.find(Print).find(Expr)
+    expr = parse_clean('? left$("Hello", 23)').main.find(Print).find(Expr)
     assert expr == Ast(
         Call,
         builtin_proc("left$"),
@@ -360,7 +353,7 @@ def test_function_call_binary():
 
 
 def test_function_call_nested():
-    program = parse('? lcase$(lcase$("foo") + "bar")')
+    program = parse_clean('? lcase$(lcase$("foo") + "bar")')
     proc = program.globals.find_procedure("lcase$")
     assert proc is not None
     expr = program.main.find(Print).find(Expr)

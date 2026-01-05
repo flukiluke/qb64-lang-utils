@@ -96,6 +96,9 @@ class DiagnosticStore:
     def has(self, template: DiagTemplate):
         return any(diag.template == template for diag in self.diagnostics)
 
+    def has_none(self):
+        return len(self.diagnostics) == 0
+
 
 E_UNKNOWN_CHARACTERS = DiagTemplate(_Level.ERROR, "The text '{}' does not belong here.")
 E_NUM_LIT_MAX_BIG = DiagTemplate(

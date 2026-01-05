@@ -15,46 +15,40 @@ from qbparse.datatypes import (
     TypeSignature,
 )
 
-from .helpers import Ast, builtin_proc
-
-
-def check(input: str):
-    result = parse(input)
-    assert len(result.diagnostics.diagnostics) == 0
-    return result
+from .helpers import Ast, builtin_proc, parse_clean
 
 
 def test_assignment():
-    check("x = 3")
-    check('x$ = "foo"')
-    check("x = 3")
+    parse_clean("x = 3")
+    parse_clean('x$ = "foo"')
+    parse_clean("x = 3")
     assert parse("x$ = 3").diagnostics.has(diag.E_ASSIGNMENT_MISMATCH)
 
 
 def test_equality():
-    expr = check("? 1% = 2%").main.find(Call)
+    expr = parse_clean("? 1% = 2%").main.find(Call)
     assert expr == Ast(
         Call,
         builtin_proc("="),
         args=[Ast(Constant, 1), Ast(Constant, 2)],
         expr_type=TYPE__BYTE,
     )
-    expr = check("? 1% = 2&").main.find(Call)
+    expr = parse_clean("? 1% = 2&").main.find(Call)
     assert expr == Ast(
         Call,
         args=[Cast(Ast(Constant, 1), TYPE_LONG), Ast(Constant, 2)],
     )
-    expr = check("? 1& = 2%").main.find(Call)
+    expr = parse_clean("? 1& = 2%").main.find(Call)
     assert expr == Ast(
         Call,
         args=[Ast(Constant, 1), Cast(Ast(Constant, 2), TYPE_LONG)],
     )
-    expr = check("? 1! = 2%").main.find(Call)
+    expr = parse_clean("? 1! = 2%").main.find(Call)
     assert expr == Ast(
         Call,
         args=[Ast(Constant, 1), Cast(Ast(Constant, 2), TYPE_SINGLE)],
     )
-    expr = check("? 1! = 2#").main.find(Call)
+    expr = parse_clean("? 1! = 2#").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -62,12 +56,12 @@ def test_equality():
             Ast(Constant, 2),
         ],
     )
-    expr = check("? 1&& = 2#").main.find(Call)
+    expr = parse_clean("? 1&& = 2#").main.find(Call)
     assert expr == Ast(
         Call,
         args=[Cast(Ast(Constant, 1), TYPE__FLOAT), Cast(Ast(Constant, 2), TYPE__FLOAT)],
     )
-    expr = check('? "foo" = "bar"').main.find(Call)
+    expr = parse_clean('? "foo" = "bar"').main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -86,7 +80,7 @@ def test_operator_overload_int():
     """
     Exact argument match
     """
-    expr = check("? 2% + 3%").main.find(Call)
+    expr = parse_clean("? 2% + 3%").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -105,7 +99,7 @@ def test_operator_overload_mixed_num():
     """
     Promotion of one argument
     """
-    expr = check("? 2% - 3!").main.find(Call)
+    expr = parse_clean("? 2% - 3!").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -124,7 +118,7 @@ def test_operator_overload_mixed_unsigned():
     """
     Promotion of unsigned to larger signed
     """
-    expr = check("? 2& * 3~%").main.find(Call)
+    expr = parse_clean("? 2& * 3~%").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -150,9 +144,9 @@ def test_operator_overload_float_to_integral():
     """
     Rounding of float types to integral
     """
-    expr = check("? not 3!").main.find(Call)
+    expr = parse_clean("? not 3!").main.find(Call)
     assert expr == Ast(Call, args=[Cast(Ast(Constant, 3), TYPE__INTEGER64)])
-    expr = check("? 4.1# and 5.5##").main.find(Call)
+    expr = parse_clean("? 4.1# and 5.5##").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -166,7 +160,7 @@ def test_operator_overload_float_mixed_to_integral():
     """
     Rounding of float and integeral to integral
     """
-    expr = check("? 3! and 4%").main.find(Call)
+    expr = parse_clean("? 3! and 4%").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -180,7 +174,7 @@ def test_operator_overload_integer_to_float():
     """
     Promotion of integers for float-only function
     """
-    expr = check("? 2% / 3~`4").main.find(Call)
+    expr = parse_clean("? 2% / 3~`4").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -199,7 +193,7 @@ def test_operator_overload_long_to_float():
     """
     Promotion of long for float-only function
     """
-    expr = check("? 2& / 3%").main.find(Call)
+    expr = parse_clean("? 2& / 3%").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -218,7 +212,7 @@ def test_operator_overload_in64_to_float():
     """
     Promotion of _integer64 for float-only function
     """
-    expr = check("? 2&& / 3~&&").main.find(Call)
+    expr = parse_clean("? 2&& / 3~&&").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -237,7 +231,7 @@ def test_operator_overload_mixed_to_float():
     """
     Promotion of integral and float types for float-only function
     """
-    expr = check("? 2& / 3!").main.find(Call)
+    expr = parse_clean("? 2& / 3!").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
@@ -253,9 +247,9 @@ def test_operator_overload_mixed_to_float():
 
 
 def test_standard_function_calls():
-    expr = check('? lcase$("foo")').main.find(Call)
+    expr = parse_clean('? lcase$("foo")').main.find(Call)
     assert expr == Ast(Call, args=[Ast(Constant, "foo")], expr_type=TYPE_STRING)
-    expr = check("? _atan2(3, 4)").main.find(Call)
+    expr = parse_clean("? _atan2(3, 4)").main.find(Call)
     assert expr == Ast(
         Call,
         args=[Cast(Ast(Constant, 3), TYPE_SINGLE), Cast(Ast(Constant, 4), TYPE_SINGLE)],

@@ -1,27 +1,18 @@
-from qbparse import parse
 from qbparse.ast import Assignment, Call, Cast, Constant, Var
 from qbparse.datatypes import TYPE_SINGLE
 
-from .helpers import Ast, builtin_proc
-
-
-def run(input: str, variable_name: str):
-    program = parse(input)
-    variable = program.globals.find_variable(variable_name)
-    assert variable is not None
-    assert variable.name == variable_name
-    return (program.main, variable)
+from .helpers import Ast, builtin_proc, run_var
 
 
 def test_implicit_scalar():
-    impl, variable = run("x = 5", "x")
+    impl, variable = run_var("x = 5", "x")
     assert impl.find(Assignment) == Assignment(
         Ast(Var, variable), Cast(Ast(Constant, 5), TYPE_SINGLE)
     )
 
 
 def test_existing_scalar():
-    impl, variable = run("foo = 32 : foo = 17", "foo")
+    impl, variable = run_var("foo = 32 : foo = 17", "foo")
     assert list(impl.find_all(Assignment)) == [
         Assignment(Ast(Var, variable), Cast(Ast(Constant, 32), TYPE_SINGLE)),
         Assignment(Ast(Var, variable), Cast(Ast(Constant, 17), TYPE_SINGLE)),
@@ -29,7 +20,7 @@ def test_existing_scalar():
 
 
 def test_expression_rvalue():
-    impl, variable = run("foo = 23 / 7", "foo")
+    impl, variable = run_var("foo = 23 / 7", "foo")
     assert impl.find(Assignment) == Assignment(
         Ast(Var, variable),
         Ast(
