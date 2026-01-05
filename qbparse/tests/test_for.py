@@ -75,8 +75,9 @@ def test_merged_next():
         """
         for i = 1! to 10!
             for j = 1! to 8!
+                for k = 1! to 1!
                 print i
-            next j, i""",
+            next k, j, i""",
         "i",
     )
     assert impl.find(For) == Ast(
@@ -92,7 +93,7 @@ def test_merged_next():
                 Ast(Constant, 1),
                 Ast(Constant, 8),
                 Ast(Constant, 1),
-                [Ast(Print)],
+                [Ast(For)],
             )
         ],
     )

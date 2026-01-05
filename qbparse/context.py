@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 from ply.lex import LexToken
 
@@ -23,6 +24,7 @@ class ParseContext:
         self.tok.lineno = 1
         self.tok.type = ""
         self.tok.value = ""
+        self.open_for_vars = list[Any]()
         next(self)
 
     def __next__(self):

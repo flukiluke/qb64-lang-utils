@@ -213,6 +213,17 @@ def do_for(ctx: ParseContext):
                 next_var.target.name,
                 var.target.name,
             )
+        if ctx.at_a("PUNCTUATION", ","):
+            # Annoying NEXT k, j, i style. Insert newline + another NEXT token,
+            # effectively expanding it to NEXT k : NEXT j, i
+            ctx.prev.type = "NEWLINE"
+            ctx.prev.value = ":"
+            ctx.prev.length = 0
+            ctx.tok.type = "KEYWORD"
+            ctx.tok.value = "next"
+            ctx.tok.length = 0
+            ctx.reverse()
+
     return For(
         var,
         start_value,
