@@ -253,7 +253,9 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
             # to not-yet-defined procedure
             result = do_unknown_var_or_procedure(ctx)
         case _:
-            raise ParseError(f"Unexpected {ctx.tok.type} {ctx.tok.value}")
+            ctx.diags.raise_error(
+                diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "a statement"
+            )
     return result
 
 

@@ -17,6 +17,17 @@ def test_bad_expr_drops_line():
     assert prog.main.find(If) == Ast(If, true_branch=[Ast(Print), Ast(Print)])
 
 
+def test_bad_stmt():
+    prog = parse("""
+        if x = 2 then
+            "foo"
+            ? 10 - 3
+        end if
+    """)
+    assert prog.diagnostics.has(E_UNEXPECTED_ITEM)
+    assert prog.main.find(If) == Ast(If, true_branch=[Ast(Print)])
+
+
 def test_lex_range_leaf():
     assert Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2).get_lex_range() == (7, 9)
     assert Constant(42, TYPE_INTEGER, lex_start=7).get_lex_range() == (7, 7)
