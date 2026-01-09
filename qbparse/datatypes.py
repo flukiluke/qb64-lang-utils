@@ -149,9 +149,16 @@ class BitnType(IntegralType):
 
 
 @dataclass
+class Parameter:
+    type: Type
+    # name may be omitted for builtins
+    name: str | None = None
+
+
+@dataclass
 class TypeSignature:
     ret: Type
-    params: list[Type]
+    params: list[Parameter]
 
 
 def bits2float(spec1: str, spec2: str, b: int):

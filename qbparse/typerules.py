@@ -102,9 +102,9 @@ class WalkContext:
         if node.impl is None:
             return TYPE__NONE
         new_args = list[Expr]()
-        for arg, param_type in zip(node.args, node.impl.signature.params):
-            if arg.expr_type != param_type and param_type != TYPE_ANY:
-                new_args.append(Cast(arg, param_type))
+        for arg, param in zip(node.args, node.impl.signature.params):
+            if arg.expr_type != param.type and param.type != TYPE_ANY:
+                new_args.append(Cast(arg, param.type))
             else:
                 new_args.append(arg)
         node.args = new_args
@@ -161,7 +161,7 @@ class WalkContext:
             return None
         args_ok = True
         for param, arg in zip(params, node.args):
-            if not can_cast(param, arg.expr_type):
+            if not can_cast(param.type, arg.expr_type):
                 self.program.diagnostics.create(
                     diag.E_ARG_TYPE_MISMATCH, arg, arg.expr_type, param
                 )
@@ -226,7 +226,7 @@ class WalkContext:
             return False
         check_func = can_safely_cast if lossless else can_cast
         for param, arg in zip(impl.signature.params, arg_types):
-            if not check_func(arg, param):
+            if not check_func(arg, param.type):
                 return False
         return True
 

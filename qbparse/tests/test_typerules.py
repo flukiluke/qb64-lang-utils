@@ -14,6 +14,7 @@ from qbparse.datatypes import (
     ExtendedFloat,
     TypeSignature,
 )
+from qbparse.datatypes import Parameter as P
 
 from .helpers import Ast, builtin_proc, parse_clean
 
@@ -89,7 +90,7 @@ def test_operator_overload_int():
         ],
         impl=Ast(
             BuiltinProcDefinition,
-            TypeSignature(TYPE_INTEGER, [TYPE_INTEGER, TYPE_INTEGER]),
+            TypeSignature(TYPE_INTEGER, [P(TYPE_INTEGER), P(TYPE_INTEGER)]),
         ),
         expr_type=TYPE_INTEGER,
     )
@@ -108,7 +109,7 @@ def test_operator_overload_mixed_num():
         ],
         impl=Ast(
             BuiltinProcDefinition,
-            TypeSignature(TYPE_SINGLE, [TYPE_SINGLE, TYPE_SINGLE]),
+            TypeSignature(TYPE_SINGLE, [P(TYPE_SINGLE), P(TYPE_SINGLE)]),
         ),
         expr_type=TYPE_SINGLE,
     )
@@ -127,7 +128,7 @@ def test_operator_overload_mixed_unsigned():
         ],
         impl=Ast(
             BuiltinProcDefinition,
-            TypeSignature(TYPE_LONG, [TYPE_LONG, TYPE_LONG]),
+            TypeSignature(TYPE_LONG, [P(TYPE_LONG), P(TYPE_LONG)]),
         ),
         expr_type=TYPE_LONG,
     )
@@ -183,7 +184,7 @@ def test_operator_overload_integer_to_float():
         ],
         impl=Ast(
             BuiltinProcDefinition,
-            TypeSignature(TYPE_SINGLE, [TYPE_SINGLE, TYPE_SINGLE]),
+            TypeSignature(TYPE_SINGLE, [P(TYPE_SINGLE), P(TYPE_SINGLE)]),
         ),
         expr_type=TYPE_SINGLE,
     )
@@ -202,7 +203,7 @@ def test_operator_overload_long_to_float():
         ],
         impl=Ast(
             BuiltinProcDefinition,
-            TypeSignature(TYPE_DOUBLE, [TYPE_DOUBLE, TYPE_DOUBLE]),
+            TypeSignature(TYPE_DOUBLE, [P(TYPE_DOUBLE), P(TYPE_DOUBLE)]),
         ),
         expr_type=TYPE_DOUBLE,
     )
@@ -221,7 +222,7 @@ def test_operator_overload_in64_to_float():
         ],
         impl=Ast(
             BuiltinProcDefinition,
-            TypeSignature(TYPE__FLOAT, [TYPE__FLOAT, TYPE__FLOAT]),
+            TypeSignature(TYPE__FLOAT, [P(TYPE__FLOAT), P(TYPE__FLOAT)]),
         ),
         expr_type=TYPE__FLOAT,
     )
@@ -240,7 +241,7 @@ def test_operator_overload_mixed_to_float():
         ],
         impl=Ast(
             BuiltinProcDefinition,
-            TypeSignature(TYPE_DOUBLE, [TYPE_DOUBLE, TYPE_DOUBLE]),
+            TypeSignature(TYPE_DOUBLE, [P(TYPE_DOUBLE), P(TYPE_DOUBLE)]),
         ),
         expr_type=TYPE_DOUBLE,
     )
