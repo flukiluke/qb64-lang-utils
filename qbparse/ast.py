@@ -95,6 +95,11 @@ ProcDefinition = UserProcDefinition | BuiltinProcDefinition
 
 
 @dataclass
+class ProcDefinitionLocation(Statement):
+    proc: UserProcDefinition
+
+
+@dataclass
 class Expr(Node):
     expr_type: Type = field(default_factory=lambda: TYPE__NONE, kw_only=True)
 

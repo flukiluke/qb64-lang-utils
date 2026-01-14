@@ -84,3 +84,14 @@ class ParseContext:
 
     def at_a(self, type: str, value: str | None = None) -> bool:
         return self.tok.type == type and (value is None or self.tok.value == value)
+
+    def was_at_a(self, type: str, value: str | None = None) -> bool:
+        return self.prev.type == type and (value is None or self.prev.value == value)
+
+    def drop_line(self):
+        # This function must progress, so unconditionally drop the first
+        # token. This might result in an extra line being dropped but this
+        # is already an error recovery scenario.
+        next(self)
+        while not self.at_line_terminator():
+            next(self)

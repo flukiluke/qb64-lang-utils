@@ -10,12 +10,15 @@ from qbparse.ast import (
     If,
     Loop,
     Print,
+    ProcDefinitionLocation,
     Statement,
+    UserProcDefinition,
 )
 from qbparse.context import ParseContext
-from qbparse.datatypes import TYPE__BYTE
+from qbparse.datatypes import TYPE__BYTE, TYPE__NONE, Parameter, Type, TypeSignature
 from qbparse.diagnostics import ParseError
 from qbparse.expression import do_bare_var, do_expr, do_lvalue
+from qbparse.symbols import Procedure
 
 
 def do_print(ctx: ParseContext):
@@ -99,13 +102,21 @@ def do_if(ctx: ParseContext):
             elses = do_block(ctx)
         if ctx.at_a("KEYWORD", "endif"):
             next(ctx)
-        elif ctx.prev.type == "KEYWORD" and ctx.prev.value == "end":
+        elif ctx.at_a("KEYWORD", "end"):
+            next(ctx)
             ctx.consume("KEYWORD", "if")
         else:
             ctx.diags.raise_error(
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end if"
             )
-    return If(guard, thens, elseifs, elses, lex_start=lex_start)
+    return If(
+        guard,
+        thens,
+        elseifs,
+        elses,
+        lex_start=lex_start,
+        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+    )
 
 
 def do_do(ctx: ParseContext):
@@ -245,52 +256,151 @@ KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
 }
 
 
+def is_eob(ctx: ParseContext):
+    match ctx.tok.type, ctx.tok.value:
+        case "EOF", _:
+            return True
+        case "KEYWORD", (
+            "else"
+            | "elseif"
+            | "endif"
+            | "loop"
+            | "next"
+            | "wend"
+            | "case"
+            | "sub"
+            | "function"
+        ):
+            return True
+        case "KEYWORD", "end":
+            next(ctx)
+            result = not ctx.at_line_terminator()
+            ctx.reverse()
+            return result
+        case _:
+            return False
+
+
+def name_close_match(ctx: ParseContext):
+    """
+    Assuming ctx is at a closing KEYWORD, give the name of the opening
+    KEYWORD it is paired with.
+    """
+    match ctx.tok.value:
+        case "else" | "elseif" | "endif":
+            return "if"
+        case "loop":
+            return "do"
+        case "next":
+            return "for"
+        case "wend":
+            return "while"
+        case "case":
+            return "select"
+        case "end":
+            next(ctx)
+            name = ctx.tok.value
+            ctx.reverse()
+            return name
+        case _:
+            return "opening keyword"
+
+
+def do_main(ctx: ParseContext):
+    main = UserProcDefinition("_main", TypeSignature(TYPE__NONE, []))
+    ctx.symbols.add_procedure(Procedure("_main", [main]))
+    while not ctx.at_a("EOF"):
+        main.statements.extend(do_block(ctx))
+        if ctx.at_a("KEYWORD", "sub") or ctx.at_a("KEYWORD", "function"):
+            try:
+                main.statements.append(do_sub_function(ctx))
+            except diag.DiagnosticError:
+                ctx.drop_line()
+        elif ctx.at_a("EOF"):
+            break
+        elif is_eob(ctx):
+            ctx.diags.create(
+                diag.E_CLOSE_KEYWORD_NO_OPEN,
+                ctx.tok,
+                ctx.tok.value,
+                name_close_match(ctx),
+            )
+            ctx.drop_line()
+    return main
+
+
+def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
+    lex_start = ctx.tok.lexpos
+    is_sub = ctx.at_a("KEYWORD", "sub")
+    default_type = ctx.symbols.default_type
+    try:
+        if is_sub:
+            ctx.symbols.default_type = TYPE__NONE
+        next(ctx)
+        if not ctx.at_a("ID"):
+            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
+    finally:
+        ctx.symbols.default_type = default_type
+    name: str = ctx.tok.value[0]
+    ret: Type = ctx.tok.value[1]
+    if is_sub and ret != TYPE__NONE:
+        ctx.diags.create(diag.E_SUB_WITH_TYPE, ctx.tok)
+    next(ctx)
+
+    params = do_param_list(ctx)
+    ctx.consume("NEWLINE")
+    impl = UserProcDefinition(name, TypeSignature(ret, params), [])
+    proc = Procedure(name, [impl])
+    ctx.symbols.add_procedure(proc)
+    impl.statements = do_block(ctx)
+    ctx.consume("KEYWORD", "end")
+    if ctx.at_a("KEYWORD", "sub"):
+        ctx.consume("KEYWORD", "sub")
+    else:
+        ctx.consume("KEYWORD", "function")
+    return ProcDefinitionLocation(
+        impl,
+        lex_start=lex_start,
+        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+    )
+
+
+def do_param_list(ctx: ParseContext):
+    result = list[Parameter]()
+    if not ctx.at_a("PUNCTUATION", "("):
+        return result
+    ctx.consume("PUNCTUATION", "(")
+    while True:
+        if not ctx.at_a("ID"):
+            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
+        result.append(Parameter(ctx.tok.value[1], ctx.tok.value[0]))
+        next(ctx)
+        if ctx.at_a("PUNCTUATION", ")"):
+            break
+        ctx.consume("PUNCTUATION", ",")
+    ctx.consume("PUNCTUATION", ")")
+    return result
+
+
 def do_block(ctx: ParseContext) -> list[Statement]:
     """
     Expects: start of statement
     Results: End of block marker
     Note: The end of block marker is:
-        - <x> for END <x> keywords (x=IF, SELECT, SUB, FUNCTION),
+        - END for END <x> keywords (x=IF, SELECT, SUB, FUNCTION),
         - the keyword itself for ELSE, ELSEIF, ENDIF, LOOP, NEXT, WEND, CASE
         - The SUB or FUNCTION keywords (indicating a change of scope)
         - EOF
     """
 
-    def is_eob():
-        match ctx.tok.type, ctx.tok.value:
-            case "EOF", _:
-                return True
-            case "KEYWORD", (
-                "else"
-                | "elseif"
-                | "endif"
-                | "loop"
-                | "next"
-                | "wend"
-                | "case"
-                | "sub"
-                | "function"
-            ):
-                return True
-            case "KEYWORD", "end":
-                next(ctx)
-                if not ctx.at_line_terminator():
-                    return True
-                else:
-                    ctx.reverse()
-                    return False
-            case _:
-                return False
-
     block: list[Statement] = []
     ctx.skip("NEWLINE")
-    while not is_eob():
+    while not is_eob(ctx):
         try:
             stmt = do_stmt(ctx)
         except diag.DiagnosticError:
             stmt = None
-            while not ctx.at_line_terminator():
-                next(ctx)
+            ctx.drop_line()
         if stmt:
             block.append(stmt)
         ctx.skip("NEWLINE")

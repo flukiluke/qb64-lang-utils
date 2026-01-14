@@ -21,6 +21,7 @@ from qbparse.ast import (
     Node,
     Print,
     ProcDefinition,
+    ProcDefinitionLocation,
     UserProcDefinition,
     Var,
 )
@@ -49,7 +50,8 @@ class WalkContext:
             (Constant, self.constant),
         ]
         self.stmt_handlers: list[tuple[type[Node], Callable[[Any], Type | None]]] = [
-            (BuiltinProcDefinition, lambda _: TYPE__NONE),
+            (BuiltinProcDefinition, lambda _: None),
+            (ProcDefinitionLocation, lambda _: None),
             (UserProcDefinition, self.proc_definition),
             (Assignment, self.assignment),
             (Print, self.kw_print),

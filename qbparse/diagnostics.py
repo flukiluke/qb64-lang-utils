@@ -153,3 +153,10 @@ E_EXPECTED_VAR_NAME = DiagTemplate(_Level.ERROR, "Expected a variable name")
 E_FOR_NEXT_VAR_MISMATCH = DiagTemplate(
     _Level.ERROR, "Incorrect variable {}, expected {}"
 )
+E_CLOSE_KEYWORD_NO_OPEN = DiagTemplate(_Level.ERROR, "{} without {}")
+E_NAME_IN_USE = DiagTemplate(_Level.ERROR, "{} is already defined")
+E_SUB_WITH_TYPE = DiagTemplate(
+    _Level.ERROR,
+    "SUB declaration must not have a return type. "
+    "To return a value, use FUNCTION instead.",
+)

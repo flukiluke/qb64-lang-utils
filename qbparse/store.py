@@ -9,7 +9,7 @@ class SymbolStore:
         self.variables: dict[str, dict[str, Variable]] = {}
         self.procedures: dict[str, Procedure] = {}
         self.types: dict[str, Type] = {}
-        self.default_type = TYPE_SINGLE
+        self.default_type: Type = TYPE_SINGLE
         for proc in builtins.PROCS:
             self.add_procedure(proc)
 
