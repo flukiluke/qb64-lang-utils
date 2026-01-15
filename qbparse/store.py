@@ -63,3 +63,6 @@ class SymbolStore:
         if procedure.name in self.procedures:
             raise ParseError(f"Duplicate procedure definition of {procedure.name}")
         self.procedures[procedure.name] = procedure
+
+    def is_proc_name_free(self, name: str):
+        return name not in self.procedures and name not in self.variables

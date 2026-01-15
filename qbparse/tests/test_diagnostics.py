@@ -82,8 +82,3 @@ def test_lex_range_extension():
         lex_start=14,
         lex_len=1,
     ).get_lex_range() == (7, 15)
-
-
-def test_msg():
-    print(parse("x = if%").diagnostics.diagnostics)
-    assert False

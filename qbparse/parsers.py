@@ -339,6 +339,8 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
         next(ctx)
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
+        elif not ctx.symbols.is_proc_name_free(ctx.tok.value[0]):
+            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value[0])
     finally:
         ctx.symbols.default_type = default_type
     name: str = ctx.tok.value[0]
@@ -347,11 +349,12 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
         ctx.diags.create(diag.E_SUB_WITH_TYPE, ctx.tok)
     next(ctx)
 
+    proc = Procedure(name, [])
+    ctx.symbols.add_procedure(proc)
     params = do_param_list(ctx)
     ctx.consume("NEWLINE")
     impl = UserProcDefinition(name, TypeSignature(ret, params), [])
-    proc = Procedure(name, [impl])
-    ctx.symbols.add_procedure(proc)
+    proc.impls.append(impl)
     impl.statements = do_block(ctx)
     ctx.consume("KEYWORD", "end")
     if ctx.at_a("KEYWORD", "sub"):
