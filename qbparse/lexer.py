@@ -69,9 +69,8 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
 
     def t_error(t: LexToken):
         t.length = len(t.value)
-        t.type = "ERROR"
-        t.lexer.skip(len(t.value))
-        t.value = diags.create(diag.E_UNKNOWN_CHARACTERS, t, t.value)
+        t.lexer.skip(t.length)
+        diags.raise_error(diag.E_UNKNOWN_CHARACTERS, t, t.value)
         return t
 
     @Token(nl)
@@ -159,8 +158,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         if type.min <= value <= type.max:
             t.value = (value, type)
         else:
-            t.type = "ERROR"
-            t.value = diags.create(
+            diags.raise_error(
                 diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
                 t,
                 t.value,
@@ -193,7 +191,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         value = int(num_part[2:], base)
         sigil = t.lexer.lexmatch.group("sigil")
         if sigil is None:
-            t.value = detect_base_int_type(value) or diags.create(
+            t.value = detect_base_int_type(value) or diags.raise_error(
                 diag.E_NUM_LIT_MAX_BIG,
                 t,
                 t.value,
@@ -201,21 +199,16 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 num_to_base(TYPE__UNSIGNED__INTEGER64.max, base),
             )
         else:
-            try:
-                validate_sigil(sigil, t, diags)
-                type = cast(IntegralType, symbols.lookup_sigil(sigil))
-                t.value = constrain_base_int_value(value, type) or diags.create(
-                    diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
-                    t,
-                    t.value,
-                    type.name,
-                    num_to_base(type.min, base),
-                    num_to_base(type.max, base),
-                )
-            except diag.DiagnosticError as e:
-                t.value = e.diagnostic
-        if not isinstance(t.value, tuple):
-            t.type = "ERROR"
+            validate_sigil(sigil, t, diags)
+            type = cast(IntegralType, symbols.lookup_sigil(sigil))
+            t.value = constrain_base_int_value(value, type) or diags.raise_error(
+                diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+                t,
+                t.value,
+                type.name,
+                num_to_base(type.min, base),
+                num_to_base(type.max, base),
+            )
         return t
 
     @Token(
@@ -232,7 +225,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             t.value = detect_dec_lit_type(num_part)
         else:
             type = cast(FloatType, symbols.lookup_sigil(sigil))
-            t.value = constrain_dec_lit_value(num_part, type) or diags.create(
+            t.value = constrain_dec_lit_value(num_part, type) or diags.raise_error(
                 diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
                 t,
                 t.value,
@@ -240,8 +233,6 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 type.min,
                 type.max,
             )
-        if not isinstance(t.value, tuple):
-            t.type = "ERROR"
         return t
 
     @Token(
@@ -255,7 +246,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         num_part = int(t.lexer.lexmatch.group("num"))
         sigil = t.lexer.lexmatch.group("sigil")
         if sigil is None:
-            t.value = detect_int_lit_type(num_part) or diags.create(
+            t.value = detect_int_lit_type(num_part) or diags.raise_error(
                 diag.E_NUM_LIT_MAX_BIG,
                 t,
                 t.value,
@@ -263,24 +254,19 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 TYPE__UNSIGNED__INTEGER64.max,
             )
         else:
-            try:
-                validate_sigil(sigil, t, diags)
-                type = cast(IntegralType | FloatType, symbols.lookup_sigil(sigil))
-                t.value = constrain_int_lit_value(
-                    num_part,
-                    type,
-                ) or diags.create(
-                    diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
-                    t,
-                    t.value,
-                    type.name,
-                    type.min,
-                    type.max,
-                )
-            except diag.DiagnosticError as e:
-                t.value = e.diagnostic
-        if not isinstance(t.value, tuple):
-            t.type = "ERROR"
+            validate_sigil(sigil, t, diags)
+            type = cast(IntegralType | FloatType, symbols.lookup_sigil(sigil))
+            t.value = constrain_int_lit_value(
+                num_part,
+                type,
+            ) or diags.raise_error(
+                diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
+                t,
+                t.value,
+                type.name,
+                type.min,
+                type.max,
+            )
         return t
 
     @Token(
@@ -299,12 +285,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         name = t.lexer.lexmatch.group("name").lower()
         sigil = t.lexer.lexmatch.group("sigil")
         if sigil is not None:
-            try:
-                validate_sigil(sigil, t, diags)
-            except diag.DiagnosticError as e:
-                t.type = "ERROR"
-                t.value = e.diagnostic
-                return t
+            validate_sigil(sigil, t, diags)
         # The presence or absence of the $ is critical for detecting some builtins.
         # `if` is a keyword, but `if$ = 3` is valid. Similarly `left$` is a function,
         # but `left = 3` is valid.
@@ -314,11 +295,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 t.value = name
                 return t
             elif not sigil.startswith("$"):
-                t.type = "ERROR"
-                t.value = diags.create(
+                diags.raise_error(
                     diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("name")
                 )
-                return t
             # case of sigil "$" falls through below
         if (proc := symbols.find_procedure(name)) or (
             sigil == "$" and (proc := symbols.find_procedure(name + "$"))
@@ -330,19 +309,17 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                     if typ == sig.ret:
                         break
                 else:
-                    t.type = "ERROR"
                     alts = " or ".join(
                         [s.ret.sigil for s in proc.sigs() if s.ret.sigil]
                         + ["no suffix"]
                     )
-                    t.value = diags.create(
+                    diags.raise_error(
                         diag.E_EXISTING_DEF_SIGIL_CLASH,
                         t,
                         sigil,
                         t.lexer.lexmatch.group("name"),
                         alts,
                     )
-                    return t
             t.type = "PROCEDURE"
             t.value = proc
             return t
@@ -370,9 +347,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     @Token(".")
     def t_BAD_CHAR(t: LexToken):
         t.length = len(t.value)
-        t.type = "ERROR"
-        t.value = diags.create(diag.E_UNKNOWN_CHARACTERS, t, t.value)
-        return t
+        diags.raise_error(diag.E_UNKNOWN_CHARACTERS, t, t.value)
 
     return lex(reflags=re.VERBOSE | re.IGNORECASE)
 
@@ -466,12 +441,12 @@ def validate_sigil(sigil: str, t: LexToken, diags: diag.DiagnosticStore):
     if sigil.startswith("`") and len(sigil) > 1:
         width = int(sigil[1:])
         if width > 64 or width < 1:
-            raise diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "`", 1, 64)
+            diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "`", 1, 64)
     elif sigil.startswith("~`") and len(sigil) > 2:
         width = int(sigil[2:])
         if width > 64 or width < 1:
-            raise diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "~`", 1, 64)
+            diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "~`", 1, 64)
     elif sigil.startswith("$") and len(sigil) > 1:
         width = int(sigil[1:])
         if width > 2**64 - 1 or width < 1:
-            raise diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "$", 1, 2**64 - 1)
+            diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "$", 1, 2**64 - 1)
