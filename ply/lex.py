@@ -326,6 +326,7 @@ class Lexer:
                 tok.value = m.group()
                 tok.lineno = self.lineno
                 tok.lexpos = lexpos
+                tok.length = len(tok.value)
 
                 i = m.lastindex
                 func, tok.type = lexindexfunc[i]

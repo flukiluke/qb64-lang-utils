@@ -3,7 +3,6 @@ from enum import Enum
 from typing import Any
 
 from ply.lex import LexToken
-
 from qbparse.ast import Node
 
 

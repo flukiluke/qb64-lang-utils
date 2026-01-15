@@ -61,7 +61,9 @@ def check(
             assert actual.lineno == expected.lineno
 
 
-def check_expr(text: str, expected: Token | None = None, diag: DiagTemplate | None = None):
+def check_expr(
+    text: str, expected: Token | None = None, diag: DiagTemplate | None = None
+):
     expecteds = [] if expected is None else [Token("KEYWORD", "?"), expected]
     check("? " + text, expecteds, d=diag)
 
@@ -526,7 +528,8 @@ def test_line_join():
 
 def test_bad_character():
     check(
-        '@ "hello"', [],
+        '@ "hello"',
+        [],
         d=diag.E_UNKNOWN_CHARACTERS,
     )
     check(

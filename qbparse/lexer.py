@@ -1,9 +1,8 @@
 import re
 from typing import Literal, cast
 
-from ply.lex import LexToken, Token, lex
-
 import qbparse.diagnostics as diag
+from ply.lex import LexToken, Token, lex
 from qbparse.datatypes import (
     TYPE__FLOAT,
     TYPE__INTEGER64,
@@ -68,65 +67,55 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     t_ignore = ws
 
     def t_error(t: LexToken):
-        t.length = len(t.value)
         t.lexer.skip(t.length)
         diags.raise_error(diag.E_UNKNOWN_CHARACTERS, t, t.value)
         return t
 
     @Token(nl)
     def t_NEWLINE(t: LexToken):
-        t.length = len(t.value)
         t.lexer.lineno += 1
         t.value = "\n"
         return t
 
     @Token(r"'.*(\n|$)")
     def t_COMMENT(t: LexToken):
-        t.length = len(t.value)
         t.type = "NEWLINE"
         t.value = "'"
         return t
 
     @Token(rf"REM({ws}+.*)?(\n|$)")
     def t_REMARK(t: LexToken):
-        t.length = len(t.value)
         t.type = "NEWLINE"
         t.value = "rem"
         return t
 
     @Token(f"^{ws}*(?P<n>{digit}+){ws}*(?P<l>{id_body}){ws}*:")
     def t_LINE_NUM_LABEL(t: LexToken):
-        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("n", "l")
         return t
 
     @Token(f"^{ws}*(?P<a>{digit}+)")
     def t_LINE_NUM(t: LexToken):
-        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("a")
         return t
 
     @Token(f"^{ws}*(?P<a>{id_body}){ws}*:")
     def t_LINE_LABEL(t: LexToken):
-        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("a")
         return t
 
     @Token(":")
     def t_LINE_SPLIT(t: LexToken):
-        t.length = len(t.value)
         t.type = "NEWLINE"
         return t
 
     @Token(f"_{ws}*{nl}")
     def t_LINE_JOIN(t: LexToken):
-        t.length = len(t.value)
         t.lexer.lineno += 1
         # No token produced
 
     @Token('"(?P<s>[^"\r\n]*)"')
     def t_STRING_LIT(t: LexToken):
-        t.length = len(t.value)
         t.value = t.lexer.lexmatch.group("s")
         return t
 
@@ -140,7 +129,6 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         """
     )
     def t_EXP_LIT(t: LexToken):
-        t.length = len(t.value)
         t.type = "NUM_LIT"
         match = t.lexer.lexmatch
         mantissa = match.group("man")
@@ -176,7 +164,6 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         """
     )
     def t_BASE_LIT(t: LexToken):
-        t.length = len(t.value)
         t.type = "NUM_LIT"
         num_part = t.lexer.lexmatch.group("num")
         match num_part[1].upper():
@@ -217,7 +204,6 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         """
     )
     def t_DEC_LIT(t: LexToken):
-        t.length = len(t.value)
         t.type = "NUM_LIT"
         num_part = t.lexer.lexmatch.group("num")
         sigil = t.lexer.lexmatch.group("sigil")
@@ -241,7 +227,6 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         """
     )
     def t_INT_LIT(t: LexToken):
-        t.length = len(t.value)
         t.type = "NUM_LIT"
         num_part = int(t.lexer.lexmatch.group("num"))
         sigil = t.lexer.lexmatch.group("sigil")
@@ -281,7 +266,6 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         """
     )
     def t_ID(t: LexToken):
-        t.length = len(t.value)
         name = t.lexer.lexmatch.group("name").lower()
         sigil = t.lexer.lexmatch.group("sigil")
         if sigil is not None:
@@ -341,12 +325,10 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
              | \. | [#]
     """)
     def t_PUNCTUATION(t: LexToken):
-        t.length = len(t.value)
         return t
 
     @Token(".")
     def t_BAD_CHAR(t: LexToken):
-        t.length = len(t.value)
         diags.raise_error(diag.E_UNKNOWN_CHARACTERS, t, t.value)
 
     return lex(reflags=re.VERBOSE | re.IGNORECASE)

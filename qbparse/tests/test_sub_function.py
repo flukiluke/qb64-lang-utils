@@ -101,8 +101,10 @@ def test_sub_return_type_disallowed():
 
 
 def test_in_use_name():
-    assert parse('sub if: end sub').diagnostics.has(diag.E_NAME_IN_USE)
-    assert parse('function f: end function: sub f: end sub').diagnostics.has(diag.E_NAME_IN_USE)
+    assert parse("sub if: end sub").diagnostics.has(diag.E_NAME_IN_USE)
+    assert parse("function f: end function: sub f: end sub").diagnostics.has(
+        diag.E_NAME_IN_USE
+    )
 
 
 def test_one_param():
@@ -130,4 +132,4 @@ def test_multi_param():
 
 def test_param_name_in_user():
     # assert parse('function f(if) : end function').diagnostics.has(diag.E_NAME_IN_USE)
-    assert parse('function f(f) : end function').diagnostics.has(diag.E_NAME_IN_USE)
+    assert parse("function f(f) : end function").diagnostics.has(diag.E_NAME_IN_USE)

@@ -1,9 +1,8 @@
 import os
 from typing import Any
 
-from ply.lex import LexToken
-
 import qbparse.diagnostics as diag
+from ply.lex import LexToken
 from qbparse.lexer import Lexer
 from qbparse.store import SymbolStore
 

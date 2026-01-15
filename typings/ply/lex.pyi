@@ -12,7 +12,7 @@ class LexToken:
     lineno: int
     lexpos: int
     lexer: Lexer
-    length: int  # Custom field
+    length: int
 
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
