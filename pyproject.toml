@@ -4,9 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "ply>=3.11",
-]
+dependencies = []
 
 [dependency-groups]
 dev = [
@@ -33,5 +31,16 @@ select = [
 
 [tool.coverage.run]
 omit = [
-    "*/tests/*"
+    "*/tests/*",
+    "ply/*"
+]
+
+[tool.pyright]
+include = [
+    "qbparse/*"
+]
+
+[tool.ruff]
+include = [
+    "qbparse/*"
 ]
