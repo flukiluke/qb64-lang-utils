@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import qbparse.diagnostics as diag
-from qbparse.ast import BuiltinProcDefinition
+from qbparse.ast import BuiltinProcDefinition, Procedure, SymbolStore
 from qbparse.datatypes import (
     TYPE__BIT,
     TYPE__BYTE,
@@ -24,8 +24,6 @@ from qbparse.datatypes import (
 )
 from qbparse.diagnostics import DiagnosticStore, DiagTemplate
 from qbparse.lexer import Lexer
-from qbparse.store import SymbolStore
-from qbparse.symbols import Procedure
 
 
 @dataclass

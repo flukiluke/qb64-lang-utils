@@ -2,12 +2,12 @@ import dataclasses
 from typing import Any
 
 import qbparse.ast
-from qbparse import builtins, parse
+from qbparse import parse
 from qbparse.diagnostics import DiagTemplate
 
 
 def builtin_proc(name: str):
-    for proc in builtins.PROCS:
+    for proc in qbparse.ast.PROCS:
         if proc.name == name:
             return proc
     raise ValueError("No such builtin procedure " + name)
@@ -35,7 +35,7 @@ def check(
 
 def run_var(input: str, variable_name: str):
     program = parse(input)
-    variable = program.globals.find_variable(variable_name)
+    variable = program.symbols.find_variable(variable_name)
     assert variable is not None
     assert variable.name == variable_name
     assert program.diagnostics.has_none(), program.diagnostics.diagnostics

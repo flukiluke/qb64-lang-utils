@@ -327,7 +327,7 @@ def test_implicit_scalar():
 
 def test_function_call_unary():
     program = parse_clean('? lcase$("hello")')
-    proc = program.globals.find_procedure("lcase$")
+    proc = program.symbols.find_procedure("lcase$")
     assert proc is not None
     expr = program.main.find(Print).find(Expr)
     assert expr == Ast(Call, proc, [Ast(Constant, "hello")])
@@ -354,7 +354,7 @@ def test_function_call_binary():
 
 def test_function_call_nested():
     program = parse_clean('? lcase$(lcase$("foo") + "bar")')
-    proc = program.globals.find_procedure("lcase$")
+    proc = program.symbols.find_procedure("lcase$")
     assert proc is not None
     expr = program.main.find(Print).find(Expr)
     assert expr == Ast(

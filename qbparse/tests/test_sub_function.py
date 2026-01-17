@@ -1,6 +1,12 @@
 import qbparse.diagnostics as diag
 from qbparse import parse
-from qbparse.ast import Assignment, Print, ProcDefinitionLocation, UserProcDefinition
+from qbparse.ast import (
+    Assignment,
+    Print,
+    ProcDefinitionLocation,
+    Procedure,
+    UserProcDefinition,
+)
 from qbparse.datatypes import (
     TYPE__NONE,
     TYPE_LONG,
@@ -9,7 +15,6 @@ from qbparse.datatypes import (
     Parameter,
     TypeSignature,
 )
-from qbparse.symbols import Procedure
 from qbparse.tests.helpers import Ast, parse_clean
 
 
@@ -22,7 +27,7 @@ def test_no_params():
             print "bye"
         end function""")
 
-    assert prog.globals.find_procedure("s") == Procedure(
+    assert prog.symbols.find_procedure("s") == Procedure(
         "s",
         [
             UserProcDefinition(
@@ -30,7 +35,7 @@ def test_no_params():
             )
         ],
     )
-    assert prog.globals.find_procedure("f") == Procedure(
+    assert prog.symbols.find_procedure("f") == Procedure(
         "f",
         [
             UserProcDefinition(
@@ -56,7 +61,7 @@ def test_sub_before_main():
             print "hi"
         end sub
         x = 1""")
-    assert prog.globals.find_procedure("s") is not None
+    assert prog.symbols.find_procedure("s") is not None
     assert prog.main.find(Assignment) is not None
 
 
@@ -66,7 +71,7 @@ def test_sub_after_main():
         sub s
             print "hi"
         end sub""")
-    assert prog.globals.find_procedure("s") is not None
+    assert prog.symbols.find_procedure("s") is not None
     assert prog.main.find(Assignment) is not None
 
 
@@ -79,19 +84,19 @@ def test_subs_main_interleaved():
         x = 2
         function f: end function
         """)
-    assert prog.globals.find_procedure("s") is not None
-    assert prog.globals.find_procedure("f") is not None
+    assert prog.symbols.find_procedure("s") is not None
+    assert prog.symbols.find_procedure("f") is not None
     assert len(list(prog.main.find_all(Assignment))) == 2
 
 
 def test_function_return_type():
     prog = parse_clean("function f: end function")
-    proc = prog.globals.find_procedure("f")
+    proc = prog.symbols.find_procedure("f")
     assert proc is not None
     assert proc.sigs()[0].ret == TYPE_SINGLE
 
     prog = parse_clean("function f&: end function")
-    proc = prog.globals.find_procedure("f")
+    proc = prog.symbols.find_procedure("f")
     assert proc is not None
     assert proc.sigs()[0].ret == TYPE_LONG
 
@@ -109,7 +114,7 @@ def test_in_use_name():
 
 def test_one_param():
     prog = parse_clean("function f(a&) : end function")
-    proc = prog.globals.find_procedure("f")
+    proc = prog.symbols.find_procedure("f")
     assert proc is not None
     assert proc.impls[0].signature == TypeSignature(
         TYPE_SINGLE, [Parameter(TYPE_LONG, "a")]
@@ -118,7 +123,7 @@ def test_one_param():
 
 def test_multi_param():
     prog = parse_clean("sub s(a&, b, c$) : end sub")
-    proc = prog.globals.find_procedure("s")
+    proc = prog.symbols.find_procedure("s")
     assert proc is not None
     assert proc.impls[0].signature == TypeSignature(
         TYPE__NONE,

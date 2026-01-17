@@ -1,9 +1,11 @@
 from collections.abc import Iterable
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ply.lex import LexToken
-from qbparse.ast import Node
+
+if TYPE_CHECKING:
+    from qbparse.ast import Node
 
 
 class ParseError(Exception):
@@ -69,7 +71,7 @@ class DiagnosticStore:
     def __init__(self):
         self.diagnostics = list[_Diagnostic]()
 
-    def create(self, template: DiagTemplate, source: LexToken | Node, *args: Any):
+    def create(self, template: DiagTemplate, source: "LexToken | Node", *args: Any):
         if isinstance(source, LexToken):
             diag = _Diagnostic(
                 template, source.lexpos, source.lexpos + source.length, *args

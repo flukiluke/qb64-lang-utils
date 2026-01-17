@@ -61,7 +61,7 @@ class WalkContext:
         ]
 
     def start(self):
-        for proc in self.program.globals.procedures.values():
+        for proc in self.program.symbols.procedures.values():
             for impl in proc.impls:
                 self.evaluate(impl)
 

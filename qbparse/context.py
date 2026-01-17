@@ -3,16 +3,16 @@ from typing import Any
 
 import qbparse.diagnostics as diag
 from ply.lex import LexToken
+from qbparse.ast import SymbolStore
 from qbparse.lexer import Lexer
-from qbparse.store import SymbolStore
 
 TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 
 
 class ParseContext:
     def __init__(self, input: str, symbols: SymbolStore, diags: diag.DiagnosticStore):
-        self.symbols = symbols
         self.diags = diags
+        self.symbols = symbols
         self.token_stream = Lexer(self.symbols, self.diags)
         self.token_stream.input(input)
         self.reversed_tokens: list[LexToken] = []

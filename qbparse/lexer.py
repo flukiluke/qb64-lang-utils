@@ -3,6 +3,7 @@ from typing import Literal, cast
 
 import qbparse.diagnostics as diag
 from ply.lex import LexToken, Token, lex
+from qbparse.ast import SymbolStore
 from qbparse.datatypes import (
     TYPE__FLOAT,
     TYPE__INTEGER64,
@@ -18,7 +19,6 @@ from qbparse.datatypes import (
     IntegralType,
     Type,
 )
-from qbparse.store import SymbolStore
 
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
 # ruff: noqa: F841

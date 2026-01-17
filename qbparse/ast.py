@@ -4,18 +4,31 @@ from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from itertools import chain
-from typing import TYPE_CHECKING, Any, TypeVar
-
-if TYPE_CHECKING:
-    import qbparse.symbols as symbols
+from typing import Any, TypeVar
 
 from qbparse.datatypes import (
+    BUILTIN_SIGILS,
+    FLOAT_TYPES,
+    INTEGRAL_TYPES,
+    TYPE__BYTE,
+    TYPE__FLOAT,
+    TYPE__INTEGER64,
     TYPE__NONE,
+    TYPE_ANY,
+    TYPE_SINGLE,
     TYPE_STRING,
+    BitnType,
     ExtendedFloat,
+    Parameter,
+    StringType,
     Type,
     TypeSignature,
 )
+from qbparse.diagnostics import ParseError
+
+
+class LocalScope:
+    pass
 
 
 @dataclass
@@ -76,6 +89,7 @@ class UserProcDefinition(Node):
     name: str
     signature: TypeSignature
     statements: list[Statement] = field(default_factory=lambda: [])
+    symbols: LocalScope = field(default_factory=LocalScope)
 
     def children(self):
         return self.statements
@@ -110,7 +124,7 @@ class LValue(Expr):
 
 @dataclass
 class Var(LValue):
-    target: symbols.Variable
+    target: Variable
 
 
 @dataclass
@@ -120,7 +134,7 @@ class Call(Expr, Statement):
         INFIX = auto()
         PREFIX = auto()
 
-    target: symbols.Procedure
+    target: Procedure
     args: list[Expr] = field(default_factory=lambda: [])
     style: Style = Style.STANDARD
     # Calculated values
@@ -204,3 +218,281 @@ class For(Statement):
 
     def children(self):
         return chain([self.iterator], self.block)
+
+
+class Procedure:
+    def __init__(self, name: str, impls: list[ProcDefinition]):
+        self.name = name
+        self.impls = impls
+
+    def __repr__(self):
+        return f"Procedure(name={self.name}, signatures={self.sigs()})"
+
+    def __eq__(self, other: object):
+        if not isinstance(other, Procedure):
+            return NotImplemented
+        return self.name == other.name and self.sigs() == other.sigs()
+
+    def sigs(self):
+        return [i.signature for i in self.impls]
+
+
+class Variable:
+    def __init__(self, name: str, type: Type):
+        self.name = name
+        self.type = type
+
+    def __repr__(self):
+        return f"[Variable name={self.name} type={self.type}]"
+
+    def __eq__(self, other: Any):
+        if type(self) is not type(other):
+            return NotImplemented
+        return self.name == other.name and self.type == other.type
+
+
+def _generic(
+    ret: Type | None, params: list[Parameter | None], concretes: Iterable[Type]
+) -> list[ProcDefinition]:
+    results = list[ProcDefinition]()
+    for concrete in concretes:
+        results.append(
+            BuiltinProcDefinition(
+                TypeSignature(
+                    ret if ret else concrete,
+                    [p if p else Parameter(concrete) for p in params],
+                )
+            )
+        )
+    return results
+
+
+KEYWORDS = set(
+    [
+        # Misc
+        "to",
+        # Declarations
+        "dim",
+        "as",
+        "const",
+        "sub",
+        "function",
+        # Conditionals
+        "if",
+        "then",
+        "else",
+        "elseif",
+        "endif",
+        "end",
+        # Loops
+        "do",
+        "while",
+        "until",
+        "loop",
+        "wend",
+        "for",
+        "next",
+        "step",
+        # Flow control
+        "goto",
+        "exit",
+        # Operators
+        "imp",
+        "eqv",
+        "xor",
+        "or",
+        "and",
+        "not",
+        "mod",
+        # I/O
+        "print",
+        "?",
+    ]
+)
+
+PROCS = [
+    # Comparison operators
+    Procedure(
+        "=",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)])
+            )
+        ],
+    ),
+    Procedure(
+        "<>",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)])
+            )
+        ],
+    ),
+    Procedure(
+        "<",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(
+                    TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
+                )
+            ),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        ">",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(
+                    TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
+                )
+            ),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "<=",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(
+                    TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
+                )
+            ),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        ">=",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(
+                    TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
+                )
+            ),
+            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+        ],
+    ),
+    # Arithmetic
+    Procedure(
+        "+",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(
+                    TYPE_STRING, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
+                )
+            ),
+            *_generic(None, [None, None], INTEGRAL_TYPES),
+            *_generic(None, [None, None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "-",
+        [
+            *_generic(None, [None], INTEGRAL_TYPES),
+            *_generic(None, [None], FLOAT_TYPES),
+            *_generic(None, [None, None], INTEGRAL_TYPES),
+            *_generic(None, [None, None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "*",
+        [
+            *_generic(None, [None, None], INTEGRAL_TYPES),
+            *_generic(None, [None, None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure("/", [*_generic(None, [None, None], FLOAT_TYPES)]),
+    Procedure("\\", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("^", [*_generic(None, [None, None], FLOAT_TYPES)]),
+    Procedure("mod", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    # Bitwise relations
+    Procedure("imp", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("eqv", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("xor", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("or", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("and", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("not", [*_generic(None, [None], INTEGRAL_TYPES)]),
+    # Other maths
+    Procedure("_atan2", [*_generic(None, [None, None], FLOAT_TYPES)]),
+    # Everything else
+    Procedure(
+        "val",
+        [BuiltinProcDefinition(TypeSignature(TYPE__FLOAT, [Parameter(TYPE_STRING)]))],
+    ),
+    Procedure(
+        "lcase$",
+        [BuiltinProcDefinition(TypeSignature(TYPE_STRING, [Parameter(TYPE_STRING)]))],
+    ),
+    Procedure(
+        "left$",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(
+                    TYPE_STRING, [Parameter(TYPE_STRING), Parameter(TYPE__INTEGER64)]
+                )
+            )
+        ],
+    ),
+]
+
+
+class SymbolStore:
+    def __init__(self):
+        self.global_vars: dict[str, dict[str, Variable]] = {}
+        self.procedures: dict[str, Procedure] = {}
+        self.types: dict[str, Type] = {}
+        self.default_type: Type = TYPE_SINGLE
+        for proc in PROCS:
+            self.add_procedure(proc)
+
+    def is_keyword(self, name: str):
+        return name in KEYWORDS
+
+    def find_procedure(self, ident: str) -> Procedure | None:
+        return self.procedures.get(ident)
+
+    def find_variable(self, ident: str, sigil: str | None = None) -> Variable | None:
+        if ident not in self.global_vars:
+            return None
+        vars = self.global_vars[ident]
+        type = self.lookup_sigil(sigil)
+        return vars.get(type.name)
+
+    def lookup_sigil(self, sigil: str | None) -> Type:
+        if sigil is None:
+            return self.default_type
+        if builtin := BUILTIN_SIGILS.get(sigil):
+            return builtin
+        if sigil.startswith("`"):
+            width = int(sigil[1:])
+            new_type = BitnType.of_signed(width)
+        elif sigil.startswith("~`"):
+            width = int(sigil[2:])
+            new_type = BitnType.of_unsigned(width)
+        elif sigil.startswith("$"):
+            max_len = int(sigil[1:])
+            new_type = StringType.of_max_len(max_len)
+        else:
+            assert False, "Unknown type " + sigil
+        return self.types.setdefault(new_type.name, new_type)
+
+    def create_local(self, name: str, type: Type | None):
+        if type is None:
+            type = self.default_type
+        typeset = self.global_vars.setdefault(name, {})
+        if type.name in typeset:
+            raise ParseError("Duplicate variable")
+        typeset[type.name] = Variable(name, type)
+        return typeset[type.name]
+
+    def add_procedure(self, procedure: Procedure):
+        if procedure.name in self.procedures:
+            raise ParseError(f"Duplicate procedure definition of {procedure.name}")
+        self.procedures[procedure.name] = procedure
+
+    def is_proc_name_free(self, name: str):
+        return name not in self.procedures and name not in self.global_vars

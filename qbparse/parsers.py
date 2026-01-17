@@ -11,6 +11,7 @@ from qbparse.ast import (
     Loop,
     Print,
     ProcDefinitionLocation,
+    Procedure,
     Statement,
     UserProcDefinition,
 )
@@ -18,7 +19,6 @@ from qbparse.context import ParseContext
 from qbparse.datatypes import TYPE__BYTE, TYPE__NONE, Parameter, Type, TypeSignature
 from qbparse.diagnostics import ParseError
 from qbparse.expression import do_bare_var, do_expr, do_lvalue
-from qbparse.symbols import Procedure
 
 
 def do_print(ctx: ParseContext):
@@ -353,7 +353,7 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
     ctx.symbols.add_procedure(proc)
     params = do_param_list(ctx)
     ctx.consume("NEWLINE")
-    impl = UserProcDefinition(name, TypeSignature(ret, params), [])
+    impl = UserProcDefinition(name, TypeSignature(ret, params))
     proc.impls.append(impl)
     impl.statements = do_block(ctx)
     ctx.consume("KEYWORD", "end")
