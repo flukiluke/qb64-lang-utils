@@ -30,16 +30,22 @@ def test_no_params():
     assert prog.symbols.find_procedure("s") == Procedure(
         "s",
         [
-            UserProcDefinition(
-                "s", TypeSignature(ret=TYPE__NONE, params=[]), [Ast(Print)]
+            Ast(
+                UserProcDefinition,
+                "s",
+                TypeSignature(ret=TYPE__NONE, params=[]),
+                [Ast(Print)],
             )
         ],
     )
     assert prog.symbols.find_procedure("f") == Procedure(
         "f",
         [
-            UserProcDefinition(
-                "f", TypeSignature(ret=TYPE_SINGLE, params=[]), [Ast(Print)]
+            Ast(
+                UserProcDefinition,
+                "f",
+                TypeSignature(ret=TYPE_SINGLE, params=[]),
+                [Ast(Print)],
             )
         ],
     )

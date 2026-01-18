@@ -42,7 +42,7 @@ def run_var(input: str, variable_name: str):
     return (program.main, variable)
 
 
-class Ast(qbparse.ast.Statement, qbparse.ast.LValue):
+class Ast(qbparse.ast.Statement, qbparse.ast.LValue, qbparse.ast.UserProcDefinition):
     def __init__(self, kind: type[qbparse.ast.Node], *args: Any, **kwargs: Any):
         self.kind = kind
         self.props: dict[str, Any] = {}
