@@ -1,8 +1,8 @@
-from qbparse.ast import SymbolStore
-from qbparse.context import ParseContext
-from qbparse.diagnostics import DiagnosticStore
-from qbparse.parsers import do_main
-from qbparse.typerules import typecheck
+from .ast import SymbolStore
+from .context import ParseContext
+from .diagnostics import DiagnosticStore
+from .parsers import do_main
+from .typerules import typecheck
 
 
 class Program:

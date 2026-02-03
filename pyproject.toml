@@ -37,10 +37,10 @@ omit = [
 
 [tool.pyright]
 include = [
-    "qbparse/*"
+    "qb64lang/parser/*"
 ]
 
 [tool.ruff]
 include = [
-    "qbparse/*"
+    "qb64lang/parser/*"
 ]

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Any
 
-import qbparse.diagnostics as diag
-from qbparse.ast import BuiltinProcDefinition, Procedure, SymbolStore
-from qbparse.datatypes import (
+from .. import diagnostics as diag
+from ..ast import BuiltinProcDefinition, Procedure, SymbolStore
+from ..datatypes import (
     TYPE__BIT,
     TYPE__BYTE,
     TYPE__FLOAT,
@@ -22,8 +22,8 @@ from qbparse.datatypes import (
     ExtendedFloat,
     TypeSignature,
 )
-from qbparse.diagnostics import DiagnosticStore, DiagTemplate
-from qbparse.lexer import Lexer
+from ..diagnostics import DiagnosticStore, DiagTemplate
+from ..lexer import Lexer
 
 
 @dataclass

@@ -1,10 +1,11 @@
 import re
 from typing import Literal, cast
 
-import qbparse.diagnostics as diag
 from ply.lex import LexToken, Token, lex
-from qbparse.ast import SymbolStore
-from qbparse.datatypes import (
+
+from . import diagnostics as diag
+from .ast import SymbolStore
+from .datatypes import (
     TYPE__FLOAT,
     TYPE__INTEGER64,
     TYPE__UNSIGNED__INTEGER64,

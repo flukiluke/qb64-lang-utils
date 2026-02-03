@@ -1,13 +1,12 @@
 import dataclasses
 from typing import Any
 
-import qbparse.ast
-from qbparse import parse
-from qbparse.diagnostics import DiagTemplate
+from .. import ast, parse
+from ..diagnostics import DiagTemplate
 
 
 def builtin_proc(name: str):
-    for proc in qbparse.ast.PROCS:
+    for proc in ast.PROCS:
         if proc.name == name:
             return proc
     raise ValueError("No such builtin procedure " + name)
@@ -21,14 +20,14 @@ def parse_clean(input: str):
 
 def check(
     input: str,
-    expected: qbparse.ast.Node | None = None,
+    expected: ast.Node | None = None,
     d: DiagTemplate | None = None,
 ):
     prog = parse("?" + input)
     if d is not None:
         assert prog.diagnostics.has(d)
     else:
-        expr = prog.main.find(qbparse.ast.Expr)
+        expr = prog.main.find(ast.Expr)
         assert expr == expected
         assert prog.diagnostics.has_none()
 
@@ -42,8 +41,8 @@ def run_var(input: str, variable_name: str):
     return (program.main, variable)
 
 
-class Ast(qbparse.ast.Statement, qbparse.ast.LValue, qbparse.ast.UserProcDefinition):
-    def __init__(self, kind: type[qbparse.ast.Node], *args: Any, **kwargs: Any):
+class Ast(ast.Statement, ast.LValue, ast.UserProcDefinition):
+    def __init__(self, kind: type[ast.Node], *args: Any, **kwargs: Any):
         self.kind = kind
         self.props: dict[str, Any] = {}
         pos_fields = list(

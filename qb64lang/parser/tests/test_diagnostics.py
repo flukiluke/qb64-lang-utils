@@ -1,8 +1,8 @@
-from qbparse import parse
-from qbparse.ast import Call, Constant, If, Print
-from qbparse.datatypes import TYPE_INTEGER
-from qbparse.diagnostics import E_UNEXPECTED_ITEM
-from qbparse.tests.helpers import Ast, builtin_proc
+from .. import parse
+from ..ast import Call, Constant, If, Print
+from ..datatypes import TYPE_INTEGER
+from ..diagnostics import E_UNEXPECTED_ITEM
+from .helpers import Ast, builtin_proc
 
 
 def test_bad_expr_drops_line():

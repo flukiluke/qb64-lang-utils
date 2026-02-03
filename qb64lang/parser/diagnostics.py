@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from ply.lex import LexToken
 
 if TYPE_CHECKING:
-    from qbparse.ast import Node
+    from .ast import Node
 
 
 class ParseError(Exception):

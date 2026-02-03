@@ -1,7 +1,9 @@
-import qbparse.diagnostics as diag
-from qbparse import parse
-from qbparse.ast import BuiltinProcDefinition, Call, Cast, Constant
-from qbparse.datatypes import (
+from qb64lang.parser.datatypes import Parameter as P
+
+from .. import diagnostics as diag
+from .. import parse
+from ..ast import BuiltinProcDefinition, Call, Cast, Constant
+from ..datatypes import (
     TYPE__BYTE,
     TYPE__FLOAT,
     TYPE__INTEGER64,
@@ -14,8 +16,6 @@ from qbparse.datatypes import (
     ExtendedFloat,
     TypeSignature,
 )
-from qbparse.datatypes import Parameter as P
-
 from .helpers import Ast, builtin_proc, parse_clean
 
 

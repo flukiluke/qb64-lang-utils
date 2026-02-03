@@ -1,4 +1,4 @@
-from qbparse.datatypes import ExtendedFloat as EF
+from ..datatypes import ExtendedFloat as EF
 
 
 def test_creation():

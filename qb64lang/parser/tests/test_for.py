@@ -1,8 +1,8 @@
-import qbparse.diagnostics as diag
-from qbparse import parse
-from qbparse.ast import Cast, Constant, Expr, For, Print, Var
-from qbparse.datatypes import TYPE_SINGLE
-from qbparse.tests.helpers import Ast, run_var
+from .. import diagnostics as diag
+from .. import parse
+from ..ast import Cast, Constant, Expr, For, Print, Var
+from ..datatypes import TYPE_SINGLE
+from .helpers import Ast, run_var
 
 
 def test_explicit_next():

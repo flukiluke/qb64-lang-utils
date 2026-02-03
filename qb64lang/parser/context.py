@@ -1,10 +1,11 @@
 import os
 from typing import Any
 
-import qbparse.diagnostics as diag
 from ply.lex import LexToken
-from qbparse.ast import SymbolStore
-from qbparse.lexer import Lexer
+
+from . import diagnostics as diag
+from .ast import SymbolStore
+from .lexer import Lexer
 
 TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 

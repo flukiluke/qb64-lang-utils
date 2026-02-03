@@ -1,6 +1,5 @@
-from qbparse.ast import Assignment, Call, Cast, Constant, Var
-from qbparse.datatypes import TYPE_SINGLE
-
+from ..ast import Assignment, Call, Cast, Constant, Var
+from ..datatypes import TYPE_SINGLE
 from .helpers import Ast, builtin_proc, run_var
 
 

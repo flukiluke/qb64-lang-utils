@@ -3,12 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
-import qbparse.diagnostics as diag
+from . import diagnostics as diag
 
 if TYPE_CHECKING:
-    from qbparse import Program
+    from . import Program
 
-from qbparse.ast import (
+from .ast import (
     Assignment,
     BuiltinProcDefinition,
     Call,
@@ -25,7 +25,7 @@ from qbparse.ast import (
     UserProcDefinition,
     Var,
 )
-from qbparse.datatypes import (
+from .datatypes import (
     TYPE__FLOAT,
     TYPE__INTEGER64,
     TYPE__NONE,

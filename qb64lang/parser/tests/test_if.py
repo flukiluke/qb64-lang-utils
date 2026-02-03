@@ -1,8 +1,7 @@
-import qbparse.diagnostics as diag
-from qbparse import parse
-from qbparse.ast import Constant, If, Print, Statement
-from qbparse.datatypes import TYPE_INTEGER, TYPE_STRING
-
+from .. import diagnostics as diag
+from .. import parse
+from ..ast import Constant, If, Print, Statement
+from ..datatypes import TYPE_INTEGER, TYPE_STRING
 from .helpers import Ast, parse_clean
 
 ONE = Ast(Constant, 1, TYPE_INTEGER)

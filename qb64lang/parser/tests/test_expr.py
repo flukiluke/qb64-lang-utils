@@ -1,11 +1,10 @@
-import qbparse.diagnostics as diag
-from qbparse.ast import Call, Cast, Constant, Expr, Print, Var
-from qbparse.datatypes import (
+from .. import diagnostics as diag
+from ..ast import Call, Cast, Constant, Expr, Print, Var
+from ..datatypes import (
     TYPE__INTEGER64,
     TYPE_INTEGER,
     TYPE_SINGLE,
 )
-
 from .helpers import Ast, builtin_proc, check, parse_clean, run_var
 
 INFIX = Call.Style.INFIX

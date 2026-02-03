@@ -1,6 +1,6 @@
-import qbparse.diagnostics as diag
-from qbparse import parse
-from qbparse.ast import (
+from .. import diagnostics as diag
+from .. import parse
+from ..ast import (
     Assignment,
     Print,
     ProcDefinitionLocation,
@@ -8,7 +8,7 @@ from qbparse.ast import (
     UserProcDefinition,
     Variable,
 )
-from qbparse.datatypes import (
+from ..datatypes import (
     TYPE__NONE,
     TYPE_LONG,
     TYPE_SINGLE,
@@ -16,7 +16,7 @@ from qbparse.datatypes import (
     Parameter,
     TypeSignature,
 )
-from qbparse.tests.helpers import Ast, parse_clean
+from .helpers import Ast, parse_clean
 
 
 def test_no_params():
@@ -159,13 +159,15 @@ def test_multi_param():
         "c": {"string": Variable("c", TYPE_STRING)},
     }
 
+
 def test_local_var():
     prog = parse_clean("sub s: x = 3: end sub")
-    proc = prog.symbols.find_procedure('s')
+    proc = prog.symbols.find_procedure("s")
     assert proc is not None
     assert proc.impls[0].symbols.variables == {
         "x": {"single": Variable("x", TYPE_SINGLE)}
     }
+
 
 def test_param_name_in_use():
     assert parse("function f(if) : end function").diagnostics.has(diag.E_NAME_IN_USE)

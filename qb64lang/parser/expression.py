@@ -1,7 +1,7 @@
-import qbparse.diagnostics as diag
-from qbparse.ast import Call, Constant, Expr, LValue, Var
-from qbparse.context import ParseContext
-from qbparse.datatypes import TYPE_STRING
+from . import diagnostics as diag
+from .ast import Call, Constant, Expr, LValue, Var
+from .context import ParseContext
+from .datatypes import TYPE_STRING
 
 PRECEDENCE = {
     "imp": 2,

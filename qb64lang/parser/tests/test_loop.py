@@ -1,7 +1,7 @@
-import qbparse.diagnostics as diag
-from qbparse import parse
-from qbparse.ast import Call, Constant, Loop, Print
-from qbparse.tests.helpers import Ast, builtin_proc, parse_clean
+from .. import diagnostics as diag
+from .. import parse
+from ..ast import Call, Constant, Loop, Print
+from .helpers import Ast, builtin_proc, parse_clean
 
 
 def test_do_while():

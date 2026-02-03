@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
-import qbparse.diagnostics as diag
-from qbparse.ast import (
+from . import diagnostics as diag
+from .ast import (
     Assignment,
     Call,
     Constant,
@@ -16,10 +16,10 @@ from qbparse.ast import (
     Statement,
     UserProcDefinition,
 )
-from qbparse.context import ParseContext
-from qbparse.datatypes import TYPE__BYTE, TYPE__NONE, Parameter, Type, TypeSignature
-from qbparse.diagnostics import ParseError
-from qbparse.expression import do_bare_var, do_expr, do_lvalue
+from .context import ParseContext
+from .datatypes import TYPE__BYTE, TYPE__NONE, Parameter, Type, TypeSignature
+from .diagnostics import ParseError
+from .expression import do_bare_var, do_expr, do_lvalue
 
 
 def do_print(ctx: ParseContext):

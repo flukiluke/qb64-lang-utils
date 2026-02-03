@@ -6,7 +6,7 @@ from enum import Enum, auto
 from itertools import chain
 from typing import Any, TypeVar
 
-from qbparse.datatypes import (
+from .datatypes import (
     BUILTIN_SIGILS,
     FLOAT_TYPES,
     INTEGRAL_TYPES,
@@ -24,7 +24,7 @@ from qbparse.datatypes import (
     Type,
     TypeSignature,
 )
-from qbparse.diagnostics import ParseError
+from .diagnostics import ParseError
 
 
 @dataclass
