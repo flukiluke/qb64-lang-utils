@@ -8,6 +8,7 @@ from qbparse.ast import (
     Expr,
     For,
     If,
+    LocalScope,
     Loop,
     Print,
     ProcDefinitionLocation,
@@ -307,9 +308,10 @@ def name_close_match(ctx: ParseContext):
 
 
 def do_main(ctx: ParseContext):
-    main = UserProcDefinition("_main", TypeSignature(TYPE__NONE, []))
+    main = UserProcDefinition("_main", TypeSignature(TYPE__NONE, []), ctx.symbols.scope)
     ctx.symbols.add_procedure(Procedure("_main", [main]))
     while not ctx.at_a("EOF"):
+        ctx.symbols.set_scope(main.symbols)
         main.statements.extend(do_block(ctx))
         if ctx.at_a("KEYWORD", "sub") or ctx.at_a("KEYWORD", "function"):
             try:
@@ -326,6 +328,7 @@ def do_main(ctx: ParseContext):
                 name_close_match(ctx),
             )
             ctx.drop_line()
+    ctx.symbols.set_scope(main.symbols)
     return main
 
 
@@ -351,9 +354,11 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
 
     proc = Procedure(name, [])
     ctx.symbols.add_procedure(proc)
+    scope = LocalScope()
+    ctx.symbols.set_scope(scope)
     params = do_param_list(ctx)
     ctx.consume("NEWLINE")
-    impl = UserProcDefinition(name, TypeSignature(ret, params))
+    impl = UserProcDefinition(name, TypeSignature(ret, params), scope)
     proc.impls.append(impl)
     impl.statements = do_block(ctx)
     ctx.consume("KEYWORD", "end")
@@ -376,7 +381,9 @@ def do_param_list(ctx: ParseContext):
     while True:
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
-        result.append(Parameter(ctx.tok.value[1], ctx.tok.value[0]))
+        name, type = ctx.tok.value
+        result.append(Parameter(type, name))
+        ctx.symbols.create_local(name, type)
         next(ctx)
         if ctx.at_a("PUNCTUATION", ")"):
             break

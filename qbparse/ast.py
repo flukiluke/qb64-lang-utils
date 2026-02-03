@@ -27,8 +27,9 @@ from qbparse.datatypes import (
 from qbparse.diagnostics import ParseError
 
 
+@dataclass
 class LocalScope:
-    pass
+    variables: dict[str, dict[str, Variable]] = field(default_factory=dict)
 
 
 @dataclass
@@ -88,8 +89,8 @@ class Statement(Node):
 class UserProcDefinition(Node):
     name: str
     signature: TypeSignature
+    symbols: LocalScope
     statements: list[Statement] = field(default_factory=lambda: [])
-    symbols: LocalScope = field(default_factory=LocalScope)
 
     def children(self):
         return self.statements
@@ -103,6 +104,7 @@ class BuiltinProcDefinition(Node):
     """
 
     signature: TypeSignature
+    symbols: LocalScope = field(default_factory=LocalScope)
 
 
 ProcDefinition = UserProcDefinition | BuiltinProcDefinition
@@ -427,11 +429,15 @@ PROCS = [
 class SymbolStore:
     def __init__(self):
         self.global_vars: dict[str, dict[str, Variable]] = {}
+        self.scope = LocalScope()
         self.procedures: dict[str, Procedure] = {}
         self.types: dict[str, Type] = {}
         self.default_type: Type = TYPE_SINGLE
         for proc in PROCS:
             self.add_procedure(proc)
+
+    def set_scope(self, scope: LocalScope):
+        self.scope = scope
 
     def is_keyword(self, name: str):
         return name in KEYWORDS
@@ -440,11 +446,11 @@ class SymbolStore:
         return self.procedures.get(ident)
 
     def find_variable(self, ident: str, sigil: str | None = None) -> Variable | None:
-        if ident not in self.global_vars:
-            return None
-        vars = self.global_vars[ident]
-        type = self.lookup_sigil(sigil)
-        return vars.get(type.name)
+        type_name = self.lookup_sigil(sigil).name
+        for pool in self.scope.variables, self.global_vars:
+            if (typeset := pool.get(ident)) and (result := typeset.get(type_name)):
+                return result
+        return None
 
     def lookup_sigil(self, sigil: str | None) -> Type:
         if sigil is None:
@@ -467,7 +473,7 @@ class SymbolStore:
     def create_local(self, name: str, type: Type | None):
         if type is None:
             type = self.default_type
-        typeset = self.global_vars.setdefault(name, {})
+        typeset = self.scope.variables.setdefault(name, {})
         if type.name in typeset:
             raise ParseError("Duplicate variable")
         typeset[type.name] = Variable(name, type)
@@ -479,4 +485,10 @@ class SymbolStore:
         self.procedures[procedure.name] = procedure
 
     def is_proc_name_free(self, name: str):
-        return name not in self.procedures and name not in self.global_vars
+        for proc in self.procedures.values():
+            if name == proc.name:
+                return False
+            for impl in proc.impls:
+                if name in impl.symbols.variables:
+                    return False
+        return name not in self.global_vars

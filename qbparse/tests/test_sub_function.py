@@ -6,6 +6,7 @@ from qbparse.ast import (
     ProcDefinitionLocation,
     Procedure,
     UserProcDefinition,
+    Variable,
 )
 from qbparse.datatypes import (
     TYPE__NONE,
@@ -34,7 +35,7 @@ def test_no_params():
                 UserProcDefinition,
                 "s",
                 TypeSignature(ret=TYPE__NONE, params=[]),
-                [Ast(Print)],
+                statements=[Ast(Print)],
             )
         ],
     )
@@ -45,7 +46,7 @@ def test_no_params():
                 UserProcDefinition,
                 "f",
                 TypeSignature(ret=TYPE_SINGLE, params=[]),
-                [Ast(Print)],
+                statements=[Ast(Print)],
             )
         ],
     )
@@ -53,7 +54,7 @@ def test_no_params():
         UserProcDefinition,
         "_main",
         TypeSignature(ret=TYPE__NONE, params=[]),
-        [Ast(ProcDefinitionLocation), Ast(ProcDefinitionLocation)],
+        statements=[Ast(ProcDefinitionLocation), Ast(ProcDefinitionLocation)],
     )
 
 
@@ -65,10 +66,14 @@ def test_sub_before_main():
     prog = parse_clean("""
         sub s
             print "hi"
+            y = 2
         end sub
         x = 1""")
-    assert prog.symbols.find_procedure("s") is not None
+    proc = prog.symbols.find_procedure("s")
+    assert proc is not None
+    assert "y" in proc.impls[0].symbols.variables
     assert prog.main.find(Assignment) is not None
+    assert "x" in prog.main.symbols.variables
 
 
 def test_sub_after_main():
@@ -79,6 +84,7 @@ def test_sub_after_main():
         end sub""")
     assert prog.symbols.find_procedure("s") is not None
     assert prog.main.find(Assignment) is not None
+    assert "x" in prog.main.symbols.variables
 
 
 def test_subs_main_interleaved():
@@ -93,6 +99,7 @@ def test_subs_main_interleaved():
     assert prog.symbols.find_procedure("s") is not None
     assert prog.symbols.find_procedure("f") is not None
     assert len(list(prog.main.find_all(Assignment))) == 2
+    assert "x" in prog.main.symbols.variables
 
 
 def test_function_return_type():
@@ -116,6 +123,12 @@ def test_in_use_name():
     assert parse("function f: end function: sub f: end sub").diagnostics.has(
         diag.E_NAME_IN_USE
     )
+    assert parse("x = 3: function x: end function").diagnostics.has(diag.E_NAME_IN_USE)
+    assert parse("""
+        sub s
+            x = 3
+        end sub
+        function x: end function""").diagnostics.has(diag.E_NAME_IN_USE)
 
 
 def test_one_param():
@@ -125,6 +138,7 @@ def test_one_param():
     assert proc.impls[0].signature == TypeSignature(
         TYPE_SINGLE, [Parameter(TYPE_LONG, "a")]
     )
+    assert proc.impls[0].symbols.variables == {"a": {"long": Variable("a", TYPE_LONG)}}
 
 
 def test_multi_param():
@@ -139,7 +153,19 @@ def test_multi_param():
             Parameter(TYPE_STRING, "c"),
         ],
     )
+    assert proc.impls[0].symbols.variables == {
+        "a": {"long": Variable("a", TYPE_LONG)},
+        "b": {"single": Variable("b", TYPE_SINGLE)},
+        "c": {"string": Variable("c", TYPE_STRING)},
+    }
 
+def test_local_var():
+    prog = parse_clean("sub s: x = 3: end sub")
+    proc = prog.symbols.find_procedure('s')
+    assert proc is not None
+    assert proc.impls[0].symbols.variables == {
+        "x": {"single": Variable("x", TYPE_SINGLE)}
+    }
 
 def test_param_name_in_use():
     assert parse("function f(if) : end function").diagnostics.has(diag.E_NAME_IN_USE)
