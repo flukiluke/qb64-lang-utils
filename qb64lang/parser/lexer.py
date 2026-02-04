@@ -1,8 +1,6 @@
 import re
 from typing import Literal, cast
 
-from ply.lex import LexToken, Token, lex
-
 from . import diagnostics as diag
 from .ast import SymbolStore
 from .datatypes import (
@@ -20,6 +18,7 @@ from .datatypes import (
     IntegralType,
     Type,
 )
+from .ply import LexToken, Token, lex
 
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
 # ruff: noqa: F841

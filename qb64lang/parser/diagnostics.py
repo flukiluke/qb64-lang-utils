@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from ply.lex import LexToken
+from .ply import LexToken
 
 if TYPE_CHECKING:
     from .ast import Node

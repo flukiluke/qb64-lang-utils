@@ -34,12 +34,14 @@
 __version__    = '3.11'
 __tabversion__ = '3.10'
 
+from logging import Logger
 import re
 import sys
 import types
 import copy
 import os
 import inspect
+from typing import Any, Callable
 
 # This tuple contains known string types
 try:
@@ -62,6 +64,13 @@ class LexError(Exception):
 
 # Token class.  This class is used to represent the tokens produced.
 class LexToken(object):
+    type: str
+    value: Any
+    lineno: int
+    lexpos: int
+    lexer: "Lexer"
+    length: int
+
     def __str__(self):
         return 'LexToken(%s,%r,%d,%d)' % (self.type, self.value, self.lineno, self.lexpos)
 
@@ -860,8 +869,18 @@ class LexerReflect(object):
 #
 # Build all of the regular expression rules from definitions in the supplied module
 # -----------------------------------------------------------------------------
-def lex(module=None, object=None, debug=False, optimize=False, lextab='lextab',
-        reflags=int(re.VERBOSE), nowarn=False, outputdir=None, debuglog=None, errorlog=None):
+def lex(
+    module: object | None = None,
+    object: object | None = None,
+    debug: bool = False,
+    optimize: bool = False,
+    lextab: str = "lextab",
+    reflags: int | re.RegexFlag = int(re.VERBOSE),
+    nowarn: bool = False,
+    outputdir: str | None = None,
+    debuglog: Logger | None = None,
+    errorlog: Logger | None = None,
+) -> Lexer:
 
     if lextab is None:
         lextab = 'lextab'
@@ -1086,7 +1105,8 @@ def runmain(lexer=None, data=None):
 # when its docstring might need to be set in an alternative way
 # -----------------------------------------------------------------------------
 
-def TOKEN(r):
+_TokenFunction = Callable[[LexToken], LexToken | None]
+def TOKEN(r: str | re.Pattern[str]) -> Callable[[_TokenFunction], _TokenFunction]:
     def set_regex(f):
         if hasattr(r, '__call__'):
             f.regex = _get_regex(r)

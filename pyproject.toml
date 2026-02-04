@@ -32,15 +32,21 @@ select = [
 [tool.coverage.run]
 omit = [
     "*/tests/*",
-    "ply/*"
+    "qb64lang/parser/ply.py"
 ]
 
 [tool.pyright]
 include = [
-    "qb64lang/parser/*"
+    "qb64lang/*"
+]
+exclude = [
+    "qb64lang/parser/ply.py"
 ]
 
 [tool.ruff]
 include = [
-    "qb64lang/parser/*"
+    "qb64lang/*"
+]
+exclude = [
+    "qb64lang/parser/ply.py"
 ]

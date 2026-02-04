@@ -1,11 +1,10 @@
 import os
 from typing import Any
 
-from ply.lex import LexToken
-
 from . import diagnostics as diag
 from .ast import SymbolStore
 from .lexer import Lexer
+from .ply import LexToken
 
 TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 
