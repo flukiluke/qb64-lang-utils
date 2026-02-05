@@ -13,6 +13,7 @@ from .ast import (
     Print,
     ProcDefinitionLocation,
     Procedure,
+    SetReturn,
     Statement,
     UserProcDefinition,
 )
@@ -352,25 +353,32 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
         ctx.diags.create(diag.E_SUB_WITH_TYPE, ctx.tok)
     next(ctx)
 
+    # The order of these steps is important to make sure the lexer
+    # can resolve things properly
     proc = Procedure(name, [])
     ctx.symbols.add_procedure(proc)
     scope = LocalScope()
     ctx.symbols.set_scope(scope)
     params = do_param_list(ctx)
-    ctx.consume("NEWLINE")
     impl = UserProcDefinition(name, TypeSignature(ret, params), scope)
     proc.impls.append(impl)
-    impl.statements = do_block(ctx)
-    ctx.consume("KEYWORD", "end")
-    if ctx.at_a("KEYWORD", "sub"):
-        ctx.consume("KEYWORD", "sub")
-    else:
-        ctx.consume("KEYWORD", "function")
-    return ProcDefinitionLocation(
-        impl,
-        lex_start=lex_start,
-        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
-    )
+    ctx.current_subproc = impl
+    try:
+        ctx.consume("NEWLINE")
+        impl.statements = do_block(ctx)
+
+        ctx.consume("KEYWORD", "end")
+        if ctx.at_a("KEYWORD", "sub"):
+            ctx.consume("KEYWORD", "sub")
+        else:
+            ctx.consume("KEYWORD", "function")
+        return ProcDefinitionLocation(
+            impl,
+            lex_start=lex_start,
+            lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        )
+    finally:
+        ctx.current_subproc = None
 
 
 def do_param_list(ctx: ParseContext):
@@ -405,6 +413,10 @@ def do_block(ctx: ParseContext) -> list[Statement]:
 
     block: list[Statement] = []
     ctx.skip("NEWLINE")
+    if ctx.current_subproc is not None and (
+        ctx.at_a("KEYWORD", "sub") or ctx.at_a("KEYWORD", "function")
+    ):
+        ctx.diags.raise_error(diag.E_NESTED_PROC, ctx.tok)
     while not is_eob(ctx):
         try:
             stmt = do_stmt(ctx)
@@ -434,8 +446,15 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
             # Asignment to existing variable
             result = do_assignment(ctx)
         case "PROCEDURE":
-            # Call to existing procedure
-            result = do_procedure_call(ctx)
+            if (
+                ctx.current_subproc is not None
+                and ctx.tok.value.name == ctx.current_subproc.name
+                and ctx.current_subproc.signature.ret != TYPE__NONE
+            ):
+                result = do_set_return(ctx)
+            else:
+                # Call to existing procedure
+                result = do_procedure_call(ctx)
         case "ID":
             # May be assignment to new variable, or call
             # to not-yet-defined procedure
@@ -471,5 +490,16 @@ def do_assignment(ctx: ParseContext):
     return Assignment(lval, rval)
 
 
+def do_set_return(ctx: ParseContext):
+    """
+    Expects: function name in lvalue position
+    """
+    lex_start = ctx.tok.lexpos
+    next(ctx)
+    ctx.consume("PUNCTUATION", "=")
+    assert ctx.current_subproc is not None
+    return SetReturn(ctx.current_subproc, do_expr(ctx), lex_start=lex_start)
+
+
 def do_procedure_call(ctx: ParseContext):
-    pass
+    raise ParseError("Unimplemented procedure call")

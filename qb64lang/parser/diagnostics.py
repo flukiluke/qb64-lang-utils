@@ -161,3 +161,9 @@ E_SUB_WITH_TYPE = DiagTemplate(
     "SUB declaration must not have a return type. "
     "To return a value, use FUNCTION instead.",
 )
+E_NESTED_PROC = DiagTemplate(
+    _Level.ERROR, "Subprocedures must not be inside other subprocedures"
+)
+E_RETURN_MISMATCH = DiagTemplate(
+    _Level.ERROR, "Cannot convert expression of type {} to {} for function return value"
+)

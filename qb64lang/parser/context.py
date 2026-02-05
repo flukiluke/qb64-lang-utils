@@ -1,8 +1,7 @@
 import os
-from typing import Any
 
 from . import diagnostics as diag
-from .ast import SymbolStore
+from .ast import SymbolStore, UserProcDefinition
 from .lexer import Lexer
 from .ply import LexToken
 
@@ -23,7 +22,7 @@ class ParseContext:
         self.tok.lineno = 1
         self.tok.type = ""
         self.tok.value = ""
-        self.open_for_vars = list[Any]()
+        self.current_subproc: None | UserProcDefinition = None
         next(self)
 
     def __next__(self):

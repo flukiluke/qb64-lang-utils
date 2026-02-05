@@ -1,3 +1,5 @@
+from .. import diagnostics as diag
+from .. import parse
 from ..ast import Assignment, Call, Cast, Constant, Var
 from ..datatypes import TYPE_SINGLE
 from .helpers import Ast, builtin_proc, run_var
@@ -28,3 +30,7 @@ def test_expression_rvalue():
             [Cast(Ast(Constant, 23), TYPE_SINGLE), Cast(Ast(Constant, 7), TYPE_SINGLE)],
         ),
     )
+
+
+def test_type_mismatch():
+    assert parse("x$ = 3").diagnostics.has(diag.E_ASSIGNMENT_MISMATCH)

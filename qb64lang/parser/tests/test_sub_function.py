@@ -2,14 +2,19 @@ from .. import diagnostics as diag
 from .. import parse
 from ..ast import (
     Assignment,
+    Call,
+    Cast,
+    Constant,
     Print,
     ProcDefinitionLocation,
     Procedure,
+    SetReturn,
     UserProcDefinition,
     Variable,
 )
 from ..datatypes import (
     TYPE__NONE,
+    TYPE_INTEGER,
     TYPE_LONG,
     TYPE_SINGLE,
     TYPE_STRING,
@@ -131,6 +136,21 @@ def test_in_use_name():
         function x: end function""").diagnostics.has(diag.E_NAME_IN_USE)
 
 
+def test_sigil_clash():
+    assert parse(
+        "function f!: end function: function f%: end function"
+    ).diagnostics.has(diag.E_EXISTING_DEF_SIGIL_CLASH)
+    assert parse("function f: end function: function f%: end function").diagnostics.has(
+        diag.E_EXISTING_DEF_SIGIL_CLASH
+    )
+    assert parse("function f: end function: function f%: end function").diagnostics.has(
+        diag.E_EXISTING_DEF_SIGIL_CLASH
+    )
+    assert parse(
+        "function f$: end function: function f%: end function"
+    ).diagnostics.has(diag.E_EXISTING_DEF_SIGIL_CLASH)
+
+
 def test_one_param():
     prog = parse_clean("function f(a&) : end function")
     proc = prog.symbols.find_procedure("f")
@@ -172,3 +192,52 @@ def test_local_var():
 def test_param_name_in_use():
     assert parse("function f(if) : end function").diagnostics.has(diag.E_NAME_IN_USE)
     assert parse("function f(f) : end function").diagnostics.has(diag.E_NAME_IN_USE)
+
+
+def test_function_recursion():
+    prog = parse_clean("""
+        function f(x)
+            f = f(x - 1)
+        end function""")
+    proc = prog.symbols.find_procedure("f")
+    assert proc is not None and isinstance(proc.impls[0], UserProcDefinition)
+    assert proc.impls[0].statements == [
+        Ast(SetReturn, proc.impls[0], Ast(Call, proc, [Ast(Call)]))
+    ]
+
+
+# TODO: SUB recursion
+
+
+def test_function_return():
+    prog = parse_clean("""
+        function f%(x%)
+            f = x% + 1
+            f% = x% + 2
+            f% = 3.5
+        end function""")
+    proc = prog.symbols.find_procedure("f")
+    assert proc is not None and isinstance(proc.impls[0], UserProcDefinition)
+    assert proc.impls[0].statements == [
+        Ast(SetReturn, proc.impls[0], Ast(Call)),
+        Ast(SetReturn, proc.impls[0], Ast(Call)),
+        Ast(SetReturn, proc.impls[0], Cast(Ast(Constant), TYPE_INTEGER)),
+    ]
+
+
+def test_function_return_bad_type():
+    assert parse("function f : f& = 3: end function").diagnostics.has(
+        diag.E_EXISTING_DEF_SIGIL_CLASH
+    )
+    assert parse("function f! : f& = 3: end function").diagnostics.has(
+        diag.E_EXISTING_DEF_SIGIL_CLASH
+    )
+    assert parse('function f! : f! = "hi": end function').diagnostics.has(
+        diag.E_RETURN_MISMATCH
+    )
+
+
+def test_nested_proc():
+    assert parse("sub s : sub t : end sub : end sub").diagnostics.has(
+        diag.E_NESTED_PROC
+    )

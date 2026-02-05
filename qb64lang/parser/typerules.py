@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +20,7 @@ from .ast import (
     Print,
     ProcDefinition,
     ProcDefinitionLocation,
+    SetReturn,
     UserProcDefinition,
     Var,
 )
@@ -39,7 +38,7 @@ from .datatypes import (
 
 
 class WalkContext:
-    def __init__(self, program: Program):
+    def __init__(self, program: "Program"):
         self.program = program
         self.current = self.program.main
         self.parent = self.program.main
@@ -58,6 +57,7 @@ class WalkContext:
             (If, self.kw_if),
             (Loop, self.kw_loop),
             (For, self.kw_for),
+            (SetReturn, self.set_return),
         ]
 
     def start(self):
@@ -304,7 +304,17 @@ class WalkContext:
         for stmt in node.block:
             self.evaluate(stmt)
 
+    def set_return(self, node: SetReturn):
+        func_type = node.impl.signature.ret
+        expr_type = self.evaluate(node.value)
+        if not can_cast(expr_type, func_type):
+            self.program.diagnostics.create(
+                diag.E_RETURN_MISMATCH, node, expr_type.name, func_type.name
+            )
+        elif func_type != expr_type:
+            node.value = Cast(node.value, func_type)
 
-def typecheck(program: Program):
+
+def typecheck(program: "Program"):
     ctx = WalkContext(program)
     ctx.start()

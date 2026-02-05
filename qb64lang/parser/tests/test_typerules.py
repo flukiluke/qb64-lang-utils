@@ -12,18 +12,10 @@ from ..datatypes import (
     TYPE_INTEGER,
     TYPE_LONG,
     TYPE_SINGLE,
-    TYPE_STRING,
     ExtendedFloat,
     TypeSignature,
 )
 from .helpers import Ast, builtin_proc, parse_clean
-
-
-def test_assignment():
-    parse_clean("x = 3")
-    parse_clean('x$ = "foo"')
-    parse_clean("x = 3")
-    assert parse("x$ = 3").diagnostics.has(diag.E_ASSIGNMENT_MISMATCH)
 
 
 def test_equality():
@@ -245,25 +237,3 @@ def test_operator_overload_mixed_to_float():
         ),
         expr_type=TYPE_DOUBLE,
     )
-
-
-def test_standard_function_calls():
-    expr = parse_clean('? lcase$("foo")').main.find(Call)
-    assert expr == Ast(Call, args=[Ast(Constant, "foo")], expr_type=TYPE_STRING)
-    expr = parse_clean("? _atan2(3, 4)").main.find(Call)
-    assert expr == Ast(
-        Call,
-        args=[Cast(Ast(Constant, 3), TYPE_SINGLE), Cast(Ast(Constant, 4), TYPE_SINGLE)],
-        expr_type=TYPE_SINGLE,
-    )
-
-
-def test_function_wrong_num_arguments():
-    assert parse('? lcase$("foo","bar")').diagnostics.has(diag.E_TOO_MANY_ARGUMENTS)
-    assert parse("? lcase$").diagnostics.has(diag.E_NOT_ENOUGH_ARGUMENTS)
-    assert parse("? _atan2(3)").diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)
-
-
-def test_function_wrong_type_arguments():
-    assert parse("? lcase$(3)").diagnostics.has(diag.E_ARG_TYPE_MISMATCH)
-    assert parse('? _atan2("foo")').diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)

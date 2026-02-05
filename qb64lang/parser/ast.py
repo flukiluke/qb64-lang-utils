@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -29,15 +27,15 @@ from .diagnostics import ParseError
 
 @dataclass
 class LocalScope:
-    variables: dict[str, dict[str, Variable]] = field(default_factory=dict)
+    variables: dict[str, dict[str, "Variable"]] = field(default_factory=dict)
 
 
 @dataclass
 class Node:
     _T = TypeVar("_T", bound="Node")
 
-    lex_start: int | None = field(kw_only=True, default=None)
-    lex_len: int = field(kw_only=True, default=0)
+    lex_start: int | None = field(kw_only=True, default=None, repr=False)
+    lex_len: int = field(kw_only=True, default=0, repr=False)
 
     def get_lex_range(self) -> tuple[int, int] | None:
         start = self.lex_start
@@ -55,7 +53,7 @@ class Node:
             return None
         return (start, end)
 
-    def children(self) -> Iterable[Node]:
+    def children(self) -> Iterable["Node"]:
         return ()
 
     def find(self, kind: type[_T], props: dict[str, Any] = {}) -> _T:
@@ -89,7 +87,7 @@ class Statement(Node):
 class UserProcDefinition(Node):
     name: str
     signature: TypeSignature
-    symbols: LocalScope
+    symbols: LocalScope = field(default_factory=LocalScope, repr=False)
     statements: list[Statement] = field(default_factory=lambda: [])
 
     def children(self):
@@ -104,7 +102,7 @@ class BuiltinProcDefinition(Node):
     """
 
     signature: TypeSignature
-    symbols: LocalScope = field(default_factory=LocalScope)
+    symbols: LocalScope = field(default_factory=LocalScope, repr=False)
 
 
 ProcDefinition = UserProcDefinition | BuiltinProcDefinition
@@ -126,7 +124,7 @@ class LValue(Expr):
 
 @dataclass
 class Var(LValue):
-    target: Variable
+    target: "Variable"
 
 
 @dataclass
@@ -136,14 +134,20 @@ class Call(Expr, Statement):
         INFIX = auto()
         PREFIX = auto()
 
-    target: Procedure
-    args: list[Expr] = field(default_factory=lambda: [])
+    target: "Procedure"
+    args: list[Expr] = field(default_factory=list)
     style: Style = Style.STANDARD
     # Calculated values
     impl: ProcDefinition | None = None
 
     def children(self):
         return self.args
+
+    def __repr__(self):
+        return (
+            f"Call(target={self.target}, args={self.args}, "
+            "impl={self.impl.signature if self.impl else None})"
+        )
 
 
 @dataclass
@@ -223,9 +227,18 @@ class For(Statement):
 
 
 @dataclass
+class SetReturn(Statement):
+    impl: UserProcDefinition
+    value: Expr
+
+    def children(self):
+        return [self.value]
+
+
+@dataclass
 class Procedure:
     name: str
-    impls: list[ProcDefinition]
+    impls: list[ProcDefinition] = field(default_factory=list, repr=False)
 
     def sigs(self):
         return [i.signature for i in self.impls]
