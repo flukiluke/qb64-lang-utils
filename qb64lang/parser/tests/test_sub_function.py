@@ -206,7 +206,14 @@ def test_function_recursion():
     ]
 
 
-# TODO: SUB recursion
+def test_sub_recursion():
+    prog = parse_clean("""
+        sub s(x)
+            s x - 1
+        end sub""")
+    proc = prog.symbols.find_procedure("s")
+    assert proc is not None and isinstance(proc.impls[0], UserProcDefinition)
+    assert proc.impls[0].statements == [Ast(Call, proc, [Ast(Call)])]
 
 
 def test_function_return():

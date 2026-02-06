@@ -20,7 +20,7 @@ from .ast import (
 from .context import ParseContext
 from .datatypes import TYPE__BYTE, TYPE__NONE, Parameter, Type, TypeSignature
 from .diagnostics import ParseError
-from .expression import do_bare_var, do_expr, do_lvalue
+from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
 
 
 def do_print(ctx: ParseContext):
@@ -438,10 +438,6 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
             if handler is None:
                 ctx.diags.raise_error(diag.E_UNEXPECTED_KEYWORD, ctx.tok, ctx.tok.value)
             result = handler(ctx)
-            if not ctx.at_line_terminator():
-                ctx.diags.raise_error(
-                    diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end of statement"
-                )
         case "VARIABLE":
             # Asignment to existing variable
             result = do_assignment(ctx)
@@ -463,6 +459,10 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
             ctx.diags.raise_error(
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "a statement"
             )
+    if not ctx.at_line_terminator():
+        ctx.diags.raise_error(
+            diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end of statement"
+        )
     return result
 
 
@@ -502,4 +502,19 @@ def do_set_return(ctx: ParseContext):
 
 
 def do_procedure_call(ctx: ParseContext):
-    raise ParseError("Unimplemented procedure call")
+    """
+    Expects: procedure name
+    """
+    target = ctx.tok.value
+    lex_start = ctx.tok.lexpos
+    lex_len = ctx.tok.length
+    next(ctx)
+    if not ctx.at_line_terminator():
+        args = do_func_args(ctx)
+        return Call(
+            target,
+            args,
+            lex_start=lex_start,
+            lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        )
+    return Call(target, lex_start=lex_start, lex_len=lex_len)

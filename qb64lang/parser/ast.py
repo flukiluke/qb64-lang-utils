@@ -13,6 +13,7 @@ from .datatypes import (
     TYPE__INTEGER64,
     TYPE__NONE,
     TYPE_ANY,
+    TYPE_INTEGER,
     TYPE_SINGLE,
     TYPE_STRING,
     BitnType,
@@ -146,7 +147,7 @@ class Call(Expr, Statement):
     def __repr__(self):
         return (
             f"Call(target={self.target}, args={self.args}, "
-            "impl={self.impl.signature if self.impl else None})"
+            f"impl={self.impl.signature if self.impl else None})"
         )
 
 
@@ -432,6 +433,20 @@ PROCS = [
             BuiltinProcDefinition(
                 TypeSignature(
                     TYPE_STRING, [Parameter(TYPE_STRING), Parameter(TYPE__INTEGER64)]
+                )
+            )
+        ],
+    ),
+    Procedure(
+        "mkdir",
+        [BuiltinProcDefinition(TypeSignature(TYPE__NONE, [Parameter(TYPE_STRING)]))],
+    ),
+    Procedure(
+        "out",
+        [
+            BuiltinProcDefinition(
+                TypeSignature(
+                    TYPE__NONE, [Parameter(TYPE_INTEGER), Parameter(TYPE_INTEGER)]
                 )
             )
         ],
