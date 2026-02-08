@@ -2,7 +2,7 @@ from qb64lang.parser.datatypes import Parameter as P
 
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import BuiltinProcDefinition, Call, Cast, Constant
+from ..ast import Call, Cast, Constant, ProcDefinition
 from ..datatypes import (
     TYPE__BYTE,
     TYPE__FLOAT,
@@ -81,7 +81,8 @@ def test_operator_overload_int():
             Ast(Constant, 3, TYPE_INTEGER),
         ],
         impl=Ast(
-            BuiltinProcDefinition,
+            ProcDefinition,
+            "+",
             TypeSignature(TYPE_INTEGER, [P(TYPE_INTEGER), P(TYPE_INTEGER)]),
         ),
         expr_type=TYPE_INTEGER,
@@ -100,7 +101,8 @@ def test_operator_overload_mixed_num():
             Ast(Constant, 3, TYPE_SINGLE),
         ],
         impl=Ast(
-            BuiltinProcDefinition,
+            ProcDefinition,
+            "-",
             TypeSignature(TYPE_SINGLE, [P(TYPE_SINGLE), P(TYPE_SINGLE)]),
         ),
         expr_type=TYPE_SINGLE,
@@ -119,7 +121,8 @@ def test_operator_overload_mixed_unsigned():
             Cast(Ast(Constant, 3, TYPE__UNSIGNED_INTEGER), TYPE_LONG),
         ],
         impl=Ast(
-            BuiltinProcDefinition,
+            ProcDefinition,
+            "*",
             TypeSignature(TYPE_LONG, [P(TYPE_LONG), P(TYPE_LONG)]),
         ),
         expr_type=TYPE_LONG,
@@ -175,7 +178,8 @@ def test_operator_overload_integer_to_float():
             Cast(Ast(Constant, 3), TYPE_SINGLE),
         ],
         impl=Ast(
-            BuiltinProcDefinition,
+            ProcDefinition,
+            "/",
             TypeSignature(TYPE_SINGLE, [P(TYPE_SINGLE), P(TYPE_SINGLE)]),
         ),
         expr_type=TYPE_SINGLE,
@@ -194,7 +198,8 @@ def test_operator_overload_long_to_float():
             Cast(Ast(Constant, 3), TYPE_DOUBLE),
         ],
         impl=Ast(
-            BuiltinProcDefinition,
+            ProcDefinition,
+            "/",
             TypeSignature(TYPE_DOUBLE, [P(TYPE_DOUBLE), P(TYPE_DOUBLE)]),
         ),
         expr_type=TYPE_DOUBLE,
@@ -213,7 +218,8 @@ def test_operator_overload_in64_to_float():
             Cast(Ast(Constant, 3), TYPE__FLOAT),
         ],
         impl=Ast(
-            BuiltinProcDefinition,
+            ProcDefinition,
+            "/",
             TypeSignature(TYPE__FLOAT, [P(TYPE__FLOAT), P(TYPE__FLOAT)]),
         ),
         expr_type=TYPE__FLOAT,
@@ -232,7 +238,8 @@ def test_operator_overload_mixed_to_float():
             Cast(Ast(Constant, 3), TYPE_DOUBLE),
         ],
         impl=Ast(
-            BuiltinProcDefinition,
+            ProcDefinition,
+            "/",
             TypeSignature(TYPE_DOUBLE, [P(TYPE_DOUBLE), P(TYPE_DOUBLE)]),
         ),
         expr_type=TYPE_DOUBLE,

@@ -1,11 +1,17 @@
 import os
+from dataclasses import dataclass
 
 from . import diagnostics as diag
-from .ast import SymbolStore, UserProcDefinition
+from .ast import ProcDefinition, SymbolStore
 from .lexer import Lexer
 from .ply import LexToken
 
 TRACE_TOKENS = "TRACE_TOKENS" in os.environ
+
+
+@dataclass
+class _Modes:
+    allow_proc_overloads: bool = False
 
 
 class ParseContext:
@@ -22,7 +28,8 @@ class ParseContext:
         self.tok.lineno = 1
         self.tok.type = ""
         self.tok.value = ""
-        self.current_subproc: None | UserProcDefinition = None
+        self.current_subproc: None | ProcDefinition = None
+        self.mode = _Modes()
         next(self)
 
     def __next__(self):

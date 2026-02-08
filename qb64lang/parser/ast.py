@@ -85,33 +85,26 @@ class Statement(Node):
 
 
 @dataclass
-class UserProcDefinition(Node):
+class ProcDefinition(Node):
     name: str
     signature: TypeSignature
     symbols: LocalScope = field(default_factory=LocalScope, repr=False)
     statements: list[Statement] = field(default_factory=lambda: [])
+    decl_only: bool = False
 
     def children(self):
         return self.statements
 
 
 @dataclass
-class BuiltinProcDefinition(Node):
-    """
-    Placeholder class for procedures with no explicit definition because
-    they are builtin
-    """
-
-    signature: TypeSignature
-    symbols: LocalScope = field(default_factory=LocalScope, repr=False)
-
-
-ProcDefinition = UserProcDefinition | BuiltinProcDefinition
+class ProcDefinitionLocation(Statement):
+    proc: ProcDefinition
 
 
 @dataclass
-class ProcDefinitionLocation(Statement):
-    proc: UserProcDefinition
+class ProcDeclaration(Statement):
+    name: str
+    signature: TypeSignature
 
 
 @dataclass
@@ -229,7 +222,7 @@ class For(Statement):
 
 @dataclass
 class SetReturn(Statement):
-    impl: UserProcDefinition
+    impl: ProcDefinition
     value: Expr
 
     def children(self):
@@ -252,16 +245,21 @@ class Variable:
 
 
 def _generic(
-    ret: Type | None, params: list[Parameter | None], concretes: Iterable[Type]
+    name: str,
+    ret: Type | None,
+    params: list[Parameter | None],
+    concretes: Iterable[Type],
 ) -> list[ProcDefinition]:
     results = list[ProcDefinition]()
     for concrete in concretes:
         results.append(
-            BuiltinProcDefinition(
+            ProcDefinition(
+                name,
                 TypeSignature(
                     ret if ret else concrete,
                     [p if p else Parameter(concrete) for p in params],
-                )
+                ),
+                decl_only=True,
             )
         )
     return results
@@ -277,6 +275,7 @@ KEYWORDS = set(
         "const",
         "sub",
         "function",
+        "declare",
         # Conditionals
         "if",
         "then",
@@ -315,139 +314,175 @@ PROCS = [
     Procedure(
         "=",
         [
-            BuiltinProcDefinition(
-                TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)])
+            ProcDefinition(
+                "=",
+                TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)]),
+                decl_only=True,
             )
         ],
     ),
     Procedure(
         "<>",
         [
-            BuiltinProcDefinition(
-                TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)])
+            ProcDefinition(
+                "<>",
+                TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)]),
+                decl_only=True,
             )
         ],
     ),
     Procedure(
         "<",
         [
-            BuiltinProcDefinition(
+            ProcDefinition(
+                "<",
                 TypeSignature(
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
-                )
+                ),
+                decl_only=True,
             ),
-            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
-            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+            *_generic("<", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic("<", TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
     Procedure(
         ">",
         [
-            BuiltinProcDefinition(
+            ProcDefinition(
+                ">",
                 TypeSignature(
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
-                )
+                ),
+                decl_only=True,
             ),
-            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
-            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+            *_generic(">", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(">", TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
     Procedure(
         "<=",
         [
-            BuiltinProcDefinition(
+            ProcDefinition(
+                "<=",
                 TypeSignature(
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
-                )
+                ),
+                decl_only=True,
             ),
-            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
-            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+            *_generic("<=", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic("<=", TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
     Procedure(
         ">=",
         [
-            BuiltinProcDefinition(
+            ProcDefinition(
+                ">=",
                 TypeSignature(
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
-                )
+                ),
+                decl_only=True,
             ),
-            *_generic(TYPE__BYTE, [None, None], INTEGRAL_TYPES),
-            *_generic(TYPE__BYTE, [None, None], FLOAT_TYPES),
+            *_generic(">=", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
+            *_generic(">=", TYPE__BYTE, [None, None], FLOAT_TYPES),
         ],
     ),
     # Arithmetic
     Procedure(
         "+",
         [
-            BuiltinProcDefinition(
+            ProcDefinition(
+                "+",
                 TypeSignature(
                     TYPE_STRING, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
-                )
+                ),
+                decl_only=True,
             ),
-            *_generic(None, [None, None], INTEGRAL_TYPES),
-            *_generic(None, [None, None], FLOAT_TYPES),
+            *_generic("+", None, [None, None], INTEGRAL_TYPES),
+            *_generic("+", None, [None, None], FLOAT_TYPES),
         ],
     ),
     Procedure(
         "-",
         [
-            *_generic(None, [None], INTEGRAL_TYPES),
-            *_generic(None, [None], FLOAT_TYPES),
-            *_generic(None, [None, None], INTEGRAL_TYPES),
-            *_generic(None, [None, None], FLOAT_TYPES),
+            *_generic("-", None, [None], INTEGRAL_TYPES),
+            *_generic("-", None, [None], FLOAT_TYPES),
+            *_generic("-", None, [None, None], INTEGRAL_TYPES),
+            *_generic("-", None, [None, None], FLOAT_TYPES),
         ],
     ),
     Procedure(
         "*",
         [
-            *_generic(None, [None, None], INTEGRAL_TYPES),
-            *_generic(None, [None, None], FLOAT_TYPES),
+            *_generic("*", None, [None, None], INTEGRAL_TYPES),
+            *_generic("*", None, [None, None], FLOAT_TYPES),
         ],
     ),
-    Procedure("/", [*_generic(None, [None, None], FLOAT_TYPES)]),
-    Procedure("\\", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("^", [*_generic(None, [None, None], FLOAT_TYPES)]),
-    Procedure("mod", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("/", [*_generic("/", None, [None, None], FLOAT_TYPES)]),
+    Procedure("\\", [*_generic("\\", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("^", [*_generic("^", None, [None, None], FLOAT_TYPES)]),
+    Procedure("mod", [*_generic("mod", None, [None, None], INTEGRAL_TYPES)]),
     # Bitwise relations
-    Procedure("imp", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("eqv", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("xor", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("or", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("and", [*_generic(None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("not", [*_generic(None, [None], INTEGRAL_TYPES)]),
+    Procedure("imp", [*_generic("imp", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("eqv", [*_generic("eqv", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("xor", [*_generic("xor", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("or", [*_generic("or", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("and", [*_generic("and", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("not", [*_generic("not", None, [None], INTEGRAL_TYPES)]),
     # Other maths
-    Procedure("_atan2", [*_generic(None, [None, None], FLOAT_TYPES)]),
+    Procedure("_atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]),
     # Everything else
     Procedure(
         "val",
-        [BuiltinProcDefinition(TypeSignature(TYPE__FLOAT, [Parameter(TYPE_STRING)]))],
+        [
+            ProcDefinition(
+                "val",
+                TypeSignature(TYPE__FLOAT, [Parameter(TYPE_STRING)]),
+                decl_only=True,
+            )
+        ],
     ),
     Procedure(
         "lcase$",
-        [BuiltinProcDefinition(TypeSignature(TYPE_STRING, [Parameter(TYPE_STRING)]))],
+        [
+            ProcDefinition(
+                "lcase$",
+                TypeSignature(TYPE_STRING, [Parameter(TYPE_STRING)]),
+                decl_only=True,
+            )
+        ],
     ),
     Procedure(
         "left$",
         [
-            BuiltinProcDefinition(
+            ProcDefinition(
+                "left$",
                 TypeSignature(
                     TYPE_STRING, [Parameter(TYPE_STRING), Parameter(TYPE__INTEGER64)]
-                )
+                ),
+                decl_only=True,
             )
         ],
     ),
     Procedure(
         "mkdir",
-        [BuiltinProcDefinition(TypeSignature(TYPE__NONE, [Parameter(TYPE_STRING)]))],
+        [
+            ProcDefinition(
+                "mkdir",
+                TypeSignature(TYPE__NONE, [Parameter(TYPE_STRING)]),
+                decl_only=True,
+            )
+        ],
     ),
     Procedure(
         "out",
         [
-            BuiltinProcDefinition(
+            ProcDefinition(
+                "out",
                 TypeSignature(
                     TYPE__NONE, [Parameter(TYPE_INTEGER), Parameter(TYPE_INTEGER)]
-                )
+                ),
+                decl_only=True,
             )
         ],
     ),
@@ -461,6 +496,7 @@ class SymbolStore:
         self.procedures: dict[str, Procedure] = {}
         self.types: dict[str, Type] = {}
         self.default_type: Type = TYPE_SINGLE
+        self.return_proc_as_id: bool = False
         for proc in PROCS:
             self.add_procedure(proc)
 
@@ -516,6 +552,7 @@ class SymbolStore:
         for proc in self.procedures.values():
             if name == proc.name:
                 return False
+            # procedure must not conflict with existing locals
             for impl in proc.impls:
                 if name in impl.symbols.variables:
                     return False

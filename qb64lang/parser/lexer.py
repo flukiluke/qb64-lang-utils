@@ -286,6 +286,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         if (proc := symbols.find_procedure(name)) or (
             sigil == "$" and (proc := symbols.find_procedure(name + "$"))
         ):
+            if symbols.return_proc_as_id:
+                t.value = (name, symbols.lookup_sigil(sigil))
+                return t
             if sigil is not None:
                 # The sigil must match the existing procedure, if present
                 typ = symbols.lookup_sigil(sigil)

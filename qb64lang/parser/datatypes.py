@@ -160,6 +160,11 @@ class TypeSignature:
     ret: Type
     params: list[Parameter]
 
+    def equivalent_to(self, other: "TypeSignature"):
+        return self.ret == other.ret and [p.type for p in self.params] == [
+            p.type for p in other.params
+        ]
+
 
 def bits2float(spec1: str, spec2: str, b: int):
     return struct.unpack(">" + spec1, struct.pack(">" + spec2, b))[0]

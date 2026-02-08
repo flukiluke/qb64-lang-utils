@@ -6,10 +6,10 @@ from ..ast import (
     Cast,
     Constant,
     Print,
+    ProcDefinition,
     ProcDefinitionLocation,
     Procedure,
     SetReturn,
-    UserProcDefinition,
     Variable,
 )
 from ..datatypes import (
@@ -37,7 +37,7 @@ def test_no_params():
         "s",
         [
             Ast(
-                UserProcDefinition,
+                ProcDefinition,
                 "s",
                 TypeSignature(ret=TYPE__NONE, params=[]),
                 statements=[Ast(Print)],
@@ -48,7 +48,7 @@ def test_no_params():
         "f",
         [
             Ast(
-                UserProcDefinition,
+                ProcDefinition,
                 "f",
                 TypeSignature(ret=TYPE_SINGLE, params=[]),
                 statements=[Ast(Print)],
@@ -56,7 +56,7 @@ def test_no_params():
         ],
     )
     assert prog.main == Ast(
-        UserProcDefinition,
+        ProcDefinition,
         "_main",
         TypeSignature(ret=TYPE__NONE, params=[]),
         statements=[Ast(ProcDefinitionLocation), Ast(ProcDefinitionLocation)],
@@ -200,7 +200,7 @@ def test_function_recursion():
             f = f(x - 1)
         end function""")
     proc = prog.symbols.find_procedure("f")
-    assert proc is not None and isinstance(proc.impls[0], UserProcDefinition)
+    assert proc is not None
     assert proc.impls[0].statements == [
         Ast(SetReturn, proc.impls[0], Ast(Call, proc, [Ast(Call)]))
     ]
@@ -212,7 +212,7 @@ def test_sub_recursion():
             s x - 1
         end sub""")
     proc = prog.symbols.find_procedure("s")
-    assert proc is not None and isinstance(proc.impls[0], UserProcDefinition)
+    assert proc is not None
     assert proc.impls[0].statements == [Ast(Call, proc, [Ast(Call)])]
 
 
@@ -224,7 +224,7 @@ def test_function_return():
             f% = 3.5
         end function""")
     proc = prog.symbols.find_procedure("f")
-    assert proc is not None and isinstance(proc.impls[0], UserProcDefinition)
+    assert proc is not None
     assert proc.impls[0].statements == [
         Ast(SetReturn, proc.impls[0], Ast(Call)),
         Ast(SetReturn, proc.impls[0], Ast(Call)),

@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 from .ast import (
     Assignment,
-    BuiltinProcDefinition,
     Call,
     Cast,
     Constant,
@@ -21,7 +20,6 @@ from .ast import (
     ProcDefinition,
     ProcDefinitionLocation,
     SetReturn,
-    UserProcDefinition,
     Var,
 )
 from .datatypes import (
@@ -49,9 +47,8 @@ class WalkContext:
             (Constant, self.constant),
         ]
         self.stmt_handlers: list[tuple[type[Node], Callable[[Any], Type | None]]] = [
-            (BuiltinProcDefinition, lambda _: None),
             (ProcDefinitionLocation, lambda _: None),
-            (UserProcDefinition, self.proc_definition),
+            (ProcDefinition, self.proc_definition),
             (Assignment, self.assignment),
             (Print, self.kw_print),
             (If, self.kw_if),
@@ -85,7 +82,7 @@ class WalkContext:
         self.parent = old_parent
         return result
 
-    def proc_definition(self, impl: UserProcDefinition):
+    def proc_definition(self, impl: ProcDefinition):
         for stmt in impl.statements:
             self.evaluate(stmt)
 

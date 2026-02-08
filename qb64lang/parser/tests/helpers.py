@@ -41,7 +41,7 @@ def run_var(input: str, variable_name: str):
     return (program.main, variable)
 
 
-class Ast(ast.Statement, ast.LValue, ast.UserProcDefinition):
+class Ast(ast.Statement, ast.LValue, ast.ProcDefinition):
     def __init__(self, kind: type[ast.Node], *args: Any, **kwargs: Any):
         self.kind = kind
         self.props: dict[str, Any] = {}

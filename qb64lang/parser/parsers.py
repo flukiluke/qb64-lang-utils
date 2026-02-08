@@ -8,14 +8,14 @@ from .ast import (
     Expr,
     For,
     If,
-    LocalScope,
     Loop,
     Print,
+    ProcDeclaration,
+    ProcDefinition,
     ProcDefinitionLocation,
     Procedure,
     SetReturn,
     Statement,
-    UserProcDefinition,
 )
 from .context import ParseContext
 from .datatypes import TYPE__BYTE, TYPE__NONE, Parameter, Type, TypeSignature
@@ -248,6 +248,60 @@ def do_for(ctx: ParseContext):
     )
 
 
+def do_proc_ident(ctx: ParseContext) -> tuple[str, Type]:
+    """
+    Expects: SUB or FUNCTION
+    Rresults: after name sigil
+    """
+    if ctx.at_a("KEYWORD", "sub"):
+        is_sub = True
+    elif ctx.at_a("KEYWORD", "function"):
+        is_sub = False
+    else:
+        ctx.diags.raise_error(diag.E_UNEXPECTED_ITEM, ctx.tok, "SUB or FUNCTION")
+    default_type = ctx.symbols.default_type
+    try:
+        if is_sub:
+            ctx.symbols.default_type = TYPE__NONE
+        ctx.symbols.return_proc_as_id = ctx.mode.allow_proc_overloads
+        next(ctx)
+        if not ctx.at_a("ID"):
+            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
+        elif not ctx.symbols.is_proc_name_free(ctx.tok.value[0]):
+            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value[0])
+    finally:
+        ctx.symbols.default_type = default_type
+        ctx.symbols.return_proc_as_id = False
+    name: str = ctx.tok.value[0]
+    ret: Type = ctx.tok.value[1]
+    if is_sub and ret != TYPE__NONE:
+        ctx.diags.create(diag.E_SUB_WITH_TYPE, ctx.tok)
+    next(ctx)
+    return (name, ret)
+
+
+def do_declare(ctx: ParseContext):
+    """
+    Expects: DECLARE
+    """
+    lex_start = ctx.tok.lexpos
+    next(ctx)
+    name, ret = do_proc_ident(ctx)
+    proc = ctx.symbols.find_procedure(name)
+    if proc is None:
+        proc = Procedure(name, [])
+        ctx.symbols.add_procedure(proc)
+    params = do_param_list(ctx)
+    impl = ProcDefinition(name, TypeSignature(ret, params), decl_only=True)
+    proc.impls.append(impl)
+    return ProcDeclaration(
+        name,
+        impl.signature,
+        lex_start=lex_start,
+        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+    )
+
+
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "print": do_print,
     "?": do_print,
@@ -255,6 +309,7 @@ KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "do": do_do,
     "while": do_while,
     "for": do_for,
+    "declare": do_declare,
 }
 
 
@@ -309,7 +364,7 @@ def name_close_match(ctx: ParseContext):
 
 
 def do_main(ctx: ParseContext):
-    main = UserProcDefinition("_main", TypeSignature(TYPE__NONE, []), ctx.symbols.scope)
+    main = ProcDefinition("_main", TypeSignature(TYPE__NONE, []), ctx.symbols.scope)
     ctx.symbols.add_procedure(Procedure("_main", [main]))
     while not ctx.at_a("EOF"):
         ctx.symbols.set_scope(main.symbols)
@@ -335,33 +390,36 @@ def do_main(ctx: ParseContext):
 
 def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
     lex_start = ctx.tok.lexpos
-    is_sub = ctx.at_a("KEYWORD", "sub")
-    default_type = ctx.symbols.default_type
-    try:
-        if is_sub:
-            ctx.symbols.default_type = TYPE__NONE
-        next(ctx)
-        if not ctx.at_a("ID"):
-            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
-        elif not ctx.symbols.is_proc_name_free(ctx.tok.value[0]):
-            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value[0])
-    finally:
-        ctx.symbols.default_type = default_type
-    name: str = ctx.tok.value[0]
-    ret: Type = ctx.tok.value[1]
-    if is_sub and ret != TYPE__NONE:
-        ctx.diags.create(diag.E_SUB_WITH_TYPE, ctx.tok)
-    next(ctx)
+    # Grab this token for error reporting purposes
+    start_tok = ctx.tok
+    name, ret = do_proc_ident(ctx)
 
-    # The order of these steps is important to make sure the lexer
-    # can resolve things properly
-    proc = Procedure(name, [])
-    ctx.symbols.add_procedure(proc)
-    scope = LocalScope()
-    ctx.symbols.set_scope(scope)
+    # Procedure may exist if pre-declared, or other impls exist
+    proc = ctx.symbols.find_procedure(name)
+    if proc is None:
+        proc = Procedure(name, [])
+        ctx.symbols.add_procedure(proc)
     params = do_param_list(ctx)
-    impl = UserProcDefinition(name, TypeSignature(ret, params), scope)
-    proc.impls.append(impl)
+    sig = TypeSignature(ret, params)
+
+    # Find any pre-declared impl with matching type signature
+    for probe_impl in proc.impls:
+        if sig.equivalent_to(probe_impl.signature):
+            if probe_impl.decl_only:
+                impl = probe_impl
+                impl.decl_only = False
+                break
+            else:
+                # Can't define the same procedure twice
+                ctx.diags.raise_error(diag.E_NAME_IN_USE, start_tok, name)
+    else:
+        impl = ProcDefinition(name, sig)
+        proc.impls.append(impl)
+
+    ctx.symbols.set_scope(impl.symbols)
+    for param in params:
+        assert param.name is not None
+        ctx.symbols.create_local(param.name, param.type)
     ctx.current_subproc = impl
     try:
         ctx.consume("NEWLINE")
@@ -382,6 +440,10 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
 
 
 def do_param_list(ctx: ParseContext):
+    """
+    Expects: (
+    Results: after )
+    """
     result = list[Parameter]()
     if not ctx.at_a("PUNCTUATION", "("):
         return result
@@ -391,7 +453,6 @@ def do_param_list(ctx: ParseContext):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
         name, type = ctx.tok.value
         result.append(Parameter(type, name))
-        ctx.symbols.create_local(name, type)
         next(ctx)
         if ctx.at_a("PUNCTUATION", ")"):
             break

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .. import diagnostics as diag
-from ..ast import BuiltinProcDefinition, Procedure, SymbolStore
+from ..ast import ProcDefinition, Procedure, SymbolStore
 from ..datatypes import (
     TYPE__BIT,
     TYPE__BYTE,
@@ -367,12 +367,21 @@ def test_keyword():
 
 def test_procedure():
     symbols = SymbolStore()
-    a_sub = Procedure("a_sub", [BuiltinProcDefinition(TypeSignature(TYPE__NONE, []))])
+    a_sub = Procedure(
+        "a_sub",
+        [ProcDefinition("a_sub", TypeSignature(TYPE__NONE, []), decl_only=True)],
+    )
     a_function = Procedure(
-        "a_function", [BuiltinProcDefinition(TypeSignature(TYPE_STRING, []))]
+        "a_function",
+        [ProcDefinition("a_function", TypeSignature(TYPE_STRING, []), decl_only=True)],
     )
     a_string_builtin = Procedure(
-        "a_string_builtin$", [BuiltinProcDefinition(TypeSignature(TYPE_STRING, []))]
+        "a_string_builtin$",
+        [
+            ProcDefinition(
+                "a_string_builtin$", TypeSignature(TYPE_STRING, []), decl_only=True
+            )
+        ],
     )
     symbols.procedures["a_sub"] = a_sub
     symbols.procedures["a_function"] = a_function
