@@ -30,6 +30,7 @@ tokens = (
     "ERROR",
     "COMMENT",
     "REMARK",
+    "META_CMD",
     "LINE_SPLIT",
     "LINE_NUM",
     "LINE_LABEL",
@@ -48,6 +49,8 @@ tokens = (
     "BAD_CHAR",
 )
 
+states = (("meta", "exclusive"),)
+
 ws = "[ \t]"
 nl = r"(?:\r?\n)"
 letter = "[A-Za-z]"
@@ -64,12 +67,9 @@ id_body = rf"""
 
 
 def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
-    t_ignore = ws
-
-    def t_error(t: LexToken):
+    def t_ANY_error(t: LexToken):
         t.lexer.skip(t.length)
         diags.raise_error(diag.E_UNKNOWN_CHARACTERS, t, t.value)
-        return t
 
     @Token(nl)
     def t_NEWLINE(t: LexToken):
@@ -79,14 +79,53 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
 
     @Token(r"'.*(\n|$)")
     def t_COMMENT(t: LexToken):
+        if t.length > 1:
+            line: str = t.value
+            line = line[1:].lstrip(" \t")
+            if line.startswith("$"):
+                t.lexer.lexpos = t.lexpos + 1
+                t.lexer.begin("meta")
+                return None
         t.type = "NEWLINE"
         t.value = "'"
         return t
 
     @Token(rf"REM({ws}+.*)?(\n|$)")
     def t_REMARK(t: LexToken):
+        if t.length > 3:
+            line: str = t.value
+            line = line[3:].lstrip(" \t")
+            if line.startswith("$"):
+                t.lexer.lexpos = t.lexpos + 3
+                t.lexer.begin("meta")
+                return None
         t.type = "NEWLINE"
         t.value = "rem"
+        return t
+
+    @Token(rf"{ws}*(?P<a>\${id_body}){ws}*(:{ws}*'(?P<b>[^']*)')?")
+    def t_meta_META_CMD(t: LexToken):
+        cmd: str
+        arg: str | None
+        cmd, arg = t.lexer.lexmatch.group("a", "b")
+        if cmd.lower() in ["$static", "$dynamic", "$include"]:
+            t.value = (cmd, arg)
+            return t
+
+    @Token(nl)
+    def t_meta_NEWLINE(t: LexToken):
+        t.lexer.lineno += 1
+        t.value = "\n"
+        t.lexer.begin("INITIAL")
+        return t
+
+    @Token("[^$]+")
+    def t_meta_COMMENT(t: LexToken):
+        pass
+
+    @Token(rf"^{ws}*(?P<a>\${id_body}){ws}*(:{ws}*(?P<b>.*))?")
+    def t_META_CMD(t: LexToken):
+        t.value = t.lexer.lexmatch.group("a", "b")
         return t
 
     @Token(f"^{ws}*(?P<n>{digit}+){ws}*(?P<l>{id_body}){ws}*:")
@@ -329,6 +368,10 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     """)
     def t_PUNCTUATION(t: LexToken):
         return t
+
+    @Token(f"{ws}+")
+    def t_WHITESPACE(t: LexToken):
+        pass
 
     @Token(".")
     def t_BAD_CHAR(t: LexToken):

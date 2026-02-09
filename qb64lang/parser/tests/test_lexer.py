@@ -544,3 +544,52 @@ def test_bad_character():
         [],
         d=diag.E_UNKNOWN_CHARACTERS,
     )
+
+
+def test_metacommand():
+    check("$foo", Token("META_CMD", ("$foo", None)))
+    check("$foo:bar", Token("META_CMD", ("$foo", "bar")))
+    check("  $foo  :  bar", Token("META_CMD", ("$foo", "bar")))
+
+
+def test_commented_metacommand():
+    check("'$dynamic", Token("META_CMD", ("$dynamic", None)))
+    check(
+        "'$dynamic\nprint",
+        [
+            Token("META_CMD", ("$dynamic", None)),
+            Token("NEWLINE"),
+            Token("KEYWORD", "print"),
+        ],
+    )
+    check(
+        "'$dynamic $static",
+        [Token("META_CMD", ("$dynamic", None)), Token("META_CMD", ("$static", None))],
+    )
+    check(
+        "'$dynamic lskdjf $static",
+        [Token("META_CMD", ("$dynamic", None)), Token("META_CMD", ("$static", None))],
+    )
+
+
+def test_remmed_metacommand():
+    check("rem $dynamic", Token("META_CMD", ("$dynamic", None)))
+
+
+def test_fake_commented_metacommand():
+    check("'$foobar\n", Token("NEWLINE"))
+    check("'$dynamic $spatz", [Token("META_CMD", ("$dynamic", None))])
+
+
+def test_include_metacommand():
+    check("'$include", Token("META_CMD", ("$include", None)))
+    check("'$include:''", Token("META_CMD", ("$include", "")))
+    check("'$include:'foo'", Token("META_CMD", ("$include", "foo")))
+    check(" rem  $include  : 'foo'asdf", Token("META_CMD", ("$include", "foo")))
+    check(
+        "'$include:'foo' $include:'bar'",
+        [
+            Token("META_CMD", ("$include", "foo")),
+            Token("META_CMD", ("$include", "bar")),
+        ],
+    )
