@@ -6,6 +6,7 @@ from ..ast import (
     Cast,
     Constant,
     Print,
+    ProcDeclaration,
     ProcDefinition,
     ProcDefinitionLocation,
     Procedure,
@@ -14,6 +15,7 @@ from ..ast import (
 )
 from ..datatypes import (
     TYPE__NONE,
+    TYPE_DOUBLE,
     TYPE_INTEGER,
     TYPE_LONG,
     TYPE_SINGLE,
@@ -125,8 +127,9 @@ def test_sub_return_type_disallowed():
 
 def test_in_use_name():
     assert parse("sub if: end sub").diagnostics.has(diag.E_NAME_IN_USE)
+    assert parse("sub s: end sub : sub s: end sub").diagnostics.has(diag.E_NAME_IN_USE)
     assert parse("function f: end function: sub f: end sub").diagnostics.has(
-        diag.E_NAME_IN_USE
+        diag.E_OVERLOAD_PROHIBITED
     )
     assert parse("x = 3: function x: end function").diagnostics.has(diag.E_NAME_IN_USE)
     assert parse("""
@@ -136,19 +139,25 @@ def test_in_use_name():
         function x: end function""").diagnostics.has(diag.E_NAME_IN_USE)
 
 
-def test_sigil_clash():
+def test_proc_redefinition():
     assert parse(
         "function f!: end function: function f%: end function"
-    ).diagnostics.has(diag.E_EXISTING_DEF_SIGIL_CLASH)
+    ).diagnostics.has(diag.E_OVERLOAD_PROHIBITED)
     assert parse("function f: end function: function f%: end function").diagnostics.has(
-        diag.E_EXISTING_DEF_SIGIL_CLASH
+        diag.E_OVERLOAD_PROHIBITED
     )
     assert parse("function f: end function: function f%: end function").diagnostics.has(
-        diag.E_EXISTING_DEF_SIGIL_CLASH
+        diag.E_OVERLOAD_PROHIBITED
     )
     assert parse(
         "function f$: end function: function f%: end function"
-    ).diagnostics.has(diag.E_EXISTING_DEF_SIGIL_CLASH)
+    ).diagnostics.has(diag.E_OVERLOAD_PROHIBITED)
+    assert parse(
+        "function f(a) : end function : function f : end function"
+    ).diagnostics.has(diag.E_OVERLOAD_PROHIBITED)
+    assert parse(
+        "function f(a$) : end function : function f(a) : end function"
+    ).diagnostics.has(diag.E_OVERLOAD_PROHIBITED)
 
 
 def test_one_param():
@@ -247,4 +256,130 @@ def test_function_return_bad_type():
 def test_nested_proc():
     assert parse("sub s : sub t : end sub : end sub").diagnostics.has(
         diag.E_NESTED_PROC
+    )
+
+
+def test_declare_signatures():
+    prog = parse_clean("declare sub foo (a, b%): declare function bar#(c$)")
+    assert prog.main.statements == [
+        Ast(
+            ProcDeclaration,
+            "foo",
+            TypeSignature(
+                TYPE__NONE, [Parameter(TYPE_SINGLE, "a"), Parameter(TYPE_INTEGER, "b")]
+            ),
+        ),
+        Ast(
+            ProcDeclaration,
+            "bar",
+            TypeSignature(TYPE_DOUBLE, [Parameter(TYPE_STRING, "c")]),
+        ),
+    ]
+    assert prog.symbols.find_procedure("foo") == Procedure(
+        "foo", [Ast(ProcDefinition, "foo", decl_only=True)]
+    )
+    assert prog.symbols.find_procedure("bar") == Procedure(
+        "bar", [Ast(ProcDefinition, "bar", decl_only=True)]
+    )
+
+
+def test_declare_match_definition():
+    prog = parse_clean("declare sub foo (a) : sub foo (a) : x = 1: end sub")
+    assert prog.symbols.find_procedure("foo") == Procedure(
+        "foo",
+        [Ast(ProcDefinition, "foo", statements=[Ast(Assignment)], decl_only=False)],
+    )
+
+
+def test_declare_mismatch_definition():
+    assert parse("declare sub foo (a) : sub foo (a%) : end sub").diagnostics.has(
+        diag.E_OVERLOAD_PROHIBITED
+    )
+
+
+def test_multi_declare_mismatch():
+    assert parse("declare sub foo (a) : declare sub foo (a%)").diagnostics.has(
+        diag.E_OVERLOAD_PROHIBITED
+    )
+
+
+def test_repeated_declare():
+    assert parse("declare sub foo (a) : declare sub foo (a)").diagnostics.has(
+        diag.E_OVERLOAD_PROHIBITED
+    )
+
+
+def test_declare_overload():
+    prog = parse_clean("$overload:on\ndeclare sub foo(a) : declare sub foo(a, b)")
+    assert prog.symbols.find_procedure("foo") == Procedure(
+        "foo",
+        [
+            Ast(
+                ProcDefinition,
+                "foo",
+                decl_only=True,
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a")]),
+            ),
+            Ast(
+                ProcDefinition,
+                "foo",
+                decl_only=True,
+                signature=TypeSignature(
+                    TYPE__NONE,
+                    [Parameter(TYPE_SINGLE, "a"), Parameter(TYPE_SINGLE, "b")],
+                ),
+            ),
+        ],
+    )
+
+
+def test_declare_match_def_overload():
+    prog = parse_clean(
+        "$overload:on\ndeclare sub foo (a) : sub foo (a) : x = 1: end sub"
+    )
+    assert prog.symbols.find_procedure("foo") == Procedure(
+        "foo",
+        [Ast(ProcDefinition, "foo", statements=[Ast(Assignment)], decl_only=False)],
+    )
+
+
+def test_declare_mismatch_def_overload():
+    prog = parse_clean("$overload:on\ndeclare sub foo (a) : sub foo (a%) : end sub")
+    assert prog.symbols.find_procedure("foo") == Procedure(
+        "foo",
+        [
+            Ast(
+                ProcDefinition,
+                "foo",
+                decl_only=True,
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a")]),
+            ),
+            Ast(
+                ProcDefinition,
+                "foo",
+                decl_only=False,
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_INTEGER, "a")]),
+            ),
+        ],
+    )
+
+
+def test_def_overload():
+    prog = parse_clean("$overload:on\n sub foo (a) : end sub : sub foo (a%) : end sub")
+    assert prog.symbols.find_procedure("foo") == Procedure(
+        "foo",
+        [
+            Ast(
+                ProcDefinition,
+                "foo",
+                decl_only=False,
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a")]),
+            ),
+            Ast(
+                ProcDefinition,
+                "foo",
+                decl_only=False,
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_INTEGER, "a")]),
+            ),
+        ],
     )

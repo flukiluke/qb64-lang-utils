@@ -27,6 +27,17 @@ def test_function_wrong_type_arguments():
     assert parse('? _atan2("foo")').diagnostics.has(diag.E_NO_MATCHING_OVERLOAD)
 
 
+def test_function_sigil_elision():
+    prog = parse_clean("function f%: end function: ? f")
+    assert prog.main.find(Call) == Ast(Call, prog.symbols.find_procedure("f"))
+
+
+def test_function_sigil_misuse():
+    assert parse("function f% : end function : ? f&").diagnostics.has(
+        diag.E_EXISTING_DEF_SIGIL_CLASH
+    )
+
+
 def test_user_function_call():
     prog = parse_clean("function f(x): print x: end function: a = f(3.0)")
     assert prog.main.find(Call) == Ast(

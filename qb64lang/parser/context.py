@@ -11,6 +11,9 @@ TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 
 @dataclass
 class _Modes:
+    # '$dynamic, '$static
+    dynamic_arrays: bool = False
+    # $overload:on/off
     allow_proc_overloads: bool = False
 
 
@@ -33,13 +36,20 @@ class ParseContext:
         next(self)
 
     def __next__(self):
+        self._advance()
+        while self.at_a("META_CMD"):
+            self.do_metacommand()
+            self._advance()
+        return self.tok
+
+    def _advance(self):
         self._prev_prev = self.prev
         self.prev = self.tok
         if len(self.reversed_tokens):
             self.tok = self.reversed_tokens.pop()
             if TRACE_TOKENS:
                 print(">", self.tok)
-            return self.tok
+            return
         try:
             self.tok = next(self.token_stream)
         except StopIteration:
@@ -53,7 +63,7 @@ class ParseContext:
             self.tok = eof
         if TRACE_TOKENS:
             print(">", self.tok)
-        return self.tok
+        return
 
     def reverse(self):
         if TRACE_TOKENS:
@@ -100,3 +110,22 @@ class ParseContext:
         next(self)
         while not self.at_line_terminator():
             next(self)
+
+    def do_metacommand(self):
+        match self.tok.value:
+            case ("$dynamic", None):
+                self.mode.dynamic_arrays = True
+            case ("$static", None):
+                self.mode.dynamic_arrays = False
+            case ("$include", path):
+                raise diag.ParseError(f"Unimplemented $include:'{path}'")
+            case ("$overload", "on"):
+                self.mode.allow_proc_overloads = True
+            case ("$overload", "off"):
+                self.mode.allow_proc_overloads = False
+            case (name, None):
+                self.diags.raise_error(diag.E_BAD_METACOMMAND, self.tok, name)
+            case (name, arg):
+                self.diags.raise_error(
+                    diag.E_BAD_METACOMMAND, self.tok, name + ":" + arg
+                )

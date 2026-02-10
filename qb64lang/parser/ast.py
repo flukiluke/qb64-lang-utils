@@ -549,10 +549,12 @@ class SymbolStore:
         self.procedures[procedure.name] = procedure
 
     def is_proc_name_free(self, name: str):
+        """
+        Check if the given name clashes with local/global variables.
+        Note: does not check against existing proc name, to allow
+        for pre-declarations and overloads.
+        """
         for proc in self.procedures.values():
-            if name == proc.name:
-                return False
-            # procedure must not conflict with existing locals
             for impl in proc.impls:
                 if name in impl.symbols.variables:
                     return False

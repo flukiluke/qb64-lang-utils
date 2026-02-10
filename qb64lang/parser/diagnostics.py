@@ -167,3 +167,7 @@ E_NESTED_PROC = DiagTemplate(
 E_RETURN_MISMATCH = DiagTemplate(
     _Level.ERROR, "Cannot convert expression of type {} to {} for function return value"
 )
+E_BAD_METACOMMAND = DiagTemplate(_Level.ERROR, "Metacommand error on {}")
+E_OVERLOAD_PROHIBITED = DiagTemplate(
+    _Level.ERROR, "Subprocedure {} cannot be redefined"
+)

@@ -17,6 +17,7 @@ from .ast import (
     Loop,
     Node,
     Print,
+    ProcDeclaration,
     ProcDefinition,
     ProcDefinitionLocation,
     SetReturn,
@@ -47,6 +48,7 @@ class WalkContext:
             (Constant, self.constant),
         ]
         self.stmt_handlers: list[tuple[type[Node], Callable[[Any], Type | None]]] = [
+            (ProcDeclaration, lambda _: None),
             (ProcDefinitionLocation, lambda _: None),
             (ProcDefinition, self.proc_definition),
             (Assignment, self.assignment),
