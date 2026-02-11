@@ -362,7 +362,7 @@ def test_keyword():
     check("?", Token("KEYWORD", "?"))
     check("if", Token("KEYWORD", "if"))
     check("if%", [], d=diag.E_KW_BAD_SIGIL)
-    check("if$", Token("ID", ("if", TYPE_STRING)))
+    check("if$", Token("ID", ("if", TYPE_STRING, "$")))
 
 
 def test_procedure():
@@ -392,35 +392,39 @@ def test_procedure():
     check("a_function", Token("PROCEDURE", a_function), symbols)
     check("a_function$", Token("PROCEDURE", a_function), symbols)
     check("a_function!", [], symbols, d=diag.E_EXISTING_DEF_SIGIL_CLASH)
-    check("a_string_builtin", Token("ID", ("a_string_builtin", TYPE_SINGLE)), symbols)
+    check(
+        "a_string_builtin",
+        Token("ID", ("a_string_builtin", TYPE_SINGLE, None)),
+        symbols,
+    )
     check("a_string_builtin$", Token("PROCEDURE", a_string_builtin), symbols)
 
 
 def test_id():
-    check("Foo", Token("ID", ("foo", TYPE_SINGLE)))
-    check("Foo_bar", Token("ID", ("foo_bar", TYPE_SINGLE)))
-    check("_foo", Token("ID", ("_foo", TYPE_SINGLE)))
-    check("foo23x", Token("ID", ("foo23x", TYPE_SINGLE)))
-    check("foo.bar", Token("ID", ("foo.bar", TYPE_SINGLE)))
+    check("Foo", Token("ID", ("foo", TYPE_SINGLE, None)))
+    check("Foo_bar", Token("ID", ("foo_bar", TYPE_SINGLE, None)))
+    check("_foo", Token("ID", ("_foo", TYPE_SINGLE, None)))
+    check("foo23x", Token("ID", ("foo23x", TYPE_SINGLE, None)))
+    check("foo.bar", Token("ID", ("foo.bar", TYPE_SINGLE, None)))
 
 
 def test_id_builtin_sigil():
-    check("foo`", Token("ID", ("foo", TYPE__BIT)))
-    check("foo%%", Token("ID", ("foo", TYPE__BYTE)))
-    check("foo%", Token("ID", ("foo", TYPE_INTEGER)))
-    check("foo&", Token("ID", ("foo", TYPE_LONG)))
-    check("foo&&", Token("ID", ("foo", TYPE__INTEGER64)))
+    check("foo`", Token("ID", ("foo", TYPE__BIT, "`")))
+    check("foo%%", Token("ID", ("foo", TYPE__BYTE, "%%")))
+    check("foo%", Token("ID", ("foo", TYPE_INTEGER, "%")))
+    check("foo&", Token("ID", ("foo", TYPE_LONG, "&")))
+    check("foo&&", Token("ID", ("foo", TYPE__INTEGER64, "&&")))
     # check("foo%&", Token("ID", ("foo", BUILTIN_TYPES["_offset"])))
-    check("foo~`", Token("ID", ("foo", TYPE__UNSIGNED__BIT)))
-    check("foo~%%", Token("ID", ("foo", TYPE__UNSIGNED__BYTE)))
-    check("foo~%", Token("ID", ("foo", TYPE__UNSIGNED_INTEGER)))
-    check("foo~&", Token("ID", ("foo", TYPE__UNSIGNED_LONG)))
-    check("foo~&&", Token("ID", ("foo", TYPE__UNSIGNED__INTEGER64)))
+    check("foo~`", Token("ID", ("foo", TYPE__UNSIGNED__BIT, "~`")))
+    check("foo~%%", Token("ID", ("foo", TYPE__UNSIGNED__BYTE, "~%%")))
+    check("foo~%", Token("ID", ("foo", TYPE__UNSIGNED_INTEGER, "~%")))
+    check("foo~&", Token("ID", ("foo", TYPE__UNSIGNED_LONG, "~&")))
+    check("foo~&&", Token("ID", ("foo", TYPE__UNSIGNED__INTEGER64, "~&&")))
     # check("foo~%&", Token("ID", ("foo", BUILTIN_TYPES["_unsigned _offset"])))
-    check("foo!", Token("ID", ("foo", TYPE_SINGLE)))
-    check("foo#", Token("ID", ("foo", TYPE_DOUBLE)))
-    check("foo##", Token("ID", ("foo", TYPE__FLOAT)))
-    check("foo$", Token("ID", ("foo", TYPE_STRING)))
+    check("foo!", Token("ID", ("foo", TYPE_SINGLE, "!")))
+    check("foo#", Token("ID", ("foo", TYPE_DOUBLE, "#")))
+    check("foo##", Token("ID", ("foo", TYPE__FLOAT, "##")))
+    check("foo$", Token("ID", ("foo", TYPE_STRING, "$")))
 
 
 def test_id_custom_sigil():
@@ -429,15 +433,16 @@ def test_id_custom_sigil():
         lex = Lexer(symbols, DiagnosticStore())
         lex.input(input)
         result = list(lex)[0]
+        type = symbols.find_type(type_name)
         assert result.type == "ID"
-        assert result.value == ("foo", symbols.types[type_name])
+        assert result.value == ("foo", type, type.sigil)
 
     check_custom_sigil("foo`10", "_bit * 10")
     check_custom_sigil("foo~`10", "_unsigned _bit * 10")
     check_custom_sigil("foo$10", "string * 10")
-    check_expr("foo$0", diag=diag.E_BAD_SIGIL_WIDTH)
-    check_expr("foo`65", diag=diag.E_BAD_SIGIL_WIDTH)
-    check_expr("foo~`65", diag=diag.E_BAD_SIGIL_WIDTH)
+    check_expr("foo$0", diag=diag.E_BAD_TYPE_WIDTH)
+    check_expr("foo`65", diag=diag.E_BAD_TYPE_WIDTH)
+    check_expr("foo~`65", diag=diag.E_BAD_TYPE_WIDTH)
 
 
 def test_check_punctuation():
@@ -483,21 +488,29 @@ def test_remark():
 def test_line_label():
     check("foo:", Token("LINE_LABEL", "foo"))
     check("foo :", Token("LINE_LABEL", "foo"))
-    check("foo: bar", [Token("LINE_LABEL", "foo"), Token("ID", ("bar", TYPE_SINGLE))])
+    check(
+        "foo: bar",
+        [Token("LINE_LABEL", "foo"), Token("ID", ("bar", TYPE_SINGLE, None))],
+    )
     check("foo.bar23:", Token("LINE_LABEL", "foo.bar23"))
 
 
 def test_line_num():
     check("123", Token("LINE_NUM", "123"))
-    check("123foo", [Token("LINE_NUM", "123"), Token("ID", ("foo", TYPE_SINGLE))])
-    check("123 foo", [Token("LINE_NUM", "123"), Token("ID", ("foo", TYPE_SINGLE))])
+    check("123foo", [Token("LINE_NUM", "123"), Token("ID", ("foo", TYPE_SINGLE, None))])
+    check(
+        "123 foo", [Token("LINE_NUM", "123"), Token("ID", ("foo", TYPE_SINGLE, None))]
+    )
 
 
 def test_line_num_label():
     check("123 foo:", Token("LINE_NUM_LABEL", ("123", "foo")))
     check(
         "123foo:bar",
-        [Token("LINE_NUM_LABEL", ("123", "foo")), Token("ID", ("bar", TYPE_SINGLE))],
+        [
+            Token("LINE_NUM_LABEL", ("123", "foo")),
+            Token("ID", ("bar", TYPE_SINGLE, None)),
+        ],
     )
 
 
@@ -515,20 +528,26 @@ def test_line_split():
 def test_line_join():
     check(
         "foo_\nbar",
-        [Token("ID", ("foo", TYPE_SINGLE), 1), Token("ID", ("bar", TYPE_SINGLE), 2)],
+        [
+            Token("ID", ("foo", TYPE_SINGLE, None), 1),
+            Token("ID", ("bar", TYPE_SINGLE, None), 2),
+        ],
     )
     check(
         "foo_ \nbar",
-        [Token("ID", ("foo", TYPE_SINGLE), 1), Token("ID", ("bar", TYPE_SINGLE), 2)],
+        [
+            Token("ID", ("foo", TYPE_SINGLE, None), 1),
+            Token("ID", ("bar", TYPE_SINGLE, None), 2),
+        ],
     )
-    check("foo_\n", Token("ID", ("foo", TYPE_SINGLE), 1))
+    check("foo_\n", Token("ID", ("foo", TYPE_SINGLE, None), 1))
     check("_\n", [])
     check(
         "foo_\nbar_\nbaz",
         [
-            Token("ID", ("foo", TYPE_SINGLE), 1),
-            Token("ID", ("bar", TYPE_SINGLE), 2),
-            Token("ID", ("baz", TYPE_SINGLE), 3),
+            Token("ID", ("foo", TYPE_SINGLE, None), 1),
+            Token("ID", ("bar", TYPE_SINGLE, None), 2),
+            Token("ID", ("baz", TYPE_SINGLE, None), 3),
         ],
     )
 
@@ -593,3 +612,16 @@ def test_include_metacommand():
             Token("META_CMD", ("$include", "bar")),
         ],
     )
+
+
+def test_type_name():
+    check("single", Token("TYPE", TYPE_SINGLE))
+    check("_bit", Token("TYPE", TYPE__BIT))
+
+
+def test_type_name_bad_sigil():
+    check("single!", [], d=diag.E_KW_BAD_SIGIL)
+
+
+def test_type_name_string_name():
+    check("single$", Token("ID", ("single", TYPE_STRING, "$")))

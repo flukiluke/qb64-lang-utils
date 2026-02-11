@@ -11,6 +11,7 @@ from .ast import (
     Call,
     Cast,
     Constant,
+    Dim,
     Expr,
     For,
     If,
@@ -50,6 +51,7 @@ class WalkContext:
         self.stmt_handlers: list[tuple[type[Node], Callable[[Any], Type | None]]] = [
             (ProcDeclaration, lambda _: None),
             (ProcDefinitionLocation, lambda _: None),
+            (Dim, lambda _: None),
             (ProcDefinition, self.proc_definition),
             (Assignment, self.assignment),
             (Print, self.kw_print),

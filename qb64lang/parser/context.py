@@ -26,7 +26,7 @@ class ParseContext:
         self.reversed_tokens: list[LexToken] = []
         self._prev_prev = LexToken()
         self.prev = LexToken()
-        self.tok = LexToken()
+        self.tok: LexToken = LexToken()
         self.tok.lexer = self.token_stream
         self.tok.lineno = 1
         self.tok.type = ""

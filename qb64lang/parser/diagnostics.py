@@ -121,8 +121,16 @@ E_KW_BAD_SIGIL = DiagTemplate(
 E_EXISTING_DEF_SIGIL_CLASH = DiagTemplate(
     _Level.ERROR, "The {} suffix does not match the definition of '{}'. Use {} instead."
 )
-E_BAD_SIGIL_WIDTH = DiagTemplate(
-    _Level.ERROR, "The {} suffix only allows fixed-widths in range [{} to {}]."
+E_SIGIL_WITH_AS = DiagTemplate(
+    _Level.ERROR, "Type suffixes cannot be used with an AS TYPE clause."
+)
+E_DUPE_AS_TYPE = DiagTemplate(_Level.ERROR, "AS TYPE clause cannot be repeated.")
+E_EMPTY_DIM = DiagTemplate(_Level.ERROR, "At least one variable must be defined.")
+E_BAD_TYPE_WIDTH = DiagTemplate(
+    _Level.ERROR, "The {} type only allows fixed-widths in range [{} to {}]."
+)
+E_UNFIXABLE_TYPE = DiagTemplate(
+    _Level.ERROR, "The {} type cannot be specified with a fixed width."
 )
 E_TOO_MANY_LOOP_GUARDS = DiagTemplate(
     _Level.ERROR, "Loop cannot have conditions at both top and bottom."
@@ -171,3 +179,4 @@ E_BAD_METACOMMAND = DiagTemplate(_Level.ERROR, "Metacommand error on {}")
 E_OVERLOAD_PROHIBITED = DiagTemplate(
     _Level.ERROR, "Subprocedure {} cannot be redefined"
 )
+E_NOT_A_TYPE = DiagTemplate(_Level.ERROR, "Expected a type name")

@@ -5,6 +5,7 @@ from .ast import (
     Assignment,
     Call,
     Constant,
+    Dim,
     Expr,
     For,
     If,
@@ -16,9 +17,18 @@ from .ast import (
     Procedure,
     SetReturn,
     Statement,
+    Variable,
 )
 from .context import ParseContext
-from .datatypes import TYPE__BYTE, TYPE__NONE, Parameter, Type, TypeSignature
+from .datatypes import (
+    TYPE__BYTE,
+    TYPE__NONE,
+    IntegralType,
+    Parameter,
+    Type,
+    TypeSignature,
+    validate_fixed_width,
+)
 from .diagnostics import ParseError
 from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
 
@@ -304,6 +314,34 @@ def do_declare(ctx: ParseContext):
     )
 
 
+def do_dim(ctx: ParseContext):
+    """
+    Expects: DIM or REDIM
+    """
+    variables = list[Variable]()
+    is_redim = ctx.at_a("KEYWORD", "redim")
+    next(ctx)
+    leading_type = do_as_type_clause(ctx)
+    while ctx.at_a("ID"):
+        var_tok = ctx.tok
+        tok_val: tuple[str, Type, str | None] = var_tok.value
+        next(ctx)
+        trailing_type = do_as_type_clause(ctx)
+        if tok_val[2] and (leading_type or trailing_type):
+            ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
+        elif leading_type and trailing_type:
+            ctx.diags.raise_error(diag.E_DUPE_AS_TYPE, var_tok)
+        type = leading_type or trailing_type or tok_val[1]
+        variables.append(ctx.symbols.create_local(tok_val[0], type))
+        if ctx.at_a("PUNCTUATION", ","):
+            next(ctx)
+        else:
+            break
+    if len(variables) == 0:
+        ctx.diags.raise_error(diag.E_EMPTY_DIM, ctx.tok)
+    return Dim(variables, is_redim, leading_type)
+
+
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "print": do_print,
     "?": do_print,
@@ -312,6 +350,8 @@ KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "while": do_while,
     "for": do_for,
     "declare": do_declare,
+    "dim": do_dim,
+    "redim": do_dim,
 }
 
 
@@ -443,6 +483,44 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
         ctx.current_subproc = None
 
 
+def do_as_type_clause(ctx: ParseContext):
+    """
+    Expects: AS or other
+    Return a type if AS T clause if present, otherwise None
+    """
+    if not ctx.at_a("KEYWORD", "as"):
+        return None
+    next(ctx)
+    unsigned = False
+    if ctx.at_a("KEYWORD", "_unsigned"):
+        unsigned = True
+        next(ctx)
+    base_tok = ctx.tok
+    if not ctx.at_a("TYPE"):
+        ctx.diags.raise_error(diag.E_NOT_A_TYPE, base_tok)
+    base_type: Type = ctx.tok.value
+    next(ctx)
+    width = None
+    if ctx.at_a("PUNCTUATION", "*"):
+        next(ctx)
+        if not ctx.at_a("NUM_LIT") or not isinstance(ctx.tok.value[1], IntegralType):
+            ctx.diags.raise_error(
+                diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "an integer number"
+            )
+        width = ctx.tok.value[0]
+        next(ctx)
+    if unsigned:
+        type = ctx.symbols.find_type("_unsigned " + base_type.name)
+        if type is None:
+            ctx.diags.raise_error(diag.E_NOT_A_TYPE, base_tok)
+    else:
+        type = base_type
+    if width is not None:
+        validate_fixed_width(type, width, base_tok, ctx.diags)
+        type = ctx.symbols.lookup_sigil(type.sigil + str(width))
+    return type
+
+
 def do_param_list(ctx: ParseContext):
     """
     Expects: (
@@ -455,7 +533,7 @@ def do_param_list(ctx: ParseContext):
     while True:
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
-        name, type = ctx.tok.value
+        name, type, _ = ctx.tok.value
         result.append(Parameter(type, name))
         next(ctx)
         if ctx.at_a("PUNCTUATION", ")"):

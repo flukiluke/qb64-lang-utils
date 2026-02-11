@@ -2,6 +2,9 @@ import struct
 from dataclasses import dataclass
 from functools import total_ordering
 
+from . import diagnostics as diag
+from .ply import LexToken
+
 
 @total_ordering
 class ExtendedFloat:
@@ -289,3 +292,16 @@ def can_safely_cast(src: Type, dest: Type):
     assert isinstance(src, (IntegralType, FloatType))
     assert isinstance(dest, (IntegralType, FloatType))
     return src.min >= dest.min and src.max <= dest.max
+
+
+def validate_fixed_width(
+    base_type: Type, width: int, t: LexToken, diags: diag.DiagnosticStore
+):
+    if base_type is TYPE__BIT or base_type is TYPE__UNSIGNED__BIT:
+        if width > 64 or width < 1:
+            diags.raise_error(diag.E_BAD_TYPE_WIDTH, t, base_type.name, 1, 64)
+    elif base_type is TYPE_STRING:
+        if width > 2**64 - 1 or width < 1:
+            diags.raise_error(diag.E_BAD_TYPE_WIDTH, t, base_type.name, 1, 2**64 - 1)
+    else:
+        diags.raise_error(diag.E_UNFIXABLE_TYPE, t, base_type.name)

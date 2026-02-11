@@ -6,6 +6,7 @@ from typing import Any, TypeVar
 
 from .datatypes import (
     BUILTIN_SIGILS,
+    BUILTIN_TYPES,
     FLOAT_TYPES,
     INTEGRAL_TYPES,
     TYPE__BYTE,
@@ -105,6 +106,14 @@ class ProcDefinitionLocation(Statement):
 class ProcDeclaration(Statement):
     name: str
     signature: TypeSignature
+
+
+@dataclass
+class Dim(Statement):
+    variables: list["Variable"]
+    is_redim: bool
+    # Initial AS T clause if present
+    leading_type: Type | None
 
 
 @dataclass
@@ -271,7 +280,9 @@ KEYWORDS = set(
         "to",
         # Declarations
         "dim",
+        "redim",
         "as",
+        "_unsigned",
         "const",
         "sub",
         "function",
@@ -515,6 +526,9 @@ class SymbolStore:
             if (typeset := pool.get(ident)) and (result := typeset.get(type_name)):
                 return result
         return None
+
+    def find_type(self, name: str) -> Type | None:
+        return BUILTIN_TYPES.get(name, self.types.get(name))
 
     def lookup_sigil(self, sigil: str | None) -> Type:
         if sigil is None:

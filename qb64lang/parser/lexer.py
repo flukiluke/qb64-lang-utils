@@ -4,8 +4,10 @@ from typing import Literal, cast
 from . import diagnostics as diag
 from .ast import SymbolStore
 from .datatypes import (
+    TYPE__BIT,
     TYPE__FLOAT,
     TYPE__INTEGER64,
+    TYPE__UNSIGNED__BIT,
     TYPE__UNSIGNED__INTEGER64,
     TYPE__UNSIGNED_INTEGER,
     TYPE__UNSIGNED_LONG,
@@ -13,10 +15,12 @@ from .datatypes import (
     TYPE_INTEGER,
     TYPE_LONG,
     TYPE_SINGLE,
+    TYPE_STRING,
     ExtendedFloat,
     FloatType,
     IntegralType,
     Type,
+    validate_fixed_width,
 )
 from .ply import LexToken, Token, lex
 
@@ -39,6 +43,7 @@ tokens = (
     "KEYWORD",
     "VARIABLE",
     "PROCEDURE",
+    "TYPE",
     "STRING_LIT",
     "NUM_LIT",
     "BASE_LIT",
@@ -312,6 +317,16 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         # The presence or absence of the $ is critical for detecting some builtins.
         # `if` is a keyword, but `if$ = 3` is valid. Similarly `left$` is a function,
         # but `left = 3` is valid.
+        if type := symbols.find_type(name):
+            if sigil is None:
+                t.type = "TYPE"
+                t.value = type
+                return t
+            elif not sigil.startswith("$"):
+                diags.raise_error(
+                    diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("name")
+                )
+            # case of sigil "$" falls through below
         if symbols.is_keyword(name):
             if sigil is None:
                 t.type = "KEYWORD"
@@ -326,7 +341,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             sigil == "$" and (proc := symbols.find_procedure(name + "$"))
         ):
             if symbols.return_proc_as_id:
-                t.value = (name, symbols.lookup_sigil(sigil))
+                t.value = (name, symbols.lookup_sigil(sigil), sigil)
                 return t
             if sigil is not None:
                 # The sigil must match the existing procedure, if present
@@ -354,7 +369,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             t.value = var
             return t
         # otherwise remain as ID
-        t.value = (name, symbols.lookup_sigil(sigil))
+        t.value = (name, symbols.lookup_sigil(sigil), sigil)
         return t
 
     @Token(r"""<= | >= | <>
@@ -467,14 +482,8 @@ def num_to_base(value: int, base: Literal[2] | Literal[8] | Literal[10] | Litera
 
 def validate_sigil(sigil: str, t: LexToken, diags: diag.DiagnosticStore):
     if sigil.startswith("`") and len(sigil) > 1:
-        width = int(sigil[1:])
-        if width > 64 or width < 1:
-            diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "`", 1, 64)
+        validate_fixed_width(TYPE__BIT, int(sigil[1:]), t, diags)
     elif sigil.startswith("~`") and len(sigil) > 2:
-        width = int(sigil[2:])
-        if width > 64 or width < 1:
-            diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "~`", 1, 64)
+        validate_fixed_width(TYPE__UNSIGNED__BIT, int(sigil[2:]), t, diags)
     elif sigil.startswith("$") and len(sigil) > 1:
-        width = int(sigil[1:])
-        if width > 2**64 - 1 or width < 1:
-            diags.raise_error(diag.E_BAD_SIGIL_WIDTH, t, "$", 1, 2**64 - 1)
+        validate_fixed_width(TYPE_STRING, int(sigil[1:]), t, diags)
