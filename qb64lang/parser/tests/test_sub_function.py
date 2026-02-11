@@ -189,6 +189,20 @@ def test_multi_param():
     }
 
 
+def test_param_as_clause():
+    prog = parse_clean("sub s(a as long, b, c as string) : end sub")
+    proc = prog.symbols.find_procedure("s")
+    assert proc is not None
+    assert proc.impls[0].signature == TypeSignature(
+        TYPE__NONE,
+        [
+            Parameter(TYPE_LONG, "a"),
+            Parameter(TYPE_SINGLE, "b"),
+            Parameter(TYPE_STRING, "c"),
+        ],
+    )
+
+
 def test_local_var():
     prog = parse_clean("sub s: x = 3: end sub")
     proc = prog.symbols.find_procedure("s")
@@ -260,7 +274,7 @@ def test_nested_proc():
 
 
 def test_declare_signatures():
-    prog = parse_clean("declare sub foo (a, b%): declare function bar#(c$)")
+    prog = parse_clean("declare sub foo (a, b%): declare function bar#(c as string)")
     assert prog.main.statements == [
         Ast(
             ProcDeclaration,

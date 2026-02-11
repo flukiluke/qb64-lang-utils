@@ -533,9 +533,15 @@ def do_param_list(ctx: ParseContext):
     while True:
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
-        name, type, _ = ctx.tok.value
-        result.append(Parameter(type, name))
+        var_tok = ctx.tok
+        name, type, sigil = var_tok.value
         next(ctx)
+        trailing_type = do_as_type_clause(ctx)
+        if trailing_type and sigil:
+            ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
+        elif trailing_type:
+            type = trailing_type
+        result.append(Parameter(type, name))
         if ctx.at_a("PUNCTUATION", ")"):
             break
         ctx.consume("PUNCTUATION", ",")

@@ -434,6 +434,7 @@ def test_id_custom_sigil():
         lex.input(input)
         result = list(lex)[0]
         type = symbols.find_type(type_name)
+        assert type is not None
         assert result.type == "ID"
         assert result.value == ("foo", type, type.sigil)
 
