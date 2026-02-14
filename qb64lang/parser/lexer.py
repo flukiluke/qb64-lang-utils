@@ -133,7 +133,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         t.value = t.lexer.lexmatch.group("metacmd_c", "metacmd_d")
         return t
 
-    @Token(f"^{ws}*(?P<linenumlabel_a>{digit}+){ws}*(?P<linenumlabel_b>{id_body}){ws}*:")
+    @Token(
+        f"^{ws}*(?P<linenumlabel_a>{digit}+){ws}*(?P<linenumlabel_b>{id_body}){ws}*:"
+    )
     def t_LINE_NUM_LABEL(t: LexToken):
         t.value = t.lexer.lexmatch.group("linenumlabel_a", "linenumlabel_b")
         return t
@@ -392,7 +394,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     def t_BAD_CHAR(t: LexToken):
         diags.raise_error(diag.E_UNKNOWN_CHARACTERS, t, t.value)
 
-    return lex(reflags=re.VERBOSE | re.IGNORECASE)
+    return lex(reflags=re.VERBOSE | re.IGNORECASE | re.MULTILINE)
 
 
 def detect_base_int_type(value: int) -> tuple[int, Type] | None:

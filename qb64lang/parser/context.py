@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import diagnostics as diag
 from .ast import ProcDefinition, SymbolStore
@@ -10,11 +10,13 @@ TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 
 
 @dataclass
-class _Modes:
+class _Flags:
     # '$dynamic, '$static
     dynamic_arrays: bool = False
     # $overload:on/off
     allow_proc_overloads: bool = False
+    # $syntax:key=value,key=value,...
+    syntax: dict[str, str] = field(default_factory=dict)
 
 
 class ParseContext:
@@ -32,7 +34,7 @@ class ParseContext:
         self.tok.type = ""
         self.tok.value = ""
         self.current_subproc: None | ProcDefinition = None
-        self.mode = _Modes()
+        self.flags = _Flags()
         next(self)
 
     def __next__(self):
@@ -114,15 +116,19 @@ class ParseContext:
     def do_metacommand(self):
         match self.tok.value:
             case ("$dynamic", None):
-                self.mode.dynamic_arrays = True
+                self.flags.dynamic_arrays = True
             case ("$static", None):
-                self.mode.dynamic_arrays = False
+                self.flags.dynamic_arrays = False
             case ("$include", path):
                 raise diag.ParseError(f"Unimplemented $include:'{path}'")
             case ("$overload", "on"):
-                self.mode.allow_proc_overloads = True
+                self.flags.allow_proc_overloads = True
             case ("$overload", "off"):
-                self.mode.allow_proc_overloads = False
+                self.flags.allow_proc_overloads = False
+            case ("$syntax", syntax):
+                self.flags.syntax = {
+                    k: v for k, v in (i.split("=", 1) for i in syntax.split(","))
+                }
             case (name, None):
                 self.diags.raise_error(diag.E_BAD_METACOMMAND, self.tok, name)
             case (name, arg):

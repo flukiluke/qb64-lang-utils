@@ -62,7 +62,8 @@ def test_loop_until():
 def test_infinite_loop():
     loop = parse_clean(
         """
-        do:print "hi"
+        do
+        print "hi"
         loop
         """
     ).main.find(Loop)

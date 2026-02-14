@@ -10,11 +10,8 @@ from .datatypes import (
     FLOAT_TYPES,
     INTEGRAL_TYPES,
     TYPE__BYTE,
-    TYPE__FLOAT,
-    TYPE__INTEGER64,
     TYPE__NONE,
     TYPE_ANY,
-    TYPE_INTEGER,
     TYPE_SINGLE,
     TYPE_STRING,
     BitnType,
@@ -442,61 +439,6 @@ PROCS = [
     Procedure("not", [*_generic("not", None, [None], INTEGRAL_TYPES)]),
     # Other maths
     Procedure("_atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]),
-    # Everything else
-    Procedure(
-        "val",
-        [
-            ProcDefinition(
-                "val",
-                TypeSignature(TYPE__FLOAT, [Parameter(TYPE_STRING)]),
-                decl_only=True,
-            )
-        ],
-    ),
-    Procedure(
-        "lcase$",
-        [
-            ProcDefinition(
-                "lcase$",
-                TypeSignature(TYPE_STRING, [Parameter(TYPE_STRING)]),
-                decl_only=True,
-            )
-        ],
-    ),
-    Procedure(
-        "left$",
-        [
-            ProcDefinition(
-                "left$",
-                TypeSignature(
-                    TYPE_STRING, [Parameter(TYPE_STRING), Parameter(TYPE__INTEGER64)]
-                ),
-                decl_only=True,
-            )
-        ],
-    ),
-    Procedure(
-        "mkdir",
-        [
-            ProcDefinition(
-                "mkdir",
-                TypeSignature(TYPE__NONE, [Parameter(TYPE_STRING)]),
-                decl_only=True,
-            )
-        ],
-    ),
-    Procedure(
-        "out",
-        [
-            ProcDefinition(
-                "out",
-                TypeSignature(
-                    TYPE__NONE, [Parameter(TYPE_INTEGER), Parameter(TYPE_INTEGER)]
-                ),
-                decl_only=True,
-            )
-        ],
-    ),
 ]
 
 

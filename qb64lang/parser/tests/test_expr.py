@@ -340,10 +340,11 @@ def test_unary_function_call_bad_syntax():
 
 
 def test_function_call_binary():
-    expr = parse_clean('? left$("Hello", 23)').main.find(Print).find(Expr)
+    program = parse_clean('? left$("Hello", 23)')
+    expr = program.main.find(Print).find(Expr)
     assert expr == Ast(
         Call,
-        builtin_proc("left$"),
+        program.symbols.find_procedure("left$"),
         [
             Ast(Constant, "Hello"),
             Cast(Ast(Constant, 23, TYPE_INTEGER), TYPE__INTEGER64),

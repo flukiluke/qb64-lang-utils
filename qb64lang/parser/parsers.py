@@ -297,15 +297,18 @@ def do_declare(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     next(ctx)
     name, ret = do_proc_ident(ctx)
+    if "musthave" in ctx.flags.syntax:
+        name += ctx.flags.syntax["musthave"]
     proc = ctx.symbols.find_procedure(name)
     if proc is None:
         proc = Procedure(name, [])
         ctx.symbols.add_procedure(proc)
-    elif not ctx.mode.allow_proc_overloads:
+    elif not ctx.flags.allow_proc_overloads:
         ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, ctx.prev, name)
     params = do_param_list(ctx)
     impl = ProcDefinition(name, TypeSignature(ret, params), decl_only=True)
     proc.impls.append(impl)
+    ctx.flags.syntax = {}
     return ProcDeclaration(
         name,
         impl.signature,
@@ -406,8 +409,11 @@ def name_close_match(ctx: ParseContext):
 
 
 def do_main(ctx: ParseContext):
-    main = ProcDefinition("_main", TypeSignature(TYPE__NONE, []), ctx.symbols.scope)
-    ctx.symbols.add_procedure(Procedure("_main", [main]))
+    if main_proc := ctx.symbols.find_procedure("_main"):
+        main = main_proc.impls[0]
+    else:
+        main = ProcDefinition("_main", TypeSignature(TYPE__NONE, []), ctx.symbols.scope)
+        ctx.symbols.add_procedure(Procedure("_main", [main]))
     while not ctx.at_a("EOF"):
         ctx.symbols.set_scope(main.symbols)
         main.statements.extend(do_block(ctx))
@@ -454,7 +460,7 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
                 break
             # equivalent definitions are always illegal
             ctx.diags.raise_error(diag.E_NAME_IN_USE, start_tok, name)
-        elif not ctx.mode.allow_proc_overloads:
+        elif not ctx.flags.allow_proc_overloads:
             ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, start_tok, name)
     else:
         impl = ProcDefinition(name, sig)
