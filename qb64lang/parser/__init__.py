@@ -16,13 +16,11 @@ The following metacommands are used heavily:
 """
 HEADER = """
 $overload:on
-$syntax:strictsigil
-declare function left$ (s$, i&&)
 declare sub mkdir (path$)
 declare sub out (address%, value%)
 $syntax:strictsigil
+declare function left$ (s$, i&&)
 declare function lcase$ (s$)
-$syntax:strictsigil
 declare function val## (s$)
 """
 

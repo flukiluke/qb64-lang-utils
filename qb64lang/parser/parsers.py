@@ -312,7 +312,6 @@ def do_declare(ctx: ParseContext):
         name, TypeSignature(ret, params), decl_only=True, strictsigil=strictsigil
     )
     proc.impls.append(impl)
-    ctx.flags.syntax = {}
     return ProcDeclaration(
         name,
         impl.signature,
