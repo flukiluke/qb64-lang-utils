@@ -108,11 +108,11 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         t.value = "rem"
         return t
 
-    @Token(rf"{ws}*(?P<a>\${id_body}){ws}*(:{ws}*'(?P<b>[^']*)')?")
+    @Token(rf"{ws}*(?P<metacmd_a>\${id_body}){ws}*(:{ws}*'(?P<metacmd_b>[^']*)')?")
     def t_meta_META_CMD(t: LexToken):
         cmd: str
         arg: str | None
-        cmd, arg = t.lexer.lexmatch.group("a", "b")
+        cmd, arg = t.lexer.lexmatch.group("metacmd_a", "metacmd_b")
         if cmd.lower() in ["$static", "$dynamic", "$include"]:
             t.value = (cmd, arg)
             return t
@@ -128,24 +128,24 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     def t_meta_COMMENT(t: LexToken):
         pass
 
-    @Token(rf"^{ws}*(?P<a>\${id_body}){ws}*(:{ws}*(?P<b>.*))?")
+    @Token(rf"^{ws}*(?P<metacmd_c>\${id_body}){ws}*(:{ws}*(?P<metacmd_d>.*))?")
     def t_META_CMD(t: LexToken):
-        t.value = t.lexer.lexmatch.group("a", "b")
+        t.value = t.lexer.lexmatch.group("metacmd_c", "metacmd_d")
         return t
 
-    @Token(f"^{ws}*(?P<n>{digit}+){ws}*(?P<l>{id_body}){ws}*:")
+    @Token(f"^{ws}*(?P<linenumlabel_a>{digit}+){ws}*(?P<linenumlabel_b>{id_body}){ws}*:")
     def t_LINE_NUM_LABEL(t: LexToken):
-        t.value = t.lexer.lexmatch.group("n", "l")
+        t.value = t.lexer.lexmatch.group("linenumlabel_a", "linenumlabel_b")
         return t
 
-    @Token(f"^{ws}*(?P<a>{digit}+)")
+    @Token(f"^{ws}*(?P<linenum_a>{digit}+)")
     def t_LINE_NUM(t: LexToken):
-        t.value = t.lexer.lexmatch.group("a")
+        t.value = t.lexer.lexmatch.group("linenum_a")
         return t
 
-    @Token(f"^{ws}*(?P<a>{id_body}){ws}*:")
+    @Token(f"^{ws}*(?P<linelabel_a>{id_body}){ws}*:")
     def t_LINE_LABEL(t: LexToken):
-        t.value = t.lexer.lexmatch.group("a")
+        t.value = t.lexer.lexmatch.group("linelabel_a")
         return t
 
     @Token(":")
@@ -158,30 +158,30 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         t.lexer.lineno += 1
         # No token produced
 
-    @Token('"(?P<s>[^"\r\n]*)"')
+    @Token('"(?P<stringlit_a>[^"\r\n]*)"')
     def t_STRING_LIT(t: LexToken):
-        t.value = t.lexer.lexmatch.group("s")
+        t.value = t.lexer.lexmatch.group("stringlit_a")
         return t
 
     @Token(
-        rf"""(?P<man>\.{digit}+        # Decimal leading, or
+        rf"""(?P<explit_man>\.{digit}+        # Decimal leading, or
                 | {digit}+             # integer leading
                     \.?{digit}*)       # with optional decimal part.
-                (?P<flag>D|E|F|d|e|f)  # Mandatory exponent flag.
-                (?P<sign>\+|-)?        # Optional exponent sign.
-                (?P<exp>{digit}*)      # Optional exponent
+                (?P<explit_flag>D|E|F|d|e|f)  # Mandatory exponent flag.
+                (?P<explit_sign>\+|-)?        # Optional exponent sign.
+                (?P<explit_exp>{digit}*)      # Optional exponent
         """
     )
     def t_EXP_LIT(t: LexToken):
         t.type = "NUM_LIT"
         match = t.lexer.lexmatch
-        mantissa = match.group("man")
-        exp_sign = match.group("sign") or "+"
-        exp = match.group("exp") or "0"
-        if match.group("flag") in ["e", "E"]:
+        mantissa = match.group("explit_man")
+        exp_sign = match.group("explit_sign") or "+"
+        exp = match.group("explit_exp") or "0"
+        if match.group("explit_flag") in ["e", "E"]:
             type = TYPE_SINGLE
             value = float(f"{mantissa}e{exp_sign}{exp}")
-        elif match.group("flag") in ["d", "D"]:
+        elif match.group("explit_flag") in ["d", "D"]:
             type = TYPE_DOUBLE
             value = float(f"{mantissa}e{exp_sign}{exp}")
         else:
@@ -201,15 +201,15 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         return t
 
     @Token(
-        rf"""(?P<num>&H[0-9A-Fa-f]+
+        rf"""(?P<baselit_num>&H[0-9A-Fa-f]+
                     |&O[0-7]+
                     |&B[01]+)
-              (?P<sigil>~?(`{digit}*|%%|&&|%&|%|&))?
+              (?P<baselit_sigil>~?(`{digit}*|%%|&&|%&|%|&))?
         """
     )
     def t_BASE_LIT(t: LexToken):
         t.type = "NUM_LIT"
-        num_part = t.lexer.lexmatch.group("num")
+        num_part = t.lexer.lexmatch.group("baselit_num")
         match num_part[1].upper():
             case "H":
                 base = 16
@@ -220,7 +220,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             case _:
                 base = 10
         value = int(num_part[2:], base)
-        sigil = t.lexer.lexmatch.group("sigil")
+        sigil = t.lexer.lexmatch.group("baselit_sigil")
         if sigil is None:
             t.value = detect_base_int_type(value) or diags.raise_error(
                 diag.E_NUM_LIT_MAX_BIG,
@@ -243,14 +243,14 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         return t
 
     @Token(
-        rf"""(?P<num>\.{digit}+|{digit}+\.{digit}*)
-             (?P<sigil>[#][#]|[#]|!)?
+        rf"""(?P<declit_num>\.{digit}+|{digit}+\.{digit}*)
+             (?P<declit_sigil>[#][#]|[#]|!)?
         """
     )
     def t_DEC_LIT(t: LexToken):
         t.type = "NUM_LIT"
-        num_part = t.lexer.lexmatch.group("num")
-        sigil = t.lexer.lexmatch.group("sigil")
+        num_part = t.lexer.lexmatch.group("declit_num")
+        sigil = t.lexer.lexmatch.group("declit_sigil")
         if sigil is None:
             t.value = detect_dec_lit_type(num_part)
         else:
@@ -266,14 +266,14 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         return t
 
     @Token(
-        rf"""(?P<num>{digit}+)
-             (?P<sigil>~?(`{digit}*|%%|&&|%&|%|&|[#][#]|[#]|!))?
+        rf"""(?P<intlit_num>{digit}+)
+             (?P<intlit_sigil>~?(`{digit}*|%%|&&|%&|%|&|[#][#]|[#]|!))?
         """
     )
     def t_INT_LIT(t: LexToken):
         t.type = "NUM_LIT"
-        num_part = int(t.lexer.lexmatch.group("num"))
-        sigil = t.lexer.lexmatch.group("sigil")
+        num_part = int(t.lexer.lexmatch.group("intlit_num"))
+        sigil = t.lexer.lexmatch.group("intlit_sigil")
         if sigil is None:
             t.value = detect_int_lit_type(num_part) or diags.raise_error(
                 diag.E_NUM_LIT_MAX_BIG,
@@ -299,9 +299,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         return t
 
     @Token(
-        rf"""(?P<name>_*{id_body}|\?)
+        rf"""(?P<id_name>_*{id_body}|\?)
                 # Optional sigils
-                (?P<sigil>`{digit}*
+                (?P<id_sigil>`{digit}*
                 |%%|&&|%&|%|&
                 |~`{digit}*
                 |~%%|~&&|~%&|~%|~&
@@ -310,8 +310,8 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         """
     )
     def t_ID(t: LexToken):
-        name = t.lexer.lexmatch.group("name").lower()
-        sigil = t.lexer.lexmatch.group("sigil")
+        name = t.lexer.lexmatch.group("id_name").lower()
+        sigil = t.lexer.lexmatch.group("id_sigil")
         if sigil is not None:
             validate_sigil(sigil, t, diags)
         # The presence or absence of the $ is critical for detecting some builtins.
@@ -324,7 +324,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 return t
             elif not sigil.startswith("$"):
                 diags.raise_error(
-                    diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("name")
+                    diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("id_name")
                 )
             # case of sigil "$" falls through below
         if symbols.is_keyword(name):
@@ -334,7 +334,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 return t
             elif not sigil.startswith("$"):
                 diags.raise_error(
-                    diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("name")
+                    diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("id_name")
                 )
             # case of sigil "$" falls through below
         if (proc := symbols.find_procedure(name)) or (
@@ -358,7 +358,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                         diag.E_EXISTING_DEF_SIGIL_CLASH,
                         t,
                         sigil,
-                        t.lexer.lexmatch.group("name"),
+                        t.lexer.lexmatch.group("id_name"),
                         alts,
                     )
             t.type = "PROCEDURE"
