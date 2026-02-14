@@ -89,6 +89,7 @@ class ProcDefinition(Node):
     symbols: LocalScope = field(default_factory=LocalScope, repr=False)
     statements: list[Statement] = field(default_factory=lambda: [])
     decl_only: bool = False
+    strictsigil: bool = False
 
     def children(self):
         return self.statements

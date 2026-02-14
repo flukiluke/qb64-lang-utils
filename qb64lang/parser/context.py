@@ -126,9 +126,12 @@ class ParseContext:
             case ("$overload", "off"):
                 self.flags.allow_proc_overloads = False
             case ("$syntax", syntax):
-                self.flags.syntax = {
-                    k: v for k, v in (i.split("=", 1) for i in syntax.split(","))
-                }
+                for item in syntax.split(","):
+                    if "=" in item:
+                        k, v = item.split("=", 1)
+                        self.flags.syntax[k.strip()] = v.strip()
+                    else:
+                        self.flags.syntax[item.strip()] = "on"
             case (name, None):
                 self.diags.raise_error(diag.E_BAD_METACOMMAND, self.tok, name)
             case (name, arg):

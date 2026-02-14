@@ -23,6 +23,7 @@ from .context import ParseContext
 from .datatypes import (
     TYPE__BYTE,
     TYPE__NONE,
+    TYPE_STRING,
     IntegralType,
     Parameter,
     Type,
@@ -297,8 +298,9 @@ def do_declare(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     next(ctx)
     name, ret = do_proc_ident(ctx)
-    if "musthave" in ctx.flags.syntax:
-        name += ctx.flags.syntax["musthave"]
+    strictsigil = ctx.flags.syntax.get("strictsigil") is not None
+    if strictsigil and ret == TYPE_STRING:
+        name += "$"
     proc = ctx.symbols.find_procedure(name)
     if proc is None:
         proc = Procedure(name, [])
@@ -306,7 +308,9 @@ def do_declare(ctx: ParseContext):
     elif not ctx.flags.allow_proc_overloads:
         ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, ctx.prev, name)
     params = do_param_list(ctx)
-    impl = ProcDefinition(name, TypeSignature(ret, params), decl_only=True)
+    impl = ProcDefinition(
+        name, TypeSignature(ret, params), decl_only=True, strictsigil=strictsigil
+    )
     proc.impls.append(impl)
     ctx.flags.syntax = {}
     return ProcDeclaration(

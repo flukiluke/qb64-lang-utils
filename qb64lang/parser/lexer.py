@@ -7,6 +7,7 @@ from .datatypes import (
     TYPE__BIT,
     TYPE__FLOAT,
     TYPE__INTEGER64,
+    TYPE__NONE,
     TYPE__UNSIGNED__BIT,
     TYPE__UNSIGNED__INTEGER64,
     TYPE__UNSIGNED_INTEGER,
@@ -339,32 +340,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                     diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("id_name")
                 )
             # case of sigil "$" falls through below
-        if (proc := symbols.find_procedure(name)) or (
-            sigil == "$" and (proc := symbols.find_procedure(name + "$"))
-        ):
-            if symbols.return_proc_as_id:
-                t.value = (name, symbols.lookup_sigil(sigil), sigil)
-                return t
-            if sigil is not None:
-                # The sigil must match the existing procedure, if present
-                typ = symbols.lookup_sigil(sigil)
-                for sig in proc.sigs():
-                    if typ == sig.ret:
-                        break
-                else:
-                    alts = " or ".join(
-                        [s.ret.sigil for s in proc.sigs() if s.ret.sigil]
-                        + ["no suffix"]
-                    )
-                    diags.raise_error(
-                        diag.E_EXISTING_DEF_SIGIL_CLASH,
-                        t,
-                        sigil,
-                        t.lexer.lexmatch.group("id_name"),
-                        alts,
-                    )
-            t.type = "PROCEDURE"
-            t.value = proc
+        if proc_tok := lookup_proc(name, sigil, symbols, t, diags):
+            t.type = proc_tok[0]
+            t.value = proc_tok[1]
             return t
         elif var := symbols.find_variable(name, sigil):
             t.type = "VARIABLE"
@@ -489,3 +467,68 @@ def validate_sigil(sigil: str, t: LexToken, diags: diag.DiagnosticStore):
         validate_fixed_width(TYPE__UNSIGNED__BIT, int(sigil[2:]), t, diags)
     elif sigil.startswith("$") and len(sigil) > 1:
         validate_fixed_width(TYPE_STRING, int(sigil[1:]), t, diags)
+
+
+def lookup_proc(
+    name: str,
+    sigil: str | None,
+    symbols: SymbolStore,
+    t: LexToken,
+    diags: diag.DiagnosticStore,
+):
+    proc_plain = symbols.find_procedure(name)
+    proc_string = symbols.find_procedure(name + "$")
+
+    def bad_sigil_error():
+        alts = set[str]()
+        if proc_plain:
+            for impl in proc_plain.impls:
+                ret = impl.signature.ret
+                if not (impl.strictsigil and ret != TYPE_STRING) and ret != TYPE__NONE:
+                    alts.add(ret.sigil)
+        if proc_string:
+            alts.add("$")
+        alts.add("no suffix")
+        alts = list(alts)
+        alts.sort()
+
+        diags.raise_error(
+            diag.E_EXISTING_DEF_SIGIL_CLASH,
+            t,
+            sigil,
+            t.lexer.lexmatch.group("id_name"),
+            " or ".join(alts),
+        )
+
+    if symbols.return_proc_as_id and (proc_plain or proc_string):
+        return ("ID", (name, symbols.lookup_sigil(sigil), sigil))
+
+    if sigil is None:
+        if proc_plain is None:
+            return None
+        # All impls are either non-strictsigil or non-string strictsigil
+        # because the proc name did not end in $. In either case we are
+        # compatible so no further checks needed.
+        return ("PROCEDURE", proc_plain)
+
+    elif sigil == "$":
+        # Check for string strictsigil
+        if proc_string:
+            # All impls are string strictsigil because the proc name ends
+            # in $ so we are compatible.
+            return ("PROCEDURE", proc_string)
+        # Check for non-strictsigil
+        if proc_plain:
+            for impl in proc_plain.impls:
+                if impl.signature.ret == TYPE_STRING:
+                    return ("PROCEDURE", proc_plain)
+        return None
+
+    # Non-string sigil case
+    if proc_plain is None:
+        return None
+    type = symbols.lookup_sigil(sigil)
+    for impl in proc_plain.impls:
+        if type == impl.signature.ret and not impl.strictsigil:
+            return ("PROCEDURE", proc_plain)
+    bad_sigil_error()
