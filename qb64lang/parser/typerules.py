@@ -181,17 +181,19 @@ class WalkContext:
             1) Select all compatible impls. An impl is compatible if all arguments
             can be cast (even with loss) to the expected type.
                 a) If there are no compatibles, return None.
+            2) Filter to only impls that are a sub/function as required.
+                a) If there are no compatibles, return None.
                 b) If there is exactly 1 compatible, return it.
-            2) Of all compatible impls, return the first one where all casts are
+            3) Of all compatible impls, return the first one where all casts are
             lossless. If no impl has all lossless casts, continue to 3.
-            3) Round all float arguments to the largest signed integral type
+            4) Round all float arguments to the largest signed integral type
             (i.e. _integer64) and return the first compatible impl that
             now has all lossless casts.
-            4) If still no impl has all lossless casts, return the last one.
-        Rule 1b is the usual case for simple procedures. 2 allows overloaded
+            5) If still no impl has all lossless casts, return the last one.
+        Rule 2b is the usual case for simple procedures. 3 allows overloaded
         functions to be listed in order of increasing type width and the narrowest
-        version that doesn't lose data is picked. 3 handles passing floats to
-        integer-only functions like bitwise operators. 4 is a fallback if a cast is
+        version that doesn't lose data is picked. 4 handles passing floats to
+        integer-only functions like bitwise operators. 5 is a fallback if a cast is
         inevitable.
         """
         impls = node.target.impls
@@ -207,6 +209,22 @@ class WalkContext:
                 node,
                 node.target.name,
                 ", ".join([t.name for t in arg_types]),
+            )
+            return None
+        if node.style == Call.Style.STATEMENT:
+            compatibles = [
+                impl for impl in compatibles if impl.signature.ret == TYPE__NONE
+            ]
+        else:
+            compatibles = [
+                impl for impl in compatibles if impl.signature.ret != TYPE__NONE
+            ]
+        if len(compatibles) == 0:
+            self.program.diagnostics.create(
+                diag.E_EXPECTED_SUB_NOT_FUNCTION
+                if node.style == Call.Style.STATEMENT
+                else diag.E_EXPECTED_FUNCTION_NOT_SUB,
+                node,
             )
             return None
         if len(compatibles) == 1:

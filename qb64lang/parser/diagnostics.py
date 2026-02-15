@@ -147,6 +147,12 @@ E_ARG_TYPE_MISMATCH = DiagTemplate(
 E_NO_MATCHING_OVERLOAD = DiagTemplate(
     _Level.ERROR, "{} cannot be applied to argument(s) of type {}"
 )
+E_EXPECTED_SUB_NOT_FUNCTION = DiagTemplate(
+    _Level.ERROR, "Expected a statement, not a function."
+)
+E_EXPECTED_FUNCTION_NOT_SUB = DiagTemplate(
+    _Level.ERROR, "Expected a function, not a statement."
+)
 E_ASSIGNMENT_MISMATCH = DiagTemplate(
     _Level.ERROR, "Cannot convert expression of type {} to {} for assignment"
 )

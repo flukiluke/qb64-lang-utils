@@ -146,6 +146,7 @@ def do_do(ctx: ParseContext):
             return Call(
                 ctx.symbols.procedures["<>"],
                 [do_expr(ctx), Constant(0, TYPE__BYTE)],
+                style=Call.Style.INFIX,
                 lex_start=ctx.prev.lexpos,
             )
         elif ctx.at_line_terminator():
@@ -672,7 +673,10 @@ def do_procedure_call(ctx: ParseContext):
         return Call(
             target,
             args,
+            style=Call.Style.STATEMENT,
             lex_start=lex_start,
             lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
         )
-    return Call(target, lex_start=lex_start, lex_len=lex_len)
+    return Call(
+        target, style=Call.Style.STATEMENT, lex_start=lex_start, lex_len=lex_len
+    )

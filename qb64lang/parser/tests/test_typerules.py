@@ -2,11 +2,12 @@ from qb64lang.parser.datatypes import Parameter as P
 
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import Call, Cast, Constant, ProcDefinition
+from ..ast import Call, Cast, Constant, If, Print, ProcDefinition
 from ..datatypes import (
     TYPE__BYTE,
     TYPE__FLOAT,
     TYPE__INTEGER64,
+    TYPE__NONE,
     TYPE__UNSIGNED_INTEGER,
     TYPE_DOUBLE,
     TYPE_INTEGER,
@@ -244,3 +245,19 @@ def test_operator_overload_mixed_to_float():
         ),
         expr_type=TYPE_DOUBLE,
     )
+
+
+def test_sub_function_mix():
+    prog = parse_clean("""
+        $overload:on
+        declare sub foo
+        declare function foo&
+        if 1 then foo
+        print foo;
+    """)
+    proc = prog.symbols.find_procedure("foo")
+    assert proc is not None
+    assert proc.impls[0].signature.ret == TYPE__NONE
+    assert proc.impls[1].signature.ret == TYPE_LONG
+    assert prog.main.find(If).true_branch == [Ast(Call, proc, impl=proc.impls[0])]
+    assert prog.main.find(Print).args == [Ast(Call, proc, impl=proc.impls[1])]

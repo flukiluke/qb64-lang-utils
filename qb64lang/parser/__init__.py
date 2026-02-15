@@ -16,12 +16,14 @@ The following metacommands are used heavily:
 """
 HEADER = """
 $overload:on
+$syntax:strictsigil
 declare sub mkdir (path$)
 declare sub out (address%, value%)
-$syntax:strictsigil
 declare function left$ (s$, i&&)
 declare function lcase$ (s$)
 declare function val## (s$)
+declare sub _autodisplay
+declare function _autodisplay%%
 """
 
 

@@ -131,13 +131,14 @@ class Var(LValue):
 @dataclass
 class Call(Expr, Statement):
     class Style(Enum):
-        STANDARD = auto()
+        FUNCTION = auto()
         INFIX = auto()
         PREFIX = auto()
+        STATEMENT = auto()
 
     target: "Procedure"
     args: list[Expr] = field(default_factory=list)
-    style: Style = Style.STANDARD
+    style: Style = Style.FUNCTION
     # Calculated values
     impl: ProcDefinition | None = None
 
