@@ -131,7 +131,9 @@ def do_bare_var(ctx: ParseContext) -> Var:
         result = Var(ctx.tok.value, lex_start=ctx.tok.lexpos, lex_len=ctx.tok.length)
     elif ctx.tok.type == "ID":
         result = Var(
-            ctx.symbols.create_local(ctx.tok.value[0], ctx.tok.value[1]),
+            ctx.symbols.create_local(
+                ctx.tok.value[0], ctx.tok.plain_value, ctx.tok.value[1]
+            ),
             lex_start=ctx.tok.lexpos,
             lex_len=ctx.tok.length,
         )

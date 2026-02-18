@@ -30,7 +30,6 @@ class ParseContext:
         self.prev = LexToken()
         self.tok: LexToken = LexToken()
         self.tok.lexer = self.token_stream
-        self.tok.lineno = 1
         self.tok.type = ""
         self.tok.value = ""
         self.current_subproc: None | ProcDefinition = None
@@ -59,7 +58,6 @@ class ParseContext:
             eof.lexer = self.tok.lexer
             eof.lexpos = self.tok.lexer.lexlen
             eof.length = 0
-            eof.lineno = self.tok.lineno
             eof.type = "EOF"
             eof.value = "<end of file>"
             self.tok = eof

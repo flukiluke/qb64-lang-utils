@@ -31,7 +31,7 @@ def test_binop():
     )
 
 
-def test_binop_precedence():
+def test_binop_precedence1():
     check(
         "2 - 3 * 4",
         Ast(
@@ -49,6 +49,9 @@ def test_binop_precedence():
             INFIX,
         ),
     )
+
+
+def test_binop_precedence2():
     check(
         "2 and 3 = 4 + 5 / 6",
         Ast(
@@ -169,7 +172,7 @@ def test_negation():
     )
 
 
-def test_not():
+def test_not1():
     check(
         "2 and not 3",
         Ast(
@@ -182,6 +185,9 @@ def test_not():
             INFIX,
         ),
     )
+
+
+def test_not2():
     check(
         "not 2 + 3",
         Ast(
@@ -198,6 +204,9 @@ def test_not():
             PREFIX,
         ),
     )
+
+
+def test_not3():
     check(
         "not not 2 and not - not 3",
         Ast(
@@ -236,7 +245,7 @@ def test_not():
     )
 
 
-def test_parentheses():
+def test_parentheses1():
     check(
         "(2 - 3) * 4",
         Ast(
@@ -254,6 +263,9 @@ def test_parentheses():
             INFIX,
         ),
     )
+
+
+def test_parentheses2():
     check(
         "-(2 + ((3 or 4) and ((5))))",
         Ast(

@@ -30,27 +30,26 @@ from .ply import LexToken, Token, lex
 
 tokens = (
     "NEWLINE",
-    "END_OF_INPUT",
-    "END_OF_FILE",
-    "ERROR",
-    "COMMENT",
-    "REMARK",
+    "COMMENT",  # Returned as NEWLINE
+    "REMARK",  # Returned as NEWLINE
+    "LINE_SPLIT",  # Returned as NEWLINE
     "META_CMD",
-    "LINE_SPLIT",
     "LINE_NUM",
     "LINE_LABEL",
     "LINE_NUM_LABEL",
     "ID",
+    # ID may be returned as ID, KEYWORD, VARIABLE, PROCEDURE or TYPE
+    # depending on symbol lookups.
     "KEYWORD",
     "VARIABLE",
     "PROCEDURE",
     "TYPE",
     "STRING_LIT",
     "NUM_LIT",
-    "BASE_LIT",
-    "EXP_LIT",
-    "DEC_LIT",
-    "INT_LIT",
+    "BASE_LIT",  # Returned as NUM_LIT
+    "EXP_LIT",  # Returned as NUM_LIT
+    "DEC_LIT",  # Returned as NUM_LIT
+    "INT_LIT",  # Returned as NUM_LIT
     "PUNCTUATION",
     "BAD_CHAR",
 )
@@ -79,32 +78,27 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
 
     @Token(nl)
     def t_NEWLINE(t: LexToken):
-        t.lexer.lineno += 1
         t.value = "\n"
         return t
 
-    @Token(r"'.*(\n|$)")
+    @Token(r"'(?P<comment_text>.*(\n|$))")
     def t_COMMENT(t: LexToken):
-        if t.length > 1:
-            line: str = t.value
-            line = line[1:].lstrip(" \t")
-            if line.startswith("$"):
-                t.lexer.lexpos = t.lexpos + 1
-                t.lexer.begin("meta")
-                return None
+        text = t.lexer.lexmatch.group("comment_text")
+        if text.lstrip(" \t").startswith("$"):
+            t.lexer.lexpos = t.lexpos + 1
+            t.lexer.begin("meta")
+            return None
         t.type = "NEWLINE"
         t.value = "'"
         return t
 
-    @Token(rf"REM({ws}+.*)?(\n|$)")
+    @Token(r"REM(?P<remark_text>([^0-9a-zA-Z.\n].*)?(\n|$))")
     def t_REMARK(t: LexToken):
-        if t.length > 3:
-            line: str = t.value
-            line = line[3:].lstrip(" \t")
-            if line.startswith("$"):
-                t.lexer.lexpos = t.lexpos + 3
-                t.lexer.begin("meta")
-                return None
+        text = t.lexer.lexmatch.group("remark_text")
+        if text.lstrip(" \t").startswith("$"):
+            t.lexer.lexpos = t.lexpos + 3
+            t.lexer.begin("meta")
+            return None
         t.type = "NEWLINE"
         t.value = "rem"
         return t
@@ -120,7 +114,6 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
 
     @Token(nl)
     def t_meta_NEWLINE(t: LexToken):
-        t.lexer.lineno += 1
         t.value = "\n"
         t.lexer.begin("INITIAL")
         return t
@@ -158,8 +151,8 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
 
     @Token(f"_{ws}*{nl}")
     def t_LINE_JOIN(t: LexToken):
-        t.lexer.lineno += 1
         # No token produced
+        pass
 
     @Token('"(?P<stringlit_a>[^"\r\n]*)"')
     def t_STRING_LIT(t: LexToken):

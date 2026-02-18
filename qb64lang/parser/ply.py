@@ -66,6 +66,7 @@ class LexError(Exception):
 class LexToken(object):
     type: str
     value: Any
+    plain_value: Any
     lineno: int
     lexpos: int
     lexer: "Lexer"
@@ -333,6 +334,7 @@ class Lexer:
                 # Create a token for return
                 tok = LexToken()
                 tok.value = m.group()
+                tok.plain_value = tok.value
                 tok.lineno = self.lineno
                 tok.lexpos = lexpos
                 tok.length = len(tok.value)

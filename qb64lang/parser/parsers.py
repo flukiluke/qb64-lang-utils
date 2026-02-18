@@ -260,7 +260,7 @@ def do_for(ctx: ParseContext):
     )
 
 
-def do_proc_ident(ctx: ParseContext) -> tuple[str, Type]:
+def do_proc_ident(ctx: ParseContext) -> tuple[str, str, Type]:
     """
     Expects: SUB or FUNCTION
     Rresults: after name sigil
@@ -285,11 +285,12 @@ def do_proc_ident(ctx: ParseContext) -> tuple[str, Type]:
         ctx.symbols.default_type = default_type
         ctx.symbols.return_proc_as_id = False
     name: str = ctx.tok.value[0]
+    cased_name: str = ctx.tok.plain_value
     ret: Type = ctx.tok.value[1]
     if is_sub and ret != TYPE__NONE:
         ctx.diags.create(diag.E_SUB_WITH_TYPE, ctx.tok)
     next(ctx)
-    return (name, ret)
+    return (name, cased_name, ret)
 
 
 def do_declare(ctx: ParseContext):
@@ -298,13 +299,13 @@ def do_declare(ctx: ParseContext):
     """
     lex_start = ctx.tok.lexpos
     next(ctx)
-    name, ret = do_proc_ident(ctx)
+    name, cased_name, ret = do_proc_ident(ctx)
     strictsigil = ctx.flags.syntax.get("strictsigil") is not None
     if strictsigil and ret == TYPE_STRING:
         name += "$"
     proc = ctx.symbols.find_procedure(name)
     if proc is None:
-        proc = Procedure(name, [])
+        proc = Procedure(name, cased_name, [])
         ctx.symbols.add_procedure(proc)
     elif not ctx.flags.allow_proc_overloads:
         ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, ctx.prev, name)
@@ -339,7 +340,9 @@ def do_dim(ctx: ParseContext):
         elif leading_type and trailing_type:
             ctx.diags.raise_error(diag.E_DUPE_AS_TYPE, var_tok)
         type = leading_type or trailing_type or tok_val[1]
-        variables.append(ctx.symbols.create_local(tok_val[0], type))
+        variables.append(
+            ctx.symbols.create_local(tok_val[0], var_tok.plain_value, type)
+        )
         if ctx.at_a("PUNCTUATION", ","):
             next(ctx)
         else:
@@ -417,7 +420,7 @@ def do_main(ctx: ParseContext):
         main = main_proc.impls[0]
     else:
         main = ProcDefinition("_main", TypeSignature(TYPE__NONE, []), ctx.symbols.scope)
-        ctx.symbols.add_procedure(Procedure("_main", [main]))
+        ctx.symbols.add_procedure(Procedure("_main", "_Main", [main]))
     while not ctx.at_a("EOF"):
         ctx.symbols.set_scope(main.symbols)
         main.statements.extend(do_block(ctx))
@@ -444,12 +447,12 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
     lex_start = ctx.tok.lexpos
     # Grab this token for error reporting purposes
     start_tok = ctx.tok
-    name, ret = do_proc_ident(ctx)
+    name, cased_name, ret = do_proc_ident(ctx)
 
     # Procedure may exist if pre-declared, or other impls exist
     proc = ctx.symbols.find_procedure(name)
     if proc is None:
-        proc = Procedure(name, [])
+        proc = Procedure(name, cased_name, [])
         ctx.symbols.add_procedure(proc)
     params = do_param_list(ctx)
     sig = TypeSignature(ret, params)
@@ -473,7 +476,8 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
     ctx.symbols.set_scope(impl.symbols)
     for param in params:
         assert param.name is not None
-        ctx.symbols.create_local(param.name, param.type)
+        assert param.source_name is not None
+        ctx.symbols.create_local(param.name, param.source_name, param.type)
     ctx.current_subproc = impl
     try:
         ctx.consume("NEWLINE")
@@ -551,7 +555,7 @@ def do_param_list(ctx: ParseContext):
             ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
         elif trailing_type:
             type = trailing_type
-        result.append(Parameter(type, name))
+        result.append(Parameter(type, name, var_tok.plain_value))
         if ctx.at_a("PUNCTUATION", ")"):
             break
         ctx.consume("PUNCTUATION", ",")

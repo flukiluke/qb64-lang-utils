@@ -30,7 +30,7 @@ from ..lexer import Lexer
 class Token:
     type: str
     value: Any = None
-    lineno: int | None = None
+    plain_value: Any = None
 
 
 def check(
@@ -55,8 +55,8 @@ def check(
         assert actual.type == expected.type
         if expected.value is not None:
             assert actual.value == expected.value
-        if expected.lineno is not None:
-            assert actual.lineno == expected.lineno
+        if expected.plain_value is not None:
+            assert actual.plain_value == expected.plain_value
 
 
 def check_expr(
@@ -369,14 +369,17 @@ def test_procedure():
     symbols = SymbolStore()
     a_sub = Procedure(
         "a_sub",
+        "A_Sub",
         [ProcDefinition("a_sub", TypeSignature(TYPE__NONE, []), decl_only=True)],
     )
     a_function = Procedure(
         "a_function",
+        "A_Function",
         [ProcDefinition("a_function", TypeSignature(TYPE_STRING, []), decl_only=True)],
     )
     a_string_builtin = Procedure(
         "a_string_builtin$",
+        "A_String_Builtin$",
         [
             ProcDefinition(
                 "a_string_builtin$", TypeSignature(TYPE_STRING, []), decl_only=True
@@ -471,19 +474,20 @@ def test_check_punctuation():
 
 
 def test_comment():
-    check("'foo", Token("NEWLINE", "'"))
-    check("this ' comment", [Token("ID"), Token("NEWLINE", "'")])
-    check("that '", [Token("ID"), Token("NEWLINE", "'")])
-    check("'foo\n", Token("NEWLINE", "'"))
-    check("this ' comment\n", [Token("ID"), Token("NEWLINE", "'")])
-    check("that '\n  ", [Token("ID"), Token("NEWLINE", "'")])
+    check("'foo", Token("NEWLINE", "'", "'foo"))
+    check("this ' comment", [Token("ID"), Token("NEWLINE", "'", "' comment")])
+    check("that '", [Token("ID"), Token("NEWLINE", "'", "'")])
+    check("'foo\n", Token("NEWLINE", "'", "'foo\n"))
+    check("this ' comment\n", [Token("ID"), Token("NEWLINE", "'", "' comment\n")])
+    check("that '\n  ", [Token("ID"), Token("NEWLINE", "'", "'\n")])
 
 
 def test_remark():
-    check("rem foo", Token("NEWLINE", "rem"))
-    check("foo REM", [Token("ID"), Token("NEWLINE", "rem")])
-    check("rem foo\n", Token("NEWLINE", "rem"))
-    check("foo REM\n  ", [Token("ID"), Token("NEWLINE", "rem")])
+    check("rem foo", Token("NEWLINE", "rem", "rem foo"))
+    check("foo REM", [Token("ID"), Token("NEWLINE", "rem", "REM")])
+    check("rem foo\n", Token("NEWLINE", "rem", "rem foo\n"))
+    check("foo REM\n  ", [Token("ID"), Token("NEWLINE", "rem", "REM\n")])
+    check("rem1 rema rem.x", [Token("ID"), Token("ID"), Token("ID")])
 
 
 def test_line_label():
@@ -530,25 +534,25 @@ def test_line_join():
     check(
         "foo_\nbar",
         [
-            Token("ID", ("foo", TYPE_SINGLE, None), 1),
-            Token("ID", ("bar", TYPE_SINGLE, None), 2),
+            Token("ID", ("foo", TYPE_SINGLE, None)),
+            Token("ID", ("bar", TYPE_SINGLE, None)),
         ],
     )
     check(
         "foo_ \nbar",
         [
-            Token("ID", ("foo", TYPE_SINGLE, None), 1),
-            Token("ID", ("bar", TYPE_SINGLE, None), 2),
+            Token("ID", ("foo", TYPE_SINGLE, None)),
+            Token("ID", ("bar", TYPE_SINGLE, None)),
         ],
     )
-    check("foo_\n", Token("ID", ("foo", TYPE_SINGLE, None), 1))
+    check("foo_\n", Token("ID", ("foo", TYPE_SINGLE, None)))
     check("_\n", [])
     check(
         "foo_\nbar_\nbaz",
         [
-            Token("ID", ("foo", TYPE_SINGLE, None), 1),
-            Token("ID", ("bar", TYPE_SINGLE, None), 2),
-            Token("ID", ("baz", TYPE_SINGLE, None), 3),
+            Token("ID", ("foo", TYPE_SINGLE, None)),
+            Token("ID", ("bar", TYPE_SINGLE, None)),
+            Token("ID", ("baz", TYPE_SINGLE, None)),
         ],
     )
 

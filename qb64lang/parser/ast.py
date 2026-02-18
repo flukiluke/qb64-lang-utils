@@ -240,6 +240,7 @@ class SetReturn(Statement):
 @dataclass
 class Procedure:
     name: str
+    source_name: str
     impls: list[ProcDefinition] = field(default_factory=list, repr=False)
 
     def sigs(self):
@@ -249,6 +250,7 @@ class Procedure:
 @dataclass
 class Variable:
     name: str
+    source_name: str
     type: Type
 
 
@@ -273,55 +275,54 @@ def _generic(
     return results
 
 
-KEYWORDS = set(
-    [
-        # Misc
-        "to",
-        # Declarations
-        "dim",
-        "redim",
-        "as",
-        "_unsigned",
-        "const",
-        "sub",
-        "function",
-        "declare",
-        # Conditionals
-        "if",
-        "then",
-        "else",
-        "elseif",
-        "endif",
-        "end",
-        # Loops
-        "do",
-        "while",
-        "until",
-        "loop",
-        "wend",
-        "for",
-        "next",
-        "step",
-        # Flow control
-        "goto",
-        "exit",
-        # Operators
-        "imp",
-        "eqv",
-        "xor",
-        "or",
-        "and",
-        "not",
-        "mod",
-        # I/O
-        "print",
-        "?",
-    ]
-)
+KEYWORDS = {
+    # Misc
+    "to": "To",
+    # Declarations
+    "dim": "Dim",
+    "redim": "ReDim",
+    "as": "As",
+    "_unsigned": "_Unsigned",
+    "const": "Const",
+    "sub": "Sub",
+    "function": "Function",
+    "declare": "Declare",
+    # Conditionals
+    "if": "If",
+    "then": "Then",
+    "else": "Else",
+    "elseif": "ElseIf",
+    "endif": "End If",
+    "end": "End",
+    # Loops
+    "do": "Do",
+    "while": "While",
+    "until": "Until",
+    "loop": "Loop",
+    "wend": "Wend",
+    "for": "For",
+    "next": "Next",
+    "step": "Step",
+    # Flow control
+    "goto": "Goto",
+    "exit": "_Exit",
+    # Operators
+    "imp": "Imp",
+    "eqv": "Eqv",
+    "xor": "Xor",
+    "or": "Or",
+    "and": "And",
+    "not": "Not",
+    "mod": "Mod",
+    # I/O
+    "print": "Print",
+    "?": "Print",
+}
 
 PROCS = [
     # Comparison operators
     Procedure(
+        "=",
         "=",
         [
             ProcDefinition(
@@ -333,6 +334,7 @@ PROCS = [
     ),
     Procedure(
         "<>",
+        "<>",
         [
             ProcDefinition(
                 "<>",
@@ -342,6 +344,7 @@ PROCS = [
         ],
     ),
     Procedure(
+        "<",
         "<",
         [
             ProcDefinition(
@@ -357,6 +360,7 @@ PROCS = [
     ),
     Procedure(
         ">",
+        ">",
         [
             ProcDefinition(
                 ">",
@@ -371,6 +375,7 @@ PROCS = [
     ),
     Procedure(
         "<=",
+        "<=",
         [
             ProcDefinition(
                 "<=",
@@ -384,6 +389,7 @@ PROCS = [
         ],
     ),
     Procedure(
+        ">=",
         ">=",
         [
             ProcDefinition(
@@ -400,6 +406,7 @@ PROCS = [
     # Arithmetic
     Procedure(
         "+",
+        "+",
         [
             ProcDefinition(
                 "+",
@@ -414,6 +421,7 @@ PROCS = [
     ),
     Procedure(
         "-",
+        "-",
         [
             *_generic("-", None, [None], INTEGRAL_TYPES),
             *_generic("-", None, [None], FLOAT_TYPES),
@@ -423,24 +431,27 @@ PROCS = [
     ),
     Procedure(
         "*",
+        "*",
         [
             *_generic("*", None, [None, None], INTEGRAL_TYPES),
             *_generic("*", None, [None, None], FLOAT_TYPES),
         ],
     ),
-    Procedure("/", [*_generic("/", None, [None, None], FLOAT_TYPES)]),
-    Procedure("\\", [*_generic("\\", None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("^", [*_generic("^", None, [None, None], FLOAT_TYPES)]),
-    Procedure("mod", [*_generic("mod", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("/", "/", [*_generic("/", None, [None, None], FLOAT_TYPES)]),
+    Procedure("\\", "\\", [*_generic("\\", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("^", "^", [*_generic("^", None, [None, None], FLOAT_TYPES)]),
+    Procedure("mod", "Mod", [*_generic("mod", None, [None, None], INTEGRAL_TYPES)]),
     # Bitwise relations
-    Procedure("imp", [*_generic("imp", None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("eqv", [*_generic("eqv", None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("xor", [*_generic("xor", None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("or", [*_generic("or", None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("and", [*_generic("and", None, [None, None], INTEGRAL_TYPES)]),
-    Procedure("not", [*_generic("not", None, [None], INTEGRAL_TYPES)]),
+    Procedure("imp", "Imp", [*_generic("imp", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("eqv", "Eqv", [*_generic("eqv", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("xor", "Xor", [*_generic("xor", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("or", "Or", [*_generic("or", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("and", "And", [*_generic("and", None, [None, None], INTEGRAL_TYPES)]),
+    Procedure("not", "Not", [*_generic("not", None, [None], INTEGRAL_TYPES)]),
     # Other maths
-    Procedure("_atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]),
+    Procedure(
+        "_atan2", "_Atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]
+    ),
 ]
 
 
@@ -492,13 +503,13 @@ class SymbolStore:
             assert False, "Unknown type " + sigil
         return self.types.setdefault(new_type.name, new_type)
 
-    def create_local(self, name: str, type: Type | None):
+    def create_local(self, name: str, cased_name: str, type: Type | None):
         if type is None:
             type = self.default_type
         typeset = self.scope.variables.setdefault(name, {})
         if type.name in typeset:
             raise ParseError("Duplicate variable")
-        typeset[type.name] = Variable(name, type)
+        typeset[type.name] = Variable(name, cased_name, type)
         return typeset[type.name]
 
     def add_procedure(self, procedure: Procedure):

@@ -28,15 +28,16 @@ from .helpers import Ast, parse_clean
 
 def test_no_params():
     prog = parse_clean("""
-        sub s
+        sub S
             print "hi"
         end sub
-        function f
+        function F
             print "bye"
         end function""")
 
     assert prog.symbols.find_procedure("s") == Procedure(
         "s",
+        "S",
         [
             Ast(
                 ProcDefinition,
@@ -48,6 +49,7 @@ def test_no_params():
     )
     assert prog.symbols.find_procedure("f") == Procedure(
         "f",
+        "F",
         [
             Ast(
                 ProcDefinition,
@@ -161,13 +163,15 @@ def test_proc_redefinition():
 
 
 def test_one_param():
-    prog = parse_clean("function f(a&) : end function")
+    prog = parse_clean("function f(A&) : end function")
     proc = prog.symbols.find_procedure("f")
     assert proc is not None
     assert proc.impls[0].signature == TypeSignature(
-        TYPE_SINGLE, [Parameter(TYPE_LONG, "a")]
+        TYPE_SINGLE, [Parameter(TYPE_LONG, "a", "A&")]
     )
-    assert proc.impls[0].symbols.variables == {"a": {"long": Variable("a", TYPE_LONG)}}
+    assert proc.impls[0].symbols.variables == {
+        "a": {"long": Variable("a", "A&", TYPE_LONG)}
+    }
 
 
 def test_multi_param():
@@ -177,15 +181,15 @@ def test_multi_param():
     assert proc.impls[0].signature == TypeSignature(
         TYPE__NONE,
         [
-            Parameter(TYPE_LONG, "a"),
-            Parameter(TYPE_SINGLE, "b"),
-            Parameter(TYPE_STRING, "c"),
+            Parameter(TYPE_LONG, "a", "a&"),
+            Parameter(TYPE_SINGLE, "b", "b"),
+            Parameter(TYPE_STRING, "c", "c$"),
         ],
     )
     assert proc.impls[0].symbols.variables == {
-        "a": {"long": Variable("a", TYPE_LONG)},
-        "b": {"single": Variable("b", TYPE_SINGLE)},
-        "c": {"string": Variable("c", TYPE_STRING)},
+        "a": {"long": Variable("a", "a&", TYPE_LONG)},
+        "b": {"single": Variable("b", "b", TYPE_SINGLE)},
+        "c": {"string": Variable("c", "c$", TYPE_STRING)},
     }
 
 
@@ -196,9 +200,9 @@ def test_param_as_clause():
     assert proc.impls[0].signature == TypeSignature(
         TYPE__NONE,
         [
-            Parameter(TYPE_LONG, "a"),
-            Parameter(TYPE_SINGLE, "b"),
-            Parameter(TYPE_STRING, "c"),
+            Parameter(TYPE_LONG, "a", "a"),
+            Parameter(TYPE_SINGLE, "b", "b"),
+            Parameter(TYPE_STRING, "c", "c"),
         ],
     )
 
@@ -208,7 +212,7 @@ def test_local_var():
     proc = prog.symbols.find_procedure("s")
     assert proc is not None
     assert proc.impls[0].symbols.variables == {
-        "x": {"single": Variable("x", TYPE_SINGLE)}
+        "x": {"single": Variable("x", "x", TYPE_SINGLE)}
     }
 
 
@@ -274,32 +278,34 @@ def test_nested_proc():
 
 
 def test_declare_signatures():
-    prog = parse_clean("declare sub foo (a, b%): declare function bar#(c as string)")
+    prog = parse_clean("declare sub Foo (a, b%): declare function bar#(c as string)")
     assert prog.main.statements == [
         Ast(
             ProcDeclaration,
             "foo",
             TypeSignature(
-                TYPE__NONE, [Parameter(TYPE_SINGLE, "a"), Parameter(TYPE_INTEGER, "b")]
+                TYPE__NONE,
+                [Parameter(TYPE_SINGLE, "a", "a"), Parameter(TYPE_INTEGER, "b", "b%")],
             ),
         ),
         Ast(
             ProcDeclaration,
             "bar",
-            TypeSignature(TYPE_DOUBLE, [Parameter(TYPE_STRING, "c")]),
+            TypeSignature(TYPE_DOUBLE, [Parameter(TYPE_STRING, "c", "c")]),
         ),
     ]
     assert prog.symbols.find_procedure("foo") == Procedure(
-        "foo", [Ast(ProcDefinition, "foo", decl_only=True)]
+        "foo", "Foo", [Ast(ProcDefinition, "foo", decl_only=True)]
     )
     assert prog.symbols.find_procedure("bar") == Procedure(
-        "bar", [Ast(ProcDefinition, "bar", decl_only=True)]
+        "bar", "bar#", [Ast(ProcDefinition, "bar", decl_only=True)]
     )
 
 
 def test_declare_match_definition():
     prog = parse_clean("declare sub foo (a) : sub foo (a) : x = 1: end sub")
     assert prog.symbols.find_procedure("foo") == Procedure(
+        "foo",
         "foo",
         [Ast(ProcDefinition, "foo", statements=[Ast(Assignment)], decl_only=False)],
     )
@@ -327,12 +333,13 @@ def test_declare_overload():
     prog = parse_clean("$overload:on\ndeclare sub foo(a) : declare sub foo(a, b)")
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
+        "foo",
         [
             Ast(
                 ProcDefinition,
                 "foo",
                 decl_only=True,
-                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a")]),
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a", "a")]),
             ),
             Ast(
                 ProcDefinition,
@@ -340,7 +347,10 @@ def test_declare_overload():
                 decl_only=True,
                 signature=TypeSignature(
                     TYPE__NONE,
-                    [Parameter(TYPE_SINGLE, "a"), Parameter(TYPE_SINGLE, "b")],
+                    [
+                        Parameter(TYPE_SINGLE, "a", "a"),
+                        Parameter(TYPE_SINGLE, "b", "b"),
+                    ],
                 ),
             ),
         ],
@@ -353,6 +363,7 @@ def test_declare_match_def_overload():
     )
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
+        "foo",
         [Ast(ProcDefinition, "foo", statements=[Ast(Assignment)], decl_only=False)],
     )
 
@@ -361,18 +372,21 @@ def test_declare_mismatch_def_overload():
     prog = parse_clean("$overload:on\ndeclare sub foo (a) : sub foo (a%) : end sub")
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
+        "foo",
         [
             Ast(
                 ProcDefinition,
                 "foo",
                 decl_only=True,
-                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a")]),
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a", "a")]),
             ),
             Ast(
                 ProcDefinition,
                 "foo",
                 decl_only=False,
-                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_INTEGER, "a")]),
+                signature=TypeSignature(
+                    TYPE__NONE, [Parameter(TYPE_INTEGER, "a", "a%")]
+                ),
             ),
         ],
     )
@@ -382,18 +396,21 @@ def test_def_overload():
     prog = parse_clean("$overload:on\n sub foo (a) : end sub : sub foo (a%) : end sub")
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
+        "foo",
         [
             Ast(
                 ProcDefinition,
                 "foo",
                 decl_only=False,
-                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a")]),
+                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_SINGLE, "a", "a")]),
             ),
             Ast(
                 ProcDefinition,
                 "foo",
                 decl_only=False,
-                signature=TypeSignature(TYPE__NONE, [Parameter(TYPE_INTEGER, "a")]),
+                signature=TypeSignature(
+                    TYPE__NONE, [Parameter(TYPE_INTEGER, "a", "a%")]
+                ),
             ),
         ],
     )
