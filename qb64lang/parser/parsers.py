@@ -37,25 +37,39 @@ from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
 def do_print(ctx: ParseContext):
     """
     Expects: PRINT or ?
-    Format: PRINT|? (expr|,|;)*
+    Format: PRINT|? (expr|,|;)* [USING expr ; (expr|,|;)+]
     """
     result = Print(lex_start=ctx.tok.lexpos, lex_len=ctx.tok.length)
     next(ctx)
-    final_newline = True
+    using = False
     while not ctx.at_line_terminator():
-        match ctx.tok.type, ctx.tok.value:
-            case "PUNCTUATION", ",":
-                result.args.append(Print.TAB_SEPARATOR)
-                final_newline = False
-                next(ctx)
-            case "PUNCTUATION", ";":
-                final_newline = False
-                next(ctx)
-            case _:
-                result.args.append(do_expr(ctx))
-                final_newline = True
-    if final_newline:
-        result.args.append(Print.FINAL_NEWLINE)
+        if ctx.at_a("PUNCTUATION", ","):
+            result.args.append(Print.Element.COMMA)
+            next(ctx)
+        elif ctx.at_a("PUNCTUATION", ";"):
+            result.args.append(Print.Element.SEMICOLON)
+            next(ctx)
+        elif ctx.at_a("KEYWORD", "using"):
+            if using:
+                ctx.diags.raise_error(diag.E_DUPE_USING, ctx.tok)
+            result.args.append(Print.Element.USING)
+            next(ctx)
+            result.args.append(do_expr(ctx))
+            ctx.consume("PUNCTUATION", ";")
+            result.args.append(Print.Element.SEMICOLON)
+            if ctx.at_line_terminator():
+                ctx.diags.raise_error(
+                    diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "an expression"
+                )
+            using = True
+        else:
+            # If two expressions would be adjacent, insert a semicolon between
+            if result.args and result.args[-1] not in (
+                Print.Element.COMMA,
+                Print.Element.SEMICOLON,
+            ):
+                result.args.append(Print.Element.SEMICOLON)
+            result.args.append(do_expr(ctx))
     return result
 
 

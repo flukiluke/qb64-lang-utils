@@ -273,12 +273,20 @@ class WalkContext:
         return node.type
 
     def kw_print(self, node: Print):
+        using = False
         for arg in node.args:
-            type = self.evaluate(arg)
-            if not type.is_number() and type != TYPE_STRING:
-                self.program.diagnostics.create(
-                    diag.E_UNPRINTABLE_TYPE, node, type.name
-                )
+            if isinstance(arg, Expr):
+                type = self.evaluate(arg)
+                if using:
+                    if type != TYPE_STRING:
+                        self.program.diagnostics.create(diag.E_USING_NON_STRING, node)
+                    using = False
+                if not type.is_number() and type != TYPE_STRING:
+                    self.program.diagnostics.create(
+                        diag.E_UNPRINTABLE_TYPE, node, type.name
+                    )
+            elif arg == Print.Element.USING:
+                using = True
 
     def kw_if(self, node: If):
         type = self.evaluate(node.guard)

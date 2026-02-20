@@ -2,7 +2,7 @@ from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from itertools import chain
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from .datatypes import (
     BUILTIN_SIGILS,
@@ -178,13 +178,15 @@ class Constant(Expr):
 
 @dataclass
 class Print(Statement):
-    TAB_SEPARATOR = Constant("\t", TYPE_STRING)
-    FINAL_NEWLINE = Constant("\n", TYPE_STRING)
+    class Element(Enum):
+        COMMA = auto()
+        SEMICOLON = auto()
+        USING = auto()
 
-    args: list[Expr] = field(default_factory=lambda: [])
+    args: list[Expr | Element] = field(default_factory=lambda: [])
 
     def children(self):
-        return self.args
+        return cast(Iterable[Expr], filter(lambda c: isinstance(c, Expr), self.args))
 
 
 @dataclass
@@ -317,6 +319,7 @@ KEYWORDS = {
     # I/O
     "print": "Print",
     "?": "Print",
+    "using": "Using",
 }
 
 PROCS = [

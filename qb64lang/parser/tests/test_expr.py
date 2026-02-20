@@ -311,7 +311,6 @@ def test_errors():
     check("2)", d=diag.E_UNEXPECTED_ITEM)
     check("2 + * 3", d=diag.E_UNEXPECTED_ITEM)
     check("2 + (*) 3", d=diag.E_UNEXPECTED_ITEM)
-    check("2 3", d=diag.E_UNEXPECTED_ITEM)
 
 
 def test_existing_scalar():
@@ -346,7 +345,6 @@ def test_function_call_unary():
 
 def test_unary_function_call_bad_syntax():
     check('lcase$("hello"', d=diag.E_UNEXPECTED_ITEM)
-    check('lcase$ "hello"', d=diag.E_UNEXPECTED_ITEM)
     check('lcase$ "hello")', d=diag.E_UNEXPECTED_ITEM)
     check('lcase$("hello",)', d=diag.E_UNEXPECTED_ITEM)
 

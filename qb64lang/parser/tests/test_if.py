@@ -10,7 +10,7 @@ THREE = Ast(Constant, 3, TYPE_INTEGER)
 
 
 def PrintStr(s: str):
-    return Ast(Print, [Ast(Constant, s, TYPE_STRING)])
+    return Ast(Print, [Ast(Constant, s, TYPE_STRING), Print.Element.SEMICOLON])
 
 
 def test_single_line():
@@ -42,7 +42,7 @@ def test_double_else():
 
 def test_single_line_else():
     stmts = list(
-        parse_clean('if 1 then print "x"; else print "y";\nprint 2;').main.find_all(
+        parse_clean('if 1 then print "x"; else print "y";\nprint 2').main.find_all(
             Statement
         )
     )

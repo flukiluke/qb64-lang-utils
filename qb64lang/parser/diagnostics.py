@@ -186,3 +186,7 @@ E_OVERLOAD_PROHIBITED = DiagTemplate(
     _Level.ERROR, "Subprocedure {} cannot be redefined"
 )
 E_NOT_A_TYPE = DiagTemplate(_Level.ERROR, "Expected a type name")
+E_DUPE_USING = DiagTemplate(_Level.ERROR, "USING can only appear once in a statement")
+E_USING_NON_STRING = DiagTemplate(
+    _Level.ERROR, "USING must be followed by a string expression"
+)

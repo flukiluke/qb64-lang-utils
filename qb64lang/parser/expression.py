@@ -88,19 +88,6 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
     def binding_power():
         match ctx.tok.type, ctx.tok.value:
-            case ("STRING_LIT", _):
-                ctx.diags.raise_error(
-                    diag.E_UNEXPECTED_ITEM,
-                    ctx.tok,
-                    '"' + ctx.tok.value + '"',
-                    "an operator",
-                )
-            case ("NUM_LIT", _):
-                ctx.diags.raise_error(
-                    diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value[0], "an operator"
-                )
-            case "PUNCTUATION", ")":
-                return 0
             case (("PUNCTUATION" | "KEYWORD"), op) if op in PRECEDENCE:
                 return PRECEDENCE[op]
             case _:

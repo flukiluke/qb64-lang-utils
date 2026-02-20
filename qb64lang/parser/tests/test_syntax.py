@@ -8,18 +8,18 @@ def test_strictsigil_string():
     prog = parse_clean("""
         $syntax:strictsigil
         declare function foo$
-        print foo$; foo;
+        print foo$; foo
     """)
-    assert prog.main.find(Print).args == [Ast(Call), Ast(Var)]
+    assert prog.main.find(Print).args == [Ast(Call), Print.Element.SEMICOLON, Ast(Var)]
 
 
 def test_strictsigil_num():
     prog = parse_clean("""
         $syntax:strictsigil
         declare function foo%
-        print foo; foo$;
+        print foo; foo$
     """)
-    assert prog.main.find(Print).args == [Ast(Call), Ast(Var)]
+    assert prog.main.find(Print).args == [Ast(Call), Print.Element.SEMICOLON, Ast(Var)]
 
 
 def test_strictsigil_num_bad():

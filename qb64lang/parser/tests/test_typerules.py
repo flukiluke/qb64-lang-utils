@@ -253,7 +253,7 @@ def test_sub_function_mix():
         declare sub foo
         declare function foo&
         if 1 then foo
-        print foo;
+        print foo
     """)
     proc = prog.symbols.find_procedure("foo")
     assert proc is not None
