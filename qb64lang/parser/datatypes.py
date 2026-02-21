@@ -24,7 +24,7 @@ class ExtendedFloat:
         mantissa = mantissa.lstrip("0")
         index = mantissa.find(".")
         if index >= 0:
-            self.mantissa = mantissa.replace(".", "", count=1).rstrip("0")
+            self.mantissa = mantissa.replace(".", "", 1).rstrip("0")
             int_exp += index
         else:
             self.mantissa = mantissa.rstrip("0")
