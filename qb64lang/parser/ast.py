@@ -1,8 +1,8 @@
-from collections.abc import Generator, Iterable
+from collections.abc import Callable, Generator, Iterable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from itertools import chain
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from .datatypes import (
     BUILTIN_SIGILS,
@@ -22,6 +22,9 @@ from .datatypes import (
     TypeSignature,
 )
 from .diagnostics import ParseError
+
+if TYPE_CHECKING:
+    from . import Program
 
 
 @dataclass
@@ -531,3 +534,58 @@ class SymbolStore:
                 if name in impl.symbols.variables:
                     return False
         return name not in self.global_vars
+
+
+T = TypeVar("T")
+
+
+class AstWalk(Generic[T]):
+    def __init__(self, program: "Program"):
+        self.program = program
+        self.handlers: dict[type[Node], Callable] = {
+            Assignment: self.assignment,
+            Call: self.call,
+            Cast: self.cast,
+            Constant: self.constant,
+            Dim: self.kw_dim,
+            For: self.kw_for,
+            If: self.kw_if,
+            Loop: self.kw_loop,
+            Print: self.kw_print,
+            ProcDeclaration: self.proc_declaration,
+            ProcDefinition: self.proc_definition,
+            ProcDefinitionLocation: self.proc_definition_location,
+            SetReturn: self.set_return,
+            Var: self.var,
+        }
+
+    def evaluate(self, node: Node) -> T:
+        return self.handlers[node.__class__](node)
+
+    def assignment(self, node: Assignment) -> T: ...
+
+    def call(self, node: Call) -> T: ...
+
+    def cast(self, node: Cast) -> T: ...
+
+    def constant(self, node: Constant) -> T: ...
+
+    def kw_dim(self, node: Dim) -> T: ...
+
+    def kw_for(self, node: For) -> T: ...
+
+    def kw_if(self, node: If) -> T: ...
+
+    def kw_loop(self, node: Loop) -> T: ...
+
+    def kw_print(self, node: Print) -> T: ...
+
+    def proc_declaration(self, node: ProcDeclaration) -> T: ...
+
+    def proc_definition(self, node: ProcDefinition) -> T: ...
+
+    def proc_definition_location(self, node: ProcDefinitionLocation) -> T: ...
+
+    def set_return(self, node: SetReturn) -> T: ...
+
+    def var(self, node: Var) -> T: ...

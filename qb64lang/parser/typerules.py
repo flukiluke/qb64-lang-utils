@@ -1,5 +1,5 @@
-from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from . import diagnostics as diag
 
@@ -8,19 +8,17 @@ if TYPE_CHECKING:
 
 from .ast import (
     Assignment,
+    AstWalk,
     Call,
     Cast,
     Constant,
-    Dim,
     Expr,
     For,
     If,
     Loop,
     Node,
     Print,
-    ProcDeclaration,
     ProcDefinition,
-    ProcDefinitionLocation,
     SetReturn,
     Var,
 )
@@ -37,57 +35,22 @@ from .datatypes import (
 )
 
 
-class WalkContext:
-    def __init__(self, program: "Program"):
-        self.program = program
-        self.current = self.program.main
-        self.parent = self.program.main
-        self.expr_handlers: list[tuple[type[Expr], Callable[[Any], Type]]] = [
-            (Var, self.var),
-            (Call, self.call),
-            (Cast, self.cast),
-            (Constant, self.constant),
-        ]
-        self.stmt_handlers: list[tuple[type[Node], Callable[[Any], Type | None]]] = [
-            (ProcDeclaration, lambda _: None),
-            (ProcDefinitionLocation, lambda _: None),
-            (Dim, lambda _: None),
-            (ProcDefinition, self.proc_definition),
-            (Assignment, self.assignment),
-            (Print, self.kw_print),
-            (If, self.kw_if),
-            (Loop, self.kw_loop),
-            (For, self.kw_for),
-            (SetReturn, self.set_return),
-        ]
-
+class TypePass(AstWalk[None | Type]):
     def start(self):
         for proc in self.program.symbols.procedures.values():
             for impl in proc.impls:
                 self.evaluate(impl)
 
     def evaluate(self, node: Node):
-        old_parent = self.parent
-        self.parent = self.current
-        result = None
-        for kind, handler in (
-            self.expr_handlers if isinstance(node, Expr) else self.stmt_handlers
-        ):
-            if isinstance(node, kind):
-                result = handler(node)
-                if result is None:
-                    result = TYPE__NONE
-                break
-        else:
-            raise ValueError(f"Unhandled node {node}")
+        result = super().evaluate(node)
+        if result is None:
+            result = TYPE__NONE
         if isinstance(node, Expr):
             node.expr_type = result
-        self.current = self.parent
-        self.parent = old_parent
         return result
 
-    def proc_definition(self, impl: ProcDefinition):
-        for stmt in impl.statements:
+    def proc_definition(self, node: ProcDefinition):
+        for stmt in node.statements:
             self.evaluate(stmt)
 
     def var(self, node: Var):
@@ -343,5 +306,4 @@ class WalkContext:
 
 
 def typecheck(program: "Program"):
-    ctx = WalkContext(program)
-    ctx.start()
+    TypePass(program).start()
