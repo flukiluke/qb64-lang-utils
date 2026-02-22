@@ -31,8 +31,6 @@ def test_bad_stmt():
 def test_lex_range_leaf():
     assert Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2).get_lex_range() == (7, 9)
     assert Constant(42, TYPE_INTEGER, lex_start=7).get_lex_range() == (7, 7)
-    assert Constant(42, TYPE_INTEGER, lex_len=2).get_lex_range() is None
-    assert Constant(42, TYPE_INTEGER).get_lex_range() is None
 
 
 def test_lex_range_full_implicit():
@@ -50,8 +48,6 @@ def test_lex_range_full_implicit():
         7,
         7,
     )
-    assert If(Constant(42, TYPE_INTEGER, lex_len=2), [], [], []).get_lex_range() is None
-    assert If(Constant(42, TYPE_INTEGER), [], [], []).get_lex_range() is None
 
 
 def test_lex_range_extension():

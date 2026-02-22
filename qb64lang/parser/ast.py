@@ -39,7 +39,7 @@ class Node:
     lex_start: int | None = field(kw_only=True, default=None, repr=False)
     lex_len: int = field(kw_only=True, default=0, repr=False)
 
-    def get_lex_range(self) -> tuple[int, int] | None:
+    def get_lex_range(self) -> tuple[int, int]:
         start = self.lex_start
         end = None if start is None else start + self.lex_len
         for child in self.children():
@@ -51,9 +51,13 @@ class Node:
                 start = child_start
             if end is None or child_end > end:
                 end = child_end
-        if start is None or end is None:
-            return None
+        assert start is not None
+        assert end is not None
         return (start, end)
+
+    def get_source_repr(self, source: str):
+        start, end = self.get_lex_range()
+        return source[start:end]
 
     def children(self) -> Iterable["Node"]:
         return ()
@@ -120,6 +124,7 @@ class Dim(Statement):
 @dataclass
 class Expr(Node):
     expr_type: Type = field(default_factory=lambda: TYPE__NONE, kw_only=True)
+    parens: bool = field(default=False, kw_only=True)
 
 
 class LValue(Expr):

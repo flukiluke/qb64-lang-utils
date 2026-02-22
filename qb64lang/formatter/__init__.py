@@ -2,9 +2,27 @@ import contextlib
 import re
 from enum import Enum, auto
 
+from qb64lang.parser.ast import Assignment, Call, ProcDeclaration
+
 from ..parser import Program
-from ..parser.ast import KEYWORDS, Procedure, SymbolStore, Variable
-from ..parser.datatypes import Type
+from ..parser.ast import (
+    KEYWORDS,
+    AstWalk,
+    Cast,
+    Constant,
+    Dim,
+    For,
+    If,
+    Loop,
+    Print,
+    ProcDefinitionLocation,
+    Procedure,
+    SetReturn,
+    SymbolStore,
+    Var,
+    Variable,
+)
+from ..parser.datatypes import TYPE__NONE, Type
 from ..parser.diagnostics import DiagnosticError, DiagnosticStore
 from ..parser.lexer import Lexer
 from ..parser.ply import LexToken
@@ -14,6 +32,177 @@ class Capitalisation(Enum):
     NONE = auto()
     CAMEL = auto()
     UPPER = auto()
+
+
+class FormatPass(AstWalk[str]):
+    def start(self):
+        result = ""
+        for stmt in self.program.main.statements:
+            result += self.evaluate(stmt)
+        return result
+
+    def assignment(self, node: Assignment):
+        return self.evaluate(node.lval) + " = " + self.evaluate(node.rval)
+
+    def call(self, node: Call):
+        result = ""
+        match node.style:
+            case Call.Style.FUNCTION:
+                if not node.args:
+                    result = node.target.source_name
+                else:
+                    result = (
+                        node.target.source_name
+                        + "("
+                        + ", ".join([self.evaluate(arg) for arg in node.args])
+                        + ")"
+                    )
+            case Call.Style.INFIX:
+                result = (
+                    self.evaluate(node.args[0])
+                    + " "
+                    + node.target.source_name
+                    + " "
+                    + self.evaluate(node.args[1])
+                )
+            case Call.Style.PREFIX if node.target.name == "-":
+                result = node.target.source_name + self.evaluate(node.args[0])
+            case Call.Style.PREFIX:
+                result = node.target.source_name + " " + self.evaluate(node.args[0])
+            case Call.Style.STATEMENT:
+                if not node.args:
+                    result = node.target.source_name
+                else:
+                    result = node.target.source_name + ", ".join(
+                        [self.evaluate(arg) for arg in node.args]
+                    )
+        if node.parens:
+            return "(" + result + ")"
+        return result
+
+    def cast(self, node: Cast):
+        return self.evaluate(node.expr)
+
+    def constant(self, node: Constant):
+        repr = node.get_source_repr(self.program.input)
+        if node.parens:
+            return "(" + repr + ")"
+        return repr
+
+    def kw_dim(self, node: Dim):
+        result = "ReDim " if node.is_redim else "Dim "
+        if node.leading_type is not None:
+            result += "As " + node.leading_type.source_name + " "
+        result += ", ".join([var.source_name for var in node.variables])
+        return result
+
+    def kw_for(self, node: For):
+        var = node.iterator.get_source_repr(self.program.input)
+        result = "For "
+        result += var + " = "
+        result += self.evaluate(node.start_value) + " To "
+        result += self.evaluate(node.end_value) + " Step "
+        result += self.evaluate(node.step)
+        for stmt in node.block:
+            result += self.evaluate(stmt)
+        result += "Next " + var
+        return result
+
+    def kw_if(self, node: If):
+        result = "If "
+        result += self.evaluate(node.guard)
+        result += " Then "
+        for stmt in node.true_branch:
+            result += self.evaluate(stmt)
+        for elseif in node.elseifs:
+            result += "ElseIf " + self.evaluate(elseif[0]) + " Then "
+            for stmt in elseif[1]:
+                result += self.evaluate(stmt)
+        if node.false_branch:
+            result += " Else "
+            for stmt in node.false_branch:
+                result += self.evaluate(stmt)
+        result += "End If"
+        return result
+
+    def kw_loop(self, node: Loop):
+        result = "Do"
+        if node.top_check:
+            result += " While " + self.evaluate(node.guard)
+        for stmt in node.block:
+            self.evaluate(stmt)
+        result += "Loop"
+        if not node.top_check:
+            result += " While " + self.evaluate(node.guard)
+        return result
+
+    def kw_print(self, node: Print):
+        if not node.args:
+            return "Print"
+        result = "Print "
+        for arg in node.args:
+            if arg == Print.Element.COMMA:
+                result += ", "
+            elif arg == Print.Element.SEMICOLON:
+                result += "; "
+            elif arg == Print.Element.USING:
+                result += " Using "
+            else:
+                result += self.evaluate(arg)
+        return result.rstrip(" ")
+
+    def proc_declaration(self, node: ProcDeclaration):
+        result = "Declare "
+        result += "Sub " if node.signature.ret == TYPE__NONE else "Function "
+        result += node.name
+        if node.signature.params:
+            result += (
+                "("
+                + ", ".join(
+                    [
+                        param.source_name
+                        for param in node.signature.params
+                        if param.source_name
+                    ]
+                )
+                + ")"
+            )
+        return result
+
+    def proc_definition_location(self, node: ProcDefinitionLocation):
+        proc = node.proc
+        is_sub = proc.signature.ret == TYPE__NONE
+        result = "Sub " if is_sub else "Function "
+        result += proc.name
+        if proc.signature.params:
+            result += (
+                "("
+                + ", ".join(
+                    [
+                        param.source_name
+                        for param in proc.signature.params
+                        if param.source_name
+                    ]
+                )
+                + ")"
+            )
+        for stmt in proc.statements:
+            result += self.evaluate(stmt)
+        result += "End "
+        result += "Sub" if is_sub else "Function"
+        return result
+
+    def set_return(self, node: SetReturn):
+        return node.impl.name + " = " + self.evaluate(node.value)
+
+    def var(self, node: Var):
+        if node.parens:
+            return "(" + node.target.source_name + ")"
+        return node.target.source_name
+
+
+def format(program: Program):
+    return FormatPass(program).start()
 
 
 class FormatContext:
@@ -84,7 +273,7 @@ class FormatContext:
         self.at_statment_position = True
 
 
-def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
+def format_token(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
     ctx = FormatContext(program.input, program.symbols, caps_style)
     while not ctx.at_a("EOF"):
         match (ctx.tok.type, ctx.tok.value):
