@@ -124,7 +124,7 @@ class Dim(Statement):
 @dataclass
 class Expr(Node):
     expr_type: Type = field(default_factory=lambda: TYPE__NONE, kw_only=True)
-    parens: bool = field(default=False, kw_only=True)
+    parens: int = field(default=0, kw_only=True)
 
 
 class LValue(Expr):

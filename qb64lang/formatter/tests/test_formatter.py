@@ -17,3 +17,7 @@ def test_remark():
 
 def test_variable():
     assert format_clean("Foo! = 1: foo = 2") == "Foo! = 1: Foo = 2"
+
+
+def test_parentheses():
+    assert format_clean("print x*((3-1))/(2)--3") == "Print x * ((3 - 1)) / (2) - -3"

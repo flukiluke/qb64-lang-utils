@@ -265,7 +265,7 @@ def test_parentheses1():
     )
 
 
-def test_parentheses2():
+def test_parentheses_count():
     check(
         "-(2 + ((3 or 4) and ((5))))",
         Ast(
@@ -276,7 +276,7 @@ def test_parentheses2():
                     Call,
                     builtin_proc("+"),
                     [
-                        Ast(Constant, 2),
+                        Ast(Constant, 2, parens=0),
                         Ast(
                             Call,
                             builtin_proc("and"),
@@ -285,20 +285,24 @@ def test_parentheses2():
                                     Call,
                                     builtin_proc("or"),
                                     [
-                                        Ast(Constant, 3),
-                                        Ast(Constant, 4),
+                                        Ast(Constant, 3, parens=0),
+                                        Ast(Constant, 4, parens=0),
                                     ],
                                     INFIX,
+                                    parens=1,
                                 ),
-                                Ast(Constant, 5),
+                                Ast(Constant, 5, parens=2),
                             ],
                             INFIX,
+                            parens=1,
                         ),
                     ],
                     INFIX,
+                    parens=1,
                 )
             ],
             PREFIX,
+            parens=0,
         ),
     )
 

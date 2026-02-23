@@ -76,9 +76,7 @@ class FormatPass(AstWalk[str]):
                     result = node.target.source_name + ", ".join(
                         [self.evaluate(arg) for arg in node.args]
                     )
-        if node.parens:
-            return "(" + result + ")"
-        return result
+        return "(" * node.parens + result + ")" * node.parens
 
     def cast(self, node: Cast):
         return self.evaluate(node.expr)
