@@ -20,4 +20,4 @@ def test_variable():
 
 
 def test_parentheses():
-    assert format_clean("print x*((3-1))/(2)--3") == "Print x * ((3 - 1)) / (2) - -3"
+    assert format_clean("print x*((3-1))/(2)--3") == "PRINT x * ((3 - 1)) / (2) - -3"

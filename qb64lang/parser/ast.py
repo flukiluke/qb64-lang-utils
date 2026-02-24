@@ -94,7 +94,7 @@ class ProcDefinition(Node):
     name: str
     signature: TypeSignature
     symbols: LocalScope = field(default_factory=LocalScope, repr=False)
-    statements: list[Statement] = field(default_factory=lambda: [])
+    statements: list[Statement] = field(default_factory=list, repr=False)
     decl_only: bool = False
     strictsigil: bool = False
 
@@ -105,6 +105,9 @@ class ProcDefinition(Node):
 @dataclass
 class ProcDefinitionLocation(Statement):
     proc: ProcDefinition
+
+    def children(self):
+        return [self.proc]
 
 
 @dataclass
@@ -191,7 +194,7 @@ class Print(Statement):
         SEMICOLON = auto()
         USING = auto()
 
-    args: list[Expr | Element] = field(default_factory=lambda: [])
+    args: list[Expr | Element] = field(default_factory=list)
 
     def children(self):
         return cast(Iterable[Expr], filter(lambda c: isinstance(c, Expr), self.args))
@@ -200,9 +203,11 @@ class Print(Statement):
 @dataclass
 class If(Statement):
     guard: Expr
-    true_branch: list[Statement]
-    elseifs: list[tuple[Expr, list[Statement]]]
-    false_branch: list[Statement]
+    true_branch: list[Statement] = field(default_factory=list, repr=False)
+    elseifs: list[tuple[Expr, list[Statement]]] = field(
+        default_factory=list, repr=False
+    )
+    false_branch: list[Statement] = field(default_factory=list, repr=False)
 
     def children(self):
         return chain(

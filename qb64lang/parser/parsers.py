@@ -433,7 +433,13 @@ def do_main(ctx: ParseContext):
     if main_proc := ctx.symbols.find_procedure("_main"):
         main = main_proc.impls[0]
     else:
-        main = ProcDefinition("_main", TypeSignature(TYPE__NONE, []), ctx.symbols.scope)
+        main = ProcDefinition(
+            "_main",
+            TypeSignature(TYPE__NONE, []),
+            ctx.symbols.scope,
+            lex_start=0,
+            lex_len=1,
+        )
         ctx.symbols.add_procedure(Procedure("_main", "_Main", [main]))
     while not ctx.at_a("EOF"):
         ctx.symbols.set_scope(main.symbols)

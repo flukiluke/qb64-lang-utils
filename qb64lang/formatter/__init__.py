@@ -1,5 +1,6 @@
 import contextlib
 import re
+from collections.abc import Generator
 from enum import Enum, auto
 
 from qb64lang.parser.ast import Assignment, Call, ProcDeclaration
@@ -14,11 +15,11 @@ from ..parser.ast import (
     For,
     If,
     Loop,
+    Node,
     Print,
     ProcDefinitionLocation,
     Procedure,
     SetReturn,
-    SymbolStore,
     Var,
     Variable,
 )
@@ -199,21 +200,24 @@ class FormatPass(AstWalk[str]):
         return node.target.source_name
 
 
-def format(program: Program):
+def format_ast(program: Program):
     return FormatPass(program).start()
 
 
 class FormatContext:
-    def __init__(self, input: str, symbols: SymbolStore, caps_style: Capitalisation):
+    def __init__(self, program: Program, caps_style: Capitalisation):
         self.diags = DiagnosticStore()
         self.tok: LexToken = LexToken()
-        self.symbols = symbols
+        self.symbols = program.symbols
         self.token_stream = Lexer(self.symbols, self.diags)
         self.caps_style = caps_style
         self.result = ""
         self.at_statment_position = True
         self.at_flex_space = False
-        self.token_stream.input(input)
+        self.ast_walker = _ast_walk(program.main, 0, program.main)
+        self.node = next(self.ast_walker)
+        self.main = program.main
+        self.token_stream.input(program.input)
         next(self)
 
     def __next__(self):
@@ -227,6 +231,10 @@ class FormatContext:
             eof.type = "EOF"
             eof.value = "<end of file>"
             self.tok = eof
+        try:
+            self.node = self.ast_walker.send(self.tok.lexpos)
+        except StopIteration:
+            self.node = self.main
         return self.tok
 
     def at_a(self, type: str, value: str | None = None) -> bool:
@@ -271,8 +279,8 @@ class FormatContext:
         self.at_statment_position = True
 
 
-def format_token(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
-    ctx = FormatContext(program.input, program.symbols, caps_style)
+def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
+    ctx = FormatContext(program, caps_style)
     while not ctx.at_a("EOF"):
         match (ctx.tok.type, ctx.tok.value):
             case ("NEWLINE", "rem"):
@@ -318,6 +326,15 @@ def format_token(program: Program, caps_style: Capitalisation = Capitalisation.U
                 ctx.add('"' + text + '"')
             case ("NUM_LIT", (value, type)):
                 ctx.add(str(value))
+            case ("PUNCTUATION", "-"):
+                ctx.pre_flex()
+                ctx.add("-")
+                if not (
+                    isinstance(ctx.node, Call)
+                    and ctx.node.impl
+                    and len(ctx.node.impl.signature.params) == 1
+                ):
+                    ctx.post_flex()
             case ("PUNCTUATION", "(" | ")" as c):
                 assert isinstance(c, str)
                 ctx.add(c)
@@ -335,3 +352,17 @@ def _split_name_sigil(s: str):
     match = re.match(r"([a-z0-9_.]+)(.*)", s, re.IGNORECASE)
     assert match is not None
     return match.group(1, 2)
+
+
+def _ast_walk(node: Node, target_pos: int, parent: Node) -> Generator[Node, int, int]:
+    start, end = node.get_lex_range()
+    while True:
+        if target_pos < start:
+            target_pos = yield parent
+        elif end <= target_pos:
+            return target_pos
+        else:
+            for child in node.children():
+                target_pos = yield from _ast_walk(child, target_pos, node)
+            if target_pos < end:
+                target_pos = yield node
