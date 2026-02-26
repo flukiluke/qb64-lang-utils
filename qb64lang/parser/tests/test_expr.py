@@ -53,7 +53,7 @@ def test_binop_precedence1():
 
 def test_binop_precedence2():
     check(
-        "2 and 3 = 4 + 5 / 6",
+        "2 and 3 = 4+5/6",
         Ast(
             Call,
             builtin_proc("and"),
@@ -169,6 +169,25 @@ def test_negation():
                 )
             ],
             PREFIX,
+        ),
+    )
+
+
+def test_doublet_signs():
+    check(
+        "2+-1",
+        Ast(
+            Call,
+            builtin_proc("+"),
+            [Ast(Constant, 2), Ast(Call, builtin_proc("-"), [Ast(Constant, 1)])],
+        ),
+    )
+    check(
+        "2-+1",
+        Ast(
+            Call,
+            builtin_proc("-"),
+            [Ast(Constant, 2), Ast(Call, builtin_proc("+"), [Ast(Constant, 1)])],
         ),
     )
 

@@ -214,6 +214,7 @@ class FormatContext:
         self.result = ""
         self.at_statment_position = True
         self.at_flex_space = False
+        self.at_force_stick = False
         self.ast_walker = _ast_walk(program.main, 0, program.main)
         self.node = next(self.ast_walker)
         self.main = program.main
@@ -253,9 +254,10 @@ class FormatContext:
         return actual
 
     def add(self, text: str):
-        if self.at_flex_space:
+        if self.at_flex_space and not self.at_force_stick:
             self.result += " "
-            self.at_flex_space = False
+        self.at_flex_space = False
+        self.at_force_stick = False
         self.result += text
         self.at_statment_position = False
 
@@ -273,6 +275,9 @@ class FormatContext:
 
     def no_flex(self):
         self.at_flex_space = False
+
+    def force_stick(self):
+        self.at_force_stick = True
 
     def statement_position(self):
         self.at_statment_position = True
@@ -325,14 +330,25 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
                 ctx.add('"' + text + '"')
             case ("NUM_LIT", (value, type)):
                 ctx.add(str(value))
-            case ("PUNCTUATION", "-"):
-                ctx.pre_flex()
-                ctx.add("-")
+            case ("PUNCTUATION", "+"):
                 if not (
                     isinstance(ctx.node, Call)
                     and ctx.node.impl
                     and len(ctx.node.impl.signature.params) == 1
                 ):
+                    ctx.pre_flex()
+                    ctx.add("+")
+                    ctx.post_flex()
+            case ("PUNCTUATION", "-"):
+                ctx.pre_flex()
+                ctx.add("-")
+                if (
+                    isinstance(ctx.node, Call)
+                    and ctx.node.impl
+                    and len(ctx.node.impl.signature.params) == 1
+                ):
+                    ctx.force_stick()
+                else:
                     ctx.post_flex()
             case ("PUNCTUATION", "(" | ")" as c):
                 assert isinstance(c, str)

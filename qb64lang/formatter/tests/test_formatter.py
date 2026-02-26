@@ -15,9 +15,35 @@ def test_remark():
     assert format_clean(" Rem foo\n") == "REM foo\n"
 
 
-def test_variable():
+def test_line_split():
+    assert format_clean("x=1:x=2") == "x = 1: x = 2"
+    assert format_clean("x=1::x=2") == "x = 1:: x = 2"
+    assert format_clean(":x=1:x=2:") == ": x = 1: x = 2:"
+
+
+def test_variable_case():
     assert format_clean("Foo! = 1: foo = 2") == "Foo! = 1: Foo = 2"
+    assert format_clean("Foo& = 1: foo = 2") == "Foo& = 1: foo = 2"
 
 
-def test_parentheses():
-    assert format_clean("print x*((3-1))/(2)--3") == "PRINT x * ((3 - 1)) / (2) - -3"
+def test_expr_parentheses():
+    assert format_clean("print x*((3-1))/(2)") == "PRINT x * ((3 - 1)) / (2)"
+
+
+def test_expr_infix():
+    assert format_clean("print x+3 or 4 and 5^6") == "PRINT x + 3 OR 4 AND 5 ^ 6"
+
+
+def test_expr_prefix():
+    assert format_clean("print not 3") == "PRINT NOT 3"
+    assert format_clean("print - 3") == "PRINT -3"
+    assert format_clean("print not-3") == "PRINT NOT -3"
+    assert format_clean("print - not 3") == "PRINT -NOT 3"
+    assert format_clean("print -(3)") == "PRINT -(3)"
+
+
+def test_expr_doublet_signs():
+    assert format_clean("print 2--2") == "PRINT 2 - -2"
+    assert format_clean("print 2-+2") == "PRINT 2 - 2"
+    assert format_clean("print 2+-2") == "PRINT 2 + -2"
+    assert format_clean("print 2+-+--+2") == "PRINT 2 + ---2"

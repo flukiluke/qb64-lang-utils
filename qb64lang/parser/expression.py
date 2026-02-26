@@ -24,7 +24,8 @@ PRECEDENCE = {
     "/": 12,
     "^": 14,
 }
-PREC_NEGATION = 13
+# Precedence of - or + sign on a number
+PREC_SIGN = 13
 
 
 def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
@@ -47,7 +48,15 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
             case "PUNCTUATION", "-":
                 return Call(
                     ctx.symbols.procedures["-"],
-                    [do_expr(ctx, PREC_NEGATION)],
+                    [do_expr(ctx, PREC_SIGN)],
+                    style=Call.Style.PREFIX,
+                    lex_start=token.lexpos,
+                    lex_end=ctx.prev.lexend,
+                )
+            case "PUNCTUATION", "+":
+                return Call(
+                    ctx.symbols.procedures["+"],
+                    [do_expr(ctx, PREC_SIGN)],
                     style=Call.Style.PREFIX,
                     lex_start=token.lexpos,
                     lex_end=ctx.prev.lexend,

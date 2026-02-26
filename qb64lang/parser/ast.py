@@ -436,6 +436,9 @@ PROCS = [
                 lex_start=-1,
                 lex_end=-1,
             ),
+            # Unary + does nothing, but it's useful to record it for formatting
+            *_generic("+", None, [None], INTEGRAL_TYPES),
+            *_generic("+", None, [None], FLOAT_TYPES),
             *_generic("+", None, [None, None], INTEGRAL_TYPES),
             *_generic("+", None, [None, None], FLOAT_TYPES),
         ],
