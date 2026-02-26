@@ -36,28 +36,13 @@ class LocalScope:
 class Node:
     _T = TypeVar("_T", bound="Node")
 
-    lex_start: int | None = field(kw_only=True, default=None, repr=False)
-    lex_len: int = field(kw_only=True, default=0, repr=False)
-
-    def get_lex_range(self) -> tuple[int, int]:
-        start = self.lex_start
-        end = None if start is None else start + self.lex_len
-        for child in self.children():
-            child_range = child.get_lex_range()
-            if child_range is None:
-                continue
-            child_start, child_end = child_range
-            if start is None or child_start < start:
-                start = child_start
-            if end is None or child_end > end:
-                end = child_end
-        assert start is not None
-        assert end is not None
-        return (start, end)
+    lex_start: int = field(kw_only=True, repr=False)
+    lex_end: int = field(kw_only=True, repr=False)
 
     def get_source_repr(self, source: str):
-        start, end = self.get_lex_range()
-        return source[start:end]
+        if self.lex_start == -1 or self.lex_end == -1:
+            assert False, "Cannot get source repr of internal node"
+        return source[self.lex_start : self.lex_end]
 
     def children(self) -> Iterable["Node"]:
         return ()
@@ -170,6 +155,10 @@ class Cast(Expr):
 
     def children(self):
         return (self.expr,)
+
+    @staticmethod
+    def wrap(expr: Expr, type: Type):
+        return Cast(expr, type, lex_start=expr.lex_start, lex_end=expr.lex_end)
 
 
 @dataclass
@@ -285,6 +274,8 @@ def _generic(
                     [p if p else Parameter(concrete) for p in params],
                 ),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             )
         )
     return results
@@ -345,6 +336,8 @@ PROCS = [
                 "=",
                 TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)]),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             )
         ],
     ),
@@ -356,6 +349,8 @@ PROCS = [
                 "<>",
                 TypeSignature(TYPE__BYTE, [Parameter(TYPE_ANY), Parameter(TYPE_ANY)]),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             )
         ],
     ),
@@ -369,6 +364,8 @@ PROCS = [
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
                 ),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             ),
             *_generic("<", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
             *_generic("<", TYPE__BYTE, [None, None], FLOAT_TYPES),
@@ -384,6 +381,8 @@ PROCS = [
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
                 ),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             ),
             *_generic(">", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
             *_generic(">", TYPE__BYTE, [None, None], FLOAT_TYPES),
@@ -399,6 +398,8 @@ PROCS = [
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
                 ),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             ),
             *_generic("<=", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
             *_generic("<=", TYPE__BYTE, [None, None], FLOAT_TYPES),
@@ -414,6 +415,8 @@ PROCS = [
                     TYPE__BYTE, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
                 ),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             ),
             *_generic(">=", TYPE__BYTE, [None, None], INTEGRAL_TYPES),
             *_generic(">=", TYPE__BYTE, [None, None], FLOAT_TYPES),
@@ -430,6 +433,8 @@ PROCS = [
                     TYPE_STRING, [Parameter(TYPE_STRING), Parameter(TYPE_STRING)]
                 ),
                 decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             ),
             *_generic("+", None, [None, None], INTEGRAL_TYPES),
             *_generic("+", None, [None, None], FLOAT_TYPES),

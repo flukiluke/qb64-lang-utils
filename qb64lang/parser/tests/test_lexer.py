@@ -370,19 +370,39 @@ def test_procedure():
     a_sub = Procedure(
         "a_sub",
         "A_Sub",
-        [ProcDefinition("a_sub", TypeSignature(TYPE__NONE, []), decl_only=True)],
+        [
+            ProcDefinition(
+                "a_sub",
+                TypeSignature(TYPE__NONE, []),
+                decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
+            )
+        ],
     )
     a_function = Procedure(
         "a_function",
         "A_Function",
-        [ProcDefinition("a_function", TypeSignature(TYPE_STRING, []), decl_only=True)],
+        [
+            ProcDefinition(
+                "a_function",
+                TypeSignature(TYPE_STRING, []),
+                decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
+            )
+        ],
     )
     a_string_builtin = Procedure(
         "a_string_builtin$",
         "A_String_Builtin$",
         [
             ProcDefinition(
-                "a_string_builtin$", TypeSignature(TYPE_STRING, []), decl_only=True
+                "a_string_builtin$",
+                TypeSignature(TYPE_STRING, []),
+                decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
             )
         ],
     )

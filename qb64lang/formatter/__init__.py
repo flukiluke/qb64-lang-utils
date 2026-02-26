@@ -226,8 +226,7 @@ class FormatContext:
         except StopIteration:
             eof = LexToken()
             eof.lexer = self.tok.lexer
-            eof.lexpos = self.tok.lexer.lexlen
-            eof.length = 0
+            eof.lexend = eof.lexpos = self.tok.lexer.lexlen
             eof.type = "EOF"
             eof.value = "<end of file>"
             self.tok = eof
@@ -355,14 +354,13 @@ def _split_name_sigil(s: str):
 
 
 def _ast_walk(node: Node, target_pos: int, parent: Node) -> Generator[Node, int, int]:
-    start, end = node.get_lex_range()
     while True:
-        if target_pos < start:
+        if target_pos < node.lex_start:
             target_pos = yield parent
-        elif end <= target_pos:
+        elif node.lex_end <= target_pos:
             return target_pos
         else:
             for child in node.children():
                 target_pos = yield from _ast_walk(child, target_pos, node)
-            if target_pos < end:
+            if target_pos < node.lex_end:
                 target_pos = yield node

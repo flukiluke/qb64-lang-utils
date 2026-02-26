@@ -30,30 +30,33 @@ def test_equality():
     expr = parse_clean("? 1% = 2&").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[Cast(Ast(Constant, 1), TYPE_LONG), Ast(Constant, 2)],
+        args=[Ast(Cast, Ast(Constant, 1), TYPE_LONG), Ast(Constant, 2)],
     )
     expr = parse_clean("? 1& = 2%").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[Ast(Constant, 1), Cast(Ast(Constant, 2), TYPE_LONG)],
+        args=[Ast(Constant, 1), Ast(Cast, Ast(Constant, 2), TYPE_LONG)],
     )
     expr = parse_clean("? 1! = 2%").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[Ast(Constant, 1), Cast(Ast(Constant, 2), TYPE_SINGLE)],
+        args=[Ast(Constant, 1), Ast(Cast, Ast(Constant, 2), TYPE_SINGLE)],
     )
     expr = parse_clean("? 1! = 2#").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 1), TYPE_DOUBLE),
+            Ast(Cast, Ast(Constant, 1), TYPE_DOUBLE),
             Ast(Constant, 2),
         ],
     )
     expr = parse_clean("? 1&& = 2#").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[Cast(Ast(Constant, 1), TYPE__FLOAT), Cast(Ast(Constant, 2), TYPE__FLOAT)],
+        args=[
+            Ast(Cast, Ast(Constant, 1), TYPE__FLOAT),
+            Ast(Cast, Ast(Constant, 2), TYPE__FLOAT),
+        ],
     )
     expr = parse_clean('? "foo" = "bar"').main.find(Call)
     assert expr == Ast(
@@ -98,7 +101,7 @@ def test_operator_overload_mixed_num():
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 2, TYPE_INTEGER), TYPE_SINGLE),
+            Ast(Cast, Ast(Constant, 2, TYPE_INTEGER), TYPE_SINGLE),
             Ast(Constant, 3, TYPE_SINGLE),
         ],
         impl=Ast(
@@ -119,7 +122,7 @@ def test_operator_overload_mixed_unsigned():
         Call,
         args=[
             Ast(Constant, 2, TYPE_LONG),
-            Cast(Ast(Constant, 3, TYPE__UNSIGNED_INTEGER), TYPE_LONG),
+            Ast(Cast, Ast(Constant, 3, TYPE__UNSIGNED_INTEGER), TYPE_LONG),
         ],
         impl=Ast(
             ProcDefinition,
@@ -142,13 +145,13 @@ def test_operator_overload_float_to_integral():
     Rounding of float types to integral
     """
     expr = parse_clean("? not 3!").main.find(Call)
-    assert expr == Ast(Call, args=[Cast(Ast(Constant, 3), TYPE__INTEGER64)])
+    assert expr == Ast(Call, args=[Ast(Cast, Ast(Constant, 3), TYPE__INTEGER64)])
     expr = parse_clean("? 4.1# and 5.5##").main.find(Call)
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 4.1), TYPE__INTEGER64),
-            Cast(Ast(Constant, ExtendedFloat("5.5")), TYPE__INTEGER64),
+            Ast(Cast, Ast(Constant, 4.1), TYPE__INTEGER64),
+            Ast(Cast, Ast(Constant, ExtendedFloat("5.5")), TYPE__INTEGER64),
         ],
     )
 
@@ -161,8 +164,8 @@ def test_operator_overload_float_mixed_to_integral():
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 3), TYPE__INTEGER64),
-            Cast(Ast(Constant, 4), TYPE__INTEGER64),
+            Ast(Cast, Ast(Constant, 3), TYPE__INTEGER64),
+            Ast(Cast, Ast(Constant, 4), TYPE__INTEGER64),
         ],
     )
 
@@ -175,8 +178,8 @@ def test_operator_overload_integer_to_float():
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 2), TYPE_SINGLE),
-            Cast(Ast(Constant, 3), TYPE_SINGLE),
+            Ast(Cast, Ast(Constant, 2), TYPE_SINGLE),
+            Ast(Cast, Ast(Constant, 3), TYPE_SINGLE),
         ],
         impl=Ast(
             ProcDefinition,
@@ -195,8 +198,8 @@ def test_operator_overload_long_to_float():
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 2), TYPE_DOUBLE),
-            Cast(Ast(Constant, 3), TYPE_DOUBLE),
+            Ast(Cast, Ast(Constant, 2), TYPE_DOUBLE),
+            Ast(Cast, Ast(Constant, 3), TYPE_DOUBLE),
         ],
         impl=Ast(
             ProcDefinition,
@@ -215,8 +218,8 @@ def test_operator_overload_in64_to_float():
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 2), TYPE__FLOAT),
-            Cast(Ast(Constant, 3), TYPE__FLOAT),
+            Ast(Cast, Ast(Constant, 2), TYPE__FLOAT),
+            Ast(Cast, Ast(Constant, 3), TYPE__FLOAT),
         ],
         impl=Ast(
             ProcDefinition,
@@ -235,8 +238,8 @@ def test_operator_overload_mixed_to_float():
     assert expr == Ast(
         Call,
         args=[
-            Cast(Ast(Constant, 2), TYPE_DOUBLE),
-            Cast(Ast(Constant, 3), TYPE_DOUBLE),
+            Ast(Cast, Ast(Constant, 2), TYPE_DOUBLE),
+            Ast(Cast, Ast(Constant, 3), TYPE_DOUBLE),
         ],
         impl=Ast(
             ProcDefinition,

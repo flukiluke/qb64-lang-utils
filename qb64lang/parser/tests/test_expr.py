@@ -59,23 +59,24 @@ def test_binop_precedence2():
             builtin_proc("and"),
             [
                 Ast(Constant, 2),
-                Cast(
+                Ast(
+                    Cast,
                     Ast(
                         Call,
                         builtin_proc("="),
                         [
-                            Cast(Ast(Constant, 3), TYPE_SINGLE),
+                            Ast(Cast, Ast(Constant, 3), TYPE_SINGLE),
                             Ast(
                                 Call,
                                 builtin_proc("+"),
                                 [
-                                    Cast(Ast(Constant, 4), TYPE_SINGLE),
+                                    Ast(Cast, Ast(Constant, 4), TYPE_SINGLE),
                                     Ast(
                                         Call,
                                         builtin_proc("/"),
                                         [
-                                            Cast(Ast(Constant, 5), TYPE_SINGLE),
-                                            Cast(Ast(Constant, 6), TYPE_SINGLE),
+                                            Ast(Cast, Ast(Constant, 5), TYPE_SINGLE),
+                                            Ast(Cast, Ast(Constant, 6), TYPE_SINGLE),
                                         ],
                                         INFIX,
                                     ),
@@ -161,8 +162,8 @@ def test_negation():
                     Call,
                     builtin_proc("^"),
                     [
-                        Cast(Ast(Constant, 2), TYPE_SINGLE),
-                        Cast(Ast(Constant, 3), TYPE_SINGLE),
+                        Ast(Cast, Ast(Constant, 2), TYPE_SINGLE),
+                        Ast(Cast, Ast(Constant, 3), TYPE_SINGLE),
                     ],
                     INFIX,
                 )
@@ -323,7 +324,7 @@ def test_existing_scalar():
     assert expr == Ast(
         Call,
         builtin_proc("+"),
-        [Ast(Var, variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
+        [Ast(Var, variable), Ast(Cast, Ast(Constant, 3), TYPE_SINGLE)],
         INFIX,
     )
 
@@ -334,7 +335,7 @@ def test_implicit_scalar():
     assert expr == Ast(
         Call,
         builtin_proc("+"),
-        [Ast(Var, variable), Cast(Ast(Constant, 3), TYPE_SINGLE)],
+        [Ast(Var, variable), Ast(Cast, Ast(Constant, 3), TYPE_SINGLE)],
         INFIX,
     )
 
@@ -361,7 +362,7 @@ def test_function_call_binary():
         program.symbols.find_procedure("left$"),
         [
             Ast(Constant, "Hello"),
-            Cast(Ast(Constant, 23, TYPE_INTEGER), TYPE__INTEGER64),
+            Ast(Cast, Ast(Constant, 23, TYPE_INTEGER), TYPE__INTEGER64),
         ],
     )
 

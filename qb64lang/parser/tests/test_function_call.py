@@ -11,7 +11,10 @@ def test_standard_function_calls():
     expr = parse_clean("? _atan2(3, 4)").main.find(Call)
     assert expr == Ast(
         Call,
-        args=[Cast(Ast(Constant, 3), TYPE_SINGLE), Cast(Ast(Constant, 4), TYPE_SINGLE)],
+        args=[
+            Ast(Cast, Ast(Constant, 3), TYPE_SINGLE),
+            Ast(Cast, Ast(Constant, 4), TYPE_SINGLE),
+        ],
         expr_type=TYPE_SINGLE,
     )
 

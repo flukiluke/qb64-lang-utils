@@ -73,7 +73,7 @@ id_body = rf"""
 
 def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     def t_ANY_error(t: LexToken):
-        t.lexer.skip(t.length)
+        t.lexer.skip(len(t.value))
         diags.raise_error(diag.E_UNKNOWN_CHARACTERS, t, t.value)
 
     @Token(nl)

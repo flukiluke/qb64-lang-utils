@@ -7,27 +7,31 @@ from .helpers import Ast, builtin_proc, run_var
 
 def test_implicit_scalar():
     impl, variable = run_var("x = 5", "x")
-    assert impl.find(Assignment) == Assignment(
-        Ast(Var, variable), Cast(Ast(Constant, 5), TYPE_SINGLE)
+    assert impl.find(Assignment) == Ast(
+        Assignment, Ast(Var, variable), Ast(Cast, Ast(Constant, 5), TYPE_SINGLE)
     )
 
 
 def test_existing_scalar():
     impl, variable = run_var("foo = 32 : foo = 17", "foo")
     assert list(impl.find_all(Assignment)) == [
-        Assignment(Ast(Var, variable), Cast(Ast(Constant, 32), TYPE_SINGLE)),
-        Assignment(Ast(Var, variable), Cast(Ast(Constant, 17), TYPE_SINGLE)),
+        Ast(Assignment, Ast(Var, variable), Ast(Cast, Ast(Constant, 32), TYPE_SINGLE)),
+        Ast(Assignment, Ast(Var, variable), Ast(Cast, Ast(Constant, 17), TYPE_SINGLE)),
     ]
 
 
 def test_expression_rvalue():
     impl, variable = run_var("foo = 23 / 7", "foo")
-    assert impl.find(Assignment) == Assignment(
+    assert impl.find(Assignment) == Ast(
+        Assignment,
         Ast(Var, variable),
         Ast(
             Call,
             builtin_proc("/"),
-            [Cast(Ast(Constant, 23), TYPE_SINGLE), Cast(Ast(Constant, 7), TYPE_SINGLE)],
+            [
+                Ast(Cast, Ast(Constant, 23), TYPE_SINGLE),
+                Ast(Cast, Ast(Constant, 7), TYPE_SINGLE),
+            ],
         ),
     )
 

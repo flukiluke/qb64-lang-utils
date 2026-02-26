@@ -56,8 +56,7 @@ class ParseContext:
         except StopIteration:
             eof = LexToken()
             eof.lexer = self.tok.lexer
-            eof.lexpos = self.tok.lexer.lexlen
-            eof.length = 0
+            eof.lexend = eof.lexpos = self.tok.lexer.lexlen
             eof.type = "EOF"
             eof.value = "<end of file>"
             self.tok = eof

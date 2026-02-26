@@ -73,24 +73,14 @@ class DiagnosticStore:
 
     def create(self, template: DiagTemplate, source: "LexToken | Node", *args: Any):
         if isinstance(source, LexToken):
-            diag = _Diagnostic(
-                template, source.lexpos, source.lexpos + source.length, *args
-            )
+            diag = _Diagnostic(template, source.lexpos, source.lexend, *args)
         else:
-            pos_range = source.get_lex_range()
-            if pos_range is None:
-                start_pos = -1
-                end_pos = -1
-            else:
-                start_pos, end_pos = pos_range
-            diag = _Diagnostic(template, start_pos, end_pos, *args)
+            diag = _Diagnostic(template, source.lex_start, source.lex_end, *args)
         self.diagnostics.append(diag)
         return diag
 
     def raise_error(self, template: DiagTemplate, source: LexToken, *args: Any):
-        diag = _Diagnostic(
-            template, source.lexpos, source.lexpos + source.length, *args
-        )
+        diag = _Diagnostic(template, source.lexpos, source.lexend, *args)
         self.diagnostics.append(diag)
         raise DiagnosticError(diag)
 

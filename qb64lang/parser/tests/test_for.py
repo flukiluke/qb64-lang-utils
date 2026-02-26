@@ -176,7 +176,7 @@ def test_casts():
     assert impl.find(For) == Ast(
         For,
         Ast(Var, var),
-        Cast(Ast(Constant, 1), TYPE_SINGLE),
-        Cast(Ast(Constant, 10), TYPE_SINGLE),
-        Cast(Ast(Constant, 3), TYPE_SINGLE),
+        Ast(Cast, Ast(Constant, 1), TYPE_SINGLE),
+        Ast(Cast, Ast(Constant, 10), TYPE_SINGLE),
+        Ast(Cast, Ast(Constant, 3), TYPE_SINGLE),
     )

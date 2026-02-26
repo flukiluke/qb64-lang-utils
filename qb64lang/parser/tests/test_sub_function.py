@@ -255,7 +255,7 @@ def test_function_return():
     assert proc.impls[0].statements == [
         Ast(SetReturn, proc.impls[0], Ast(Call)),
         Ast(SetReturn, proc.impls[0], Ast(Call)),
-        Ast(SetReturn, proc.impls[0], Cast(Ast(Constant), TYPE_INTEGER)),
+        Ast(SetReturn, proc.impls[0], Ast(Cast, Ast(Constant), TYPE_INTEGER)),
     ]
 
 

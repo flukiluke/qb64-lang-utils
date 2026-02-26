@@ -39,7 +39,7 @@ def do_print(ctx: ParseContext):
     Expects: PRINT or ?
     Format: PRINT|? (expr|,|;)* [USING expr ; (expr|,|;)+]
     """
-    result = Print(lex_start=ctx.tok.lexpos, lex_len=ctx.tok.length)
+    result = Print(lex_start=ctx.tok.lexpos, lex_end=ctx.tok.lexend)
     next(ctx)
     using = False
     while not ctx.at_line_terminator():
@@ -70,6 +70,7 @@ def do_print(ctx: ParseContext):
             ):
                 result.args.append(Print.Element.SEMICOLON)
             result.args.append(do_expr(ctx))
+    result.lex_end = ctx.prev.lexend
     return result
 
 
@@ -99,14 +100,7 @@ def do_if(ctx: ParseContext):
     # A REM after THEN acts as a command; we remain in single-line if mode
     if ctx.at_a("NEWLINE", "rem"):
         # Do not advance token so we leave it at a NEWLINE
-        return If(
-            guard,
-            [],
-            [],
-            [],
-            lex_start=lex_start,
-            lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
-        )
+        return If(guard, [], [], [], lex_start=lex_start, lex_end=ctx.prev.lexend)
 
     elses = []
     elseifs: list[tuple[Expr, list[Statement]]] = []
@@ -137,12 +131,7 @@ def do_if(ctx: ParseContext):
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end if"
             )
     return If(
-        guard,
-        thens,
-        elseifs,
-        elses,
-        lex_start=lex_start,
-        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        guard, thens, elseifs, elses, lex_start=lex_start, lex_end=ctx.prev.lexend
     )
 
 
@@ -159,9 +148,18 @@ def do_do(ctx: ParseContext):
             next(ctx)
             return Call(
                 ctx.symbols.procedures["<>"],
-                [do_expr(ctx), Constant(0, TYPE__BYTE)],
+                [
+                    do_expr(ctx),
+                    Constant(
+                        0,
+                        TYPE__BYTE,
+                        lex_start=ctx.prev.lexend,
+                        lex_end=ctx.prev.lexend,
+                    ),
+                ],
                 style=Call.Style.INFIX,
-                lex_start=ctx.prev.lexpos,
+                lex_start=ctx.prev.lexend,
+                lex_end=ctx.prev.lexend,
             )
         elif ctx.at_line_terminator():
             return None
@@ -180,7 +178,6 @@ def do_do(ctx: ParseContext):
     block = do_block(ctx)
     loop_tok = ctx.tok
     ctx.consume("KEYWORD", "loop")
-    lex_end = ctx.prev.lexpos + ctx.prev.length
     bottom = loop_guard()
     if top and bottom:
         ctx.diags.create(diag.E_TOO_MANY_LOOP_GUARDS, loop_tok)
@@ -190,13 +187,15 @@ def do_do(ctx: ParseContext):
     elif bottom:
         guard = bottom
     else:
-        guard = Constant(1, TYPE__BYTE)
+        guard = Constant(
+            1, TYPE__BYTE, lex_start=ctx.prev.lexend, lex_end=ctx.prev.lexend
+        )
     return Loop(
         guard,
         block,
         top_check=(top is not None),
         lex_start=lex_start,
-        lex_len=(lex_end - lex_start),
+        lex_end=ctx.prev.lexend,
     )
 
 
@@ -211,11 +210,7 @@ def do_while(ctx: ParseContext):
     block = do_block(ctx)
     ctx.consume("KEYWORD", "wend")
     return Loop(
-        guard,
-        block,
-        top_check=True,
-        lex_start=lex_start,
-        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        guard, block, top_check=True, lex_start=lex_start, lex_end=ctx.prev.lexend
     )
 
 
@@ -234,7 +229,9 @@ def do_for(ctx: ParseContext):
         next(ctx)
         step_value = do_expr(ctx)
     elif ctx.at_a("NEWLINE"):
-        step_value = Constant(1, var.target.type)
+        step_value = Constant(
+            1, var.target.type, lex_start=ctx.prev.lexend, lex_end=ctx.prev.lexend
+        )
     else:
         ctx.diags.raise_error(
             diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "step or <newline>"
@@ -257,10 +254,8 @@ def do_for(ctx: ParseContext):
             # effectively expanding it to NEXT k : NEXT j, i
             ctx.prev.type = "NEWLINE"
             ctx.prev.value = ":"
-            ctx.prev.length = 0
             ctx.tok.type = "KEYWORD"
             ctx.tok.value = "next"
-            ctx.tok.length = 0
             ctx.reverse()
 
     return For(
@@ -270,7 +265,7 @@ def do_for(ctx: ParseContext):
         step_value,
         block,
         lex_start=lex_start,
-        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        lex_end=ctx.prev.lexend,
     )
 
 
@@ -325,14 +320,16 @@ def do_declare(ctx: ParseContext):
         ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, ctx.prev, name)
     params = do_param_list(ctx)
     impl = ProcDefinition(
-        name, TypeSignature(ret, params), decl_only=True, strictsigil=strictsigil
+        name,
+        TypeSignature(ret, params),
+        decl_only=True,
+        strictsigil=strictsigil,
+        lex_start=lex_start,
+        lex_end=ctx.prev.lexend,
     )
     proc.impls.append(impl)
     return ProcDeclaration(
-        name,
-        impl.signature,
-        lex_start=lex_start,
-        lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+        name, impl.signature, lex_start=lex_start, lex_end=ctx.prev.lexend
     )
 
 
@@ -340,6 +337,7 @@ def do_dim(ctx: ParseContext):
     """
     Expects: DIM or REDIM
     """
+    lex_start = ctx.tok.lexpos
     variables = list[Variable]()
     is_redim = ctx.at_a("KEYWORD", "redim")
     next(ctx)
@@ -363,7 +361,9 @@ def do_dim(ctx: ParseContext):
             break
     if len(variables) == 0:
         ctx.diags.raise_error(diag.E_EMPTY_DIM, ctx.tok)
-    return Dim(variables, is_redim, leading_type)
+    return Dim(
+        variables, is_redim, leading_type, lex_start=lex_start, lex_end=ctx.prev.lexend
+    )
 
 
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
@@ -438,7 +438,7 @@ def do_main(ctx: ParseContext):
             TypeSignature(TYPE__NONE, []),
             ctx.symbols.scope,
             lex_start=0,
-            lex_len=1,
+            lex_end=0,
         )
         ctx.symbols.add_procedure(Procedure("_main", "_Main", [main]))
     while not ctx.at_a("EOF"):
@@ -460,6 +460,7 @@ def do_main(ctx: ParseContext):
             )
             ctx.drop_line()
     ctx.symbols.set_scope(main.symbols)
+    main.lex_end = ctx.prev.lexend
     return main
 
 
@@ -490,7 +491,7 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
         elif not ctx.flags.allow_proc_overloads:
             ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, start_tok, name)
     else:
-        impl = ProcDefinition(name, sig)
+        impl = ProcDefinition(name, sig, lex_start=lex_start, lex_end=ctx.prev.lexend)
         proc.impls.append(impl)
 
     ctx.symbols.set_scope(impl.symbols)
@@ -508,10 +509,10 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
             ctx.consume("KEYWORD", "sub")
         else:
             ctx.consume("KEYWORD", "function")
+        impl.lex_start = lex_start
+        impl.lex_end = ctx.prev.lexend
         return ProcDefinitionLocation(
-            impl,
-            lex_start=lex_start,
-            lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+            impl, lex_start=lex_start, lex_end=ctx.prev.lexend
         )
     finally:
         ctx.current_subproc = None
@@ -667,10 +668,11 @@ def do_assignment(ctx: ParseContext):
     """
     Expects: first token of lvalue
     """
+    lex_start = ctx.tok.lexpos
     lval = do_lvalue(ctx)
     ctx.consume("PUNCTUATION", "=")
     rval = do_expr(ctx)
-    return Assignment(lval, rval)
+    return Assignment(lval, rval, lex_start=lex_start, lex_end=ctx.prev.lexend)
 
 
 def do_set_return(ctx: ParseContext):
@@ -681,7 +683,9 @@ def do_set_return(ctx: ParseContext):
     next(ctx)
     ctx.consume("PUNCTUATION", "=")
     assert ctx.current_subproc is not None
-    return SetReturn(ctx.current_subproc, do_expr(ctx), lex_start=lex_start)
+    return SetReturn(
+        ctx.current_subproc, do_expr(ctx), lex_start=lex_start, lex_end=ctx.prev.lexend
+    )
 
 
 def do_procedure_call(ctx: ParseContext):
@@ -690,7 +694,6 @@ def do_procedure_call(ctx: ParseContext):
     """
     target = ctx.tok.value
     lex_start = ctx.tok.lexpos
-    lex_len = ctx.tok.length
     next(ctx)
     if not ctx.at_line_terminator():
         args = do_func_args(ctx)
@@ -699,8 +702,8 @@ def do_procedure_call(ctx: ParseContext):
             args,
             style=Call.Style.STATEMENT,
             lex_start=lex_start,
-            lex_len=(ctx.prev.lexpos + ctx.prev.length - lex_start),
+            lex_end=ctx.prev.lexend,
         )
     return Call(
-        target, style=Call.Style.STATEMENT, lex_start=lex_start, lex_len=lex_len
+        target, style=Call.Style.STATEMENT, lex_start=lex_start, lex_end=ctx.prev.lexend
     )

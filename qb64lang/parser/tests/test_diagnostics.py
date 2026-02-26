@@ -1,8 +1,7 @@
 from .. import parse
-from ..ast import Call, Constant, If, Print
-from ..datatypes import TYPE_INTEGER
+from ..ast import If, Print
 from ..diagnostics import E_UNEXPECTED_ITEM
-from .helpers import Ast, builtin_proc
+from .helpers import Ast
 
 
 def test_bad_expr_drops_line():
@@ -26,55 +25,3 @@ def test_bad_stmt():
     """)
     assert prog.diagnostics.has(E_UNEXPECTED_ITEM)
     assert prog.main.find(If) == Ast(If, true_branch=[Ast(Print)])
-
-
-def test_lex_range_leaf():
-    assert Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2).get_lex_range() == (7, 9)
-    assert Constant(42, TYPE_INTEGER, lex_start=7).get_lex_range() == (7, 7)
-
-
-def test_lex_range_full_implicit():
-    assert Call(
-        builtin_proc("+"),
-        [
-            Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2),
-            Constant(420, TYPE_INTEGER, lex_start=11, lex_len=3),
-        ],
-    ).get_lex_range() == (7, 14)
-    assert If(
-        Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2), [], [], []
-    ).get_lex_range() == (7, 9)
-    assert If(Constant(42, TYPE_INTEGER, lex_start=7), [], [], []).get_lex_range() == (
-        7,
-        7,
-    )
-
-
-def test_lex_range_extension():
-    assert Call(
-        builtin_proc("+"),
-        [
-            Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2),
-            Constant(420, TYPE_INTEGER, lex_start=11, lex_len=3),
-        ],
-        lex_start=9,
-        lex_len=1,
-    ).get_lex_range() == (7, 14)
-    assert Call(
-        builtin_proc("+"),
-        [
-            Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2),
-            Constant(420, TYPE_INTEGER, lex_start=11, lex_len=3),
-        ],
-        lex_start=5,
-        lex_len=1,
-    ).get_lex_range() == (5, 14)
-    assert Call(
-        builtin_proc("+"),
-        [
-            Constant(42, TYPE_INTEGER, lex_start=7, lex_len=2),
-            Constant(420, TYPE_INTEGER, lex_start=11, lex_len=3),
-        ],
-        lex_start=14,
-        lex_len=1,
-    ).get_lex_range() == (7, 15)

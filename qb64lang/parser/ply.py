@@ -65,7 +65,7 @@ class LexToken(object):
     lineno: int
     lexpos: int
     lexer: "Lexer"
-    length: int
+    lexend: int
 
     def __str__(self):
         return 'LexToken(%s,%r,%d,%d)' % (self.type, self.value, self.lineno, self.lexpos)
@@ -332,7 +332,7 @@ class Lexer:
                 tok.plain_value = tok.value
                 tok.lineno = self.lineno
                 tok.lexpos = lexpos
-                tok.length = len(tok.value)
+                tok.lexend = lexpos + len(tok.value)
 
                 i = m.lastindex
                 func, tok.type = lexindexfunc[i]

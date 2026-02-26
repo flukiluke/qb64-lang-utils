@@ -23,7 +23,7 @@ def test_standard_sub_calls():
     assert prog.main.find(Call) == Ast(
         Call,
         proc,
-        [Ast(Constant, 1, TYPE_INTEGER), Cast(Ast(Constant, 2.2), TYPE_INTEGER)],
+        [Ast(Constant, 1, TYPE_INTEGER), Ast(Cast, Ast(Constant, 2.2), TYPE_INTEGER)],
         impl=proc.impls[0],
         expr_type=TYPE__NONE,
     )
@@ -34,7 +34,7 @@ def test_expr_argument():
     proc = prog.symbols.find_procedure("out")
     assert proc is not None
     assert prog.main.find(Call) == Ast(
-        Call, proc, [Ast(Call), Cast(Ast(Call), TYPE_INTEGER)]
+        Call, proc, [Ast(Call), Ast(Cast, Ast(Call), TYPE_INTEGER)]
     )
 
 
@@ -50,5 +50,7 @@ def test_function_wrong_type_arguments():
 def test_user_sub_call():
     prog = parse_clean("sub s(x): print x: end sub: s 3")
     assert prog.main.find(Call) == Ast(
-        Call, prog.symbols.find_procedure("s"), [Cast(Ast(Constant, 3), TYPE_SINGLE)]
+        Call,
+        prog.symbols.find_procedure("s"),
+        [Ast(Cast, Ast(Constant, 3), TYPE_SINGLE)],
     )

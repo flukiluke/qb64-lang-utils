@@ -70,7 +70,7 @@ class TypePass(AstWalk[None | Type]):
         new_args = list[Expr]()
         for arg, param in zip(node.args, node.impl.signature.params):
             if arg.expr_type != param.type and param.type != TYPE_ANY:
-                new_args.append(Cast(arg, param.type))
+                new_args.append(Cast.wrap(arg, param.type))
             else:
                 new_args.append(arg)
         node.args = new_args
@@ -95,13 +95,13 @@ class TypePass(AstWalk[None | Type]):
             )
             return None
         elif can_safely_cast(left, right):
-            node.args[0] = Cast(node.args[0], right)
+            node.args[0] = Cast.wrap(node.args[0], right)
         elif can_safely_cast(right, left):
-            node.args[1] = Cast(node.args[1], left)
+            node.args[1] = Cast.wrap(node.args[1], left)
         else:
             node.args = [
-                Cast(node.args[0], TYPE__FLOAT),
-                Cast(node.args[1], TYPE__FLOAT),
+                Cast.wrap(node.args[0], TYPE__FLOAT),
+                Cast.wrap(node.args[1], TYPE__FLOAT),
             ]
         return node.target.impls[0]
 
@@ -230,7 +230,12 @@ class TypePass(AstWalk[None | Type]):
                 diag.E_ASSIGNMENT_MISMATCH, node, rtype.name, ltype.name
             )
         elif rtype != ltype:
-            node.rval = Cast(node.rval, ltype)
+            node.rval = Cast(
+                node.rval,
+                ltype,
+                lex_start=node.rval.lex_start,
+                lex_end=node.rval.lex_end,
+            )
 
     def constant(self, node: Constant):
         return node.type
@@ -286,11 +291,11 @@ class TypePass(AstWalk[None | Type]):
         if not step_type.is_number():
             self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, node.step)
         if start_type != var_type:
-            node.start_value = Cast(node.start_value, var_type)
+            node.start_value = Cast.wrap(node.start_value, var_type)
         if end_type != var_type:
-            node.end_value = Cast(node.end_value, var_type)
+            node.end_value = Cast.wrap(node.end_value, var_type)
         if step_type != var_type:
-            node.step = Cast(node.step, var_type)
+            node.step = Cast.wrap(node.step, var_type)
         for stmt in node.block:
             self.evaluate(stmt)
 
@@ -302,7 +307,7 @@ class TypePass(AstWalk[None | Type]):
                 diag.E_RETURN_MISMATCH, node, expr_type.name, func_type.name
             )
         elif func_type != expr_type:
-            node.value = Cast(node.value, func_type)
+            node.value = Cast.wrap(node.value, func_type)
 
 
 def typecheck(program: "Program"):
