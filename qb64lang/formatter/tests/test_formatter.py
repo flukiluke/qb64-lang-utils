@@ -47,3 +47,17 @@ def test_expr_doublet_signs():
     assert format_clean("print 2-+2") == "PRINT 2 - 2"
     assert format_clean("print 2+-2") == "PRINT 2 + -2"
     assert format_clean("print 2+-+--+2") == "PRINT 2 + ---2"
+
+
+def test_numbers():
+    assert format_clean("print 1234") == "PRINT 1234"
+    assert format_clean("print 1234&") == "PRINT 1234&"
+    assert format_clean("print 12.34") == "PRINT 12.34"
+    assert format_clean("print 12.34#") == "PRINT 12.34#"
+    assert format_clean("print &hdead") == "PRINT &HDEAD"
+    assert format_clean("print &hdead~&&") == "PRINT &HDEAD~&&"
+    assert format_clean("print 1.2e-4") == "PRINT 1.2E-4"
+
+
+def test_string():
+    assert format_clean('Print "abc"') == 'PRINT "abc"'

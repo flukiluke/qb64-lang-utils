@@ -24,7 +24,6 @@ from .datatypes import (
     TYPE__BYTE,
     TYPE__NONE,
     TYPE_STRING,
-    IntegralType,
     Parameter,
     Type,
     TypeSignature,
@@ -32,6 +31,7 @@ from .datatypes import (
 )
 from .diagnostics import ParseError
 from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
+from .lexer import Number
 
 
 def do_print(ctx: ParseContext):
@@ -538,11 +538,11 @@ def do_as_type_clause(ctx: ParseContext):
     width = None
     if ctx.at_a("PUNCTUATION", "*"):
         next(ctx)
-        if not ctx.at_a("NUM_LIT") or not isinstance(ctx.tok.value[1], IntegralType):
+        if not ctx.at_a("NUM_LIT") or ctx.tok.value.style != Number.Style.INT:
             ctx.diags.raise_error(
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "an integer number"
             )
-        width = ctx.tok.value[0]
+        width = ctx.tok.value.value
         next(ctx)
     if unsigned:
         type = ctx.symbols.find_type("_unsigned " + base_type.name)

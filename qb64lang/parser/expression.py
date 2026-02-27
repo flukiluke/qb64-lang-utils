@@ -81,8 +81,8 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
                 )
             case "NUM_LIT", _:
                 return Constant(
-                    token.value[0],
-                    token.value[1],
+                    token.value.value,
+                    token.value.type,
                     lex_start=token.lexpos,
                     lex_end=token.lexend,
                 )

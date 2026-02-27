@@ -328,8 +328,8 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
             case ("STRING_LIT", text):
                 assert isinstance(text, str)
                 ctx.add('"' + text + '"')
-            case ("NUM_LIT", (value, type)):
-                ctx.add(str(value))
+            case ("NUM_LIT", _):
+                ctx.add(ctx.tok.plain_value.upper())
             case ("PUNCTUATION", "+"):
                 if not (
                     isinstance(ctx.node, Call)

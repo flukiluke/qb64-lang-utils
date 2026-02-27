@@ -1,4 +1,6 @@
 import re
+from dataclasses import dataclass
+from enum import Enum, auto
 from typing import Literal, cast
 
 from . import diagnostics as diag
@@ -69,6 +71,22 @@ id_body = rf"""
                 (?:{letter}|{digit})        # Final letter/number
             )?
             """
+
+
+@dataclass
+class Number:
+    class Style(Enum):
+        BINARY = auto()
+        OCTAL = auto()
+        HEXA = auto()
+        EXP = auto()
+        DEC = auto()
+        INT = auto()
+
+    value: int | float | ExtendedFloat
+    type: Type
+    style: Style = Style.INT
+    sigil: str | None = None
 
 
 def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
@@ -184,7 +202,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             type = TYPE__FLOAT
             value = ExtendedFloat(mantissa, exp_sign + exp)
         if type.min <= value <= type.max:
-            t.value = (value, type)
+            t.value = Number(value, type, style=Number.Style.EXP)
         else:
             diags.raise_error(
                 diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
@@ -236,6 +254,13 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 num_to_base(type.min, base),
                 num_to_base(type.max, base),
             )
+        if base == 16:
+            t.value.style = Number.Style.HEXA
+        elif base == 8:
+            t.value.style = Number.Style.OCTAL
+        elif base == 2:
+            t.value.style = Number.Style.BINARY
+        t.value.sigil = sigil
         return t
 
     @Token(
@@ -259,6 +284,8 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 type.min,
                 type.max,
             )
+        t.value.style = Number.Style.DEC
+        t.value.sigil = sigil
         return t
 
     @Token(
@@ -292,6 +319,8 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 type.min,
                 type.max,
             )
+        t.value.style = Number.Style.INT
+        t.value.sigil = sigil
         return t
 
     @Token(
@@ -368,7 +397,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     return lex(reflags=re.VERBOSE | re.IGNORECASE | re.MULTILINE)
 
 
-def detect_base_int_type(value: int) -> tuple[int, Type] | None:
+def detect_base_int_type(value: int) -> Number | None:
     """
     Identify the type of a value using rules for base notation numbers,
     returning the type and the number. Return None if number is outside
@@ -380,61 +409,57 @@ def detect_base_int_type(value: int) -> tuple[int, Type] | None:
         (TYPE__INTEGER64, TYPE__UNSIGNED__INTEGER64),
     ]:
         if signed.min <= value <= signed.max:
-            return (value, signed)
+            return Number(value, signed)
         if unsigned.min <= value <= unsigned.max:
-            return (-int(unsigned.max) + value - 1, signed)
+            return Number(-int(unsigned.max) + value - 1, signed)
     return None
 
 
-def constrain_base_int_value(
-    value: int, type: IntegralType
-) -> tuple[int, IntegralType] | None:
+def constrain_base_int_value(value: int, type: IntegralType) -> Number | None:
     if type.min <= value <= type.max:
-        return (value, type)
+        return Number(value, type)
     if type.min < 0 and value <= type.max * 2 + 1:
-        return (value - (int(type.max) * 2 + 1) - 1, type)
+        return Number(value - (int(type.max) * 2 + 1) - 1, type)
     return None
 
 
-def detect_dec_lit_type(value: str) -> tuple[float | ExtendedFloat, Type]:
+def detect_dec_lit_type(value: str) -> Number:
     num_digits = len(value) - 1
     if num_digits <= 7:
-        return (float(value), TYPE_SINGLE)
+        return Number(float(value), TYPE_SINGLE)
     if num_digits <= 16:
-        return (float(value), TYPE_DOUBLE)
-    return (ExtendedFloat(value), TYPE__FLOAT)
+        return Number(float(value), TYPE_DOUBLE)
+    return Number(ExtendedFloat(value), TYPE__FLOAT)
 
 
-def constrain_dec_lit_value(
-    value: str, type: FloatType
-) -> tuple[float | ExtendedFloat, Type] | None:
+def constrain_dec_lit_value(value: str, type: FloatType) -> Number | None:
     v = float(value)
     inf = float("inf")
     if type == TYPE_SINGLE:
         if v != inf and type.min <= v <= type.max:
-            return (v, type)
+            return Number(v, type)
     elif type == TYPE_DOUBLE:
         if v != inf:
-            return (v, type)
+            return Number(v, type)
     elif type == TYPE__FLOAT:
-        return (ExtendedFloat(value), type)
+        return Number(ExtendedFloat(value), type)
     return None
 
 
-def detect_int_lit_type(value: int) -> tuple[int, Type] | None:
+def detect_int_lit_type(value: int) -> Number | None:
     for type in [TYPE_INTEGER, TYPE_LONG, TYPE__INTEGER64, TYPE__UNSIGNED__INTEGER64]:
         if type.min <= value <= type.max:
-            return (value, type)
+            return Number(value, type)
     return None
 
 
 def constrain_int_lit_value(
     value: int, type: IntegralType | FloatType
-) -> tuple[int | ExtendedFloat, Type] | None:
+) -> Number | None:
     if type == TYPE__FLOAT:
-        return (ExtendedFloat(str(value)), type)
+        return Number(ExtendedFloat(str(value)), type)
     if type.min <= value <= type.max:
-        return (value, type)
+        return Number(value, type)
     return None
 
 

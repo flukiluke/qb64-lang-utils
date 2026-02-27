@@ -23,7 +23,7 @@ from ..datatypes import (
     TypeSignature,
 )
 from ..diagnostics import DiagnosticStore, DiagTemplate
-from ..lexer import Lexer
+from ..lexer import Lexer, Number
 
 
 @dataclass
@@ -73,53 +73,68 @@ def check_bitn(input: str, kind: str, value: int, sigil: str):
     actuals = list(lex)
     assert len(actuals) == 2
     assert actuals[1].type == kind
-    assert actuals[1].value == (value, symbols.lookup_sigil(sigil))
+    assert actuals[1].value.value == value
+    assert actuals[1].value.type == symbols.lookup_sigil(sigil)
 
 
 def test_int_lit_type_detection():
-    check_expr("123", Token("NUM_LIT", (123, TYPE_INTEGER)))
-    check_expr("32767", Token("NUM_LIT", (32767, TYPE_INTEGER)))
-    check_expr("32768", Token("NUM_LIT", (32768, TYPE_LONG)))
-    check_expr("2147483647", Token("NUM_LIT", (2147483647, TYPE_LONG)))
-    check_expr("2147483648", Token("NUM_LIT", (2147483648, TYPE__INTEGER64)))
+    check_expr("123", Token("NUM_LIT", Number(123, TYPE_INTEGER)))
+    check_expr("32767", Token("NUM_LIT", Number(32767, TYPE_INTEGER)))
+    check_expr("32768", Token("NUM_LIT", Number(32768, TYPE_LONG)))
+    check_expr("2147483647", Token("NUM_LIT", Number(2147483647, TYPE_LONG)))
+    check_expr("2147483648", Token("NUM_LIT", Number(2147483648, TYPE__INTEGER64)))
     check_expr(
         "9223372036854775807",
-        Token("NUM_LIT", (9223372036854775807, TYPE__INTEGER64)),
+        Token("NUM_LIT", Number(9223372036854775807, TYPE__INTEGER64)),
     )
     check_expr(
         "9223372036854775808",
-        Token("NUM_LIT", (9223372036854775808, TYPE__UNSIGNED__INTEGER64)),
+        Token("NUM_LIT", Number(9223372036854775808, TYPE__UNSIGNED__INTEGER64)),
     )
     check_expr(
         "18446744073709551615",
-        Token("NUM_LIT", (18446744073709551615, TYPE__UNSIGNED__INTEGER64)),
+        Token("NUM_LIT", Number(18446744073709551615, TYPE__UNSIGNED__INTEGER64)),
     )
     check_expr("18446744073709551616", diag=diag.E_NUM_LIT_MAX_BIG)
 
 
 def test_int_lit_explicit_type():
-    check_expr("0`", Token("NUM_LIT", (0, TYPE__BIT)))
+    check_expr("0`", Token("NUM_LIT", Number(0, TYPE__BIT, sigil="`")))
     check_expr("1`", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("0~`", Token("NUM_LIT", (0, TYPE__UNSIGNED__BIT)))
-    check_expr("1~`", Token("NUM_LIT", (1, TYPE__UNSIGNED__BIT)))
+    check_expr("0~`", Token("NUM_LIT", Number(0, TYPE__UNSIGNED__BIT, sigil="~`")))
+    check_expr("1~`", Token("NUM_LIT", Number(1, TYPE__UNSIGNED__BIT, sigil="~`")))
     check_expr("2~`", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("127%%", Token("NUM_LIT", (0x7F, TYPE__BYTE)))
+    check_expr("127%%", Token("NUM_LIT", Number(0x7F, TYPE__BYTE, sigil="%%")))
     check_expr("128%%", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("128~%%", Token("NUM_LIT", (0x80, TYPE__UNSIGNED__BYTE)))
+    check_expr(
+        "128~%%", Token("NUM_LIT", Number(0x80, TYPE__UNSIGNED__BYTE, sigil="~%%"))
+    )
     check_expr("256~%%", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("32767%", Token("NUM_LIT", (0x7FFF, TYPE_INTEGER)))
+    check_expr("32767%", Token("NUM_LIT", Number(0x7FFF, TYPE_INTEGER, sigil="%")))
     check_expr("32768%", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("32768~%", Token("NUM_LIT", (0x8000, TYPE__UNSIGNED_INTEGER)))
-    check_expr("65535~%", Token("NUM_LIT", (0xFFFF, TYPE__UNSIGNED_INTEGER)))
+    check_expr(
+        "32768~%", Token("NUM_LIT", Number(0x8000, TYPE__UNSIGNED_INTEGER, sigil="~%"))
+    )
+    check_expr(
+        "65535~%", Token("NUM_LIT", Number(0xFFFF, TYPE__UNSIGNED_INTEGER, sigil="~%"))
+    )
     check_expr("65536%", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("2147483647&", Token("NUM_LIT", (0x7FFFFFFF, TYPE_LONG)))
+    check_expr(
+        "2147483647&", Token("NUM_LIT", Number(0x7FFFFFFF, TYPE_LONG, sigil="&"))
+    )
     check_expr("2147483648&", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("2147483648~&", Token("NUM_LIT", (0x80000000, TYPE__UNSIGNED_LONG)))
-    check_expr("4294967295~&", Token("NUM_LIT", (0xFFFFFFFF, TYPE__UNSIGNED_LONG)))
+    check_expr(
+        "2147483648~&",
+        Token("NUM_LIT", Number(0x80000000, TYPE__UNSIGNED_LONG, sigil="~&")),
+    )
+    check_expr(
+        "4294967295~&",
+        Token("NUM_LIT", Number(0xFFFFFFFF, TYPE__UNSIGNED_LONG, sigil="~&")),
+    )
     check_expr("4294967296~&", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr(
         "9223372036854775807&&",
-        Token("NUM_LIT", (0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64)),
+        Token("NUM_LIT", Number(0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64, sigil="&&")),
     )
     check_expr(
         "9223372036854775808&&",
@@ -128,54 +143,75 @@ def test_int_lit_explicit_type():
     )
     check_expr(
         "9223372036854775808~&&",
-        Token("NUM_LIT", (0x8000000000000000, TYPE__UNSIGNED__INTEGER64)),
+        Token(
+            "NUM_LIT",
+            Number(0x8000000000000000, TYPE__UNSIGNED__INTEGER64, sigil="~&&"),
+        ),
     )
     check_expr(
         "18446744073709551615~&&",
-        Token("NUM_LIT", (0xFFFFFFFFFFFFFFFF, TYPE__UNSIGNED__INTEGER64)),
+        Token(
+            "NUM_LIT",
+            Number(0xFFFFFFFFFFFFFFFF, TYPE__UNSIGNED__INTEGER64, sigil="~&&"),
+        ),
     )
     check_expr(
         "18446744073709551616~&&",
         Token("ERROR"),
         diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
     )
-    check_expr("1&&", Token("NUM_LIT", (1, TYPE__INTEGER64)))
+    check_expr("1&&", Token("NUM_LIT", Number(1, TYPE__INTEGER64, sigil="&&")))
 
 
 def test_int_lit_explicit_float_type():
-    check_expr("2!", Token("NUM_LIT", (2, TYPE_SINGLE)))
-    check_expr("2#", Token("NUM_LIT", (2, TYPE_DOUBLE)))
-    check_expr("2##", Token("NUM_LIT", (ExtendedFloat("2"), TYPE__FLOAT)))
+    check_expr("2!", Token("NUM_LIT", Number(2, TYPE_SINGLE, sigil="!")))
+    check_expr("2#", Token("NUM_LIT", Number(2, TYPE_DOUBLE, sigil="#")))
+    check_expr(
+        "2##", Token("NUM_LIT", Number(ExtendedFloat("2"), TYPE__FLOAT, sigil="##"))
+    )
 
 
 def test_dec_lit():
-    check_expr("1.25", Token("NUM_LIT", (1.25, TYPE_SINGLE)))
-    check_expr(".25", Token("NUM_LIT", (0.25, TYPE_SINGLE)))
-    check_expr("23.", Token("NUM_LIT", (23.0, TYPE_SINGLE)))
+    check_expr("1.25", Token("NUM_LIT", Number(1.25, TYPE_SINGLE, Number.Style.DEC)))
+    check_expr(".25", Token("NUM_LIT", Number(0.25, TYPE_SINGLE, Number.Style.DEC)))
+    check_expr("23.", Token("NUM_LIT", Number(23.0, TYPE_SINGLE, Number.Style.DEC)))
 
 
 def test_dec_lit_type_detection():
-    check_expr("1.234567", Token("NUM_LIT", (1.234567, TYPE_SINGLE)))
-    check_expr("1.2345678", Token("NUM_LIT", (1.2345678, TYPE_DOUBLE)))
-    check_expr("12345678.", Token("NUM_LIT", (12345678.0, TYPE_DOUBLE)))
+    check_expr(
+        "1.234567", Token("NUM_LIT", Number(1.234567, TYPE_SINGLE, Number.Style.DEC))
+    )
+    check_expr(
+        "1.2345678", Token("NUM_LIT", Number(1.2345678, TYPE_DOUBLE, Number.Style.DEC))
+    )
+    check_expr(
+        "12345678.", Token("NUM_LIT", Number(12345678.0, TYPE_DOUBLE, Number.Style.DEC))
+    )
     check_expr(
         ".1234567890123456",
-        Token("NUM_LIT", (0.1234567890123456, TYPE_DOUBLE)),
+        Token("NUM_LIT", Number(0.1234567890123456, TYPE_DOUBLE, Number.Style.DEC)),
     )
     check_expr(
         ".12345678901234567",
-        Token("NUM_LIT", (ExtendedFloat(".12345678901234567"), TYPE__FLOAT)),
+        Token(
+            "NUM_LIT",
+            Number(ExtendedFloat(".12345678901234567"), TYPE__FLOAT, Number.Style.DEC),
+        ),
     )
 
 
 def test_dec_lit_explicit_type():
     check_expr(
         "123456789012345678901234567890123456789.0!",
-        Token("NUM_LIT", (1.2345678901234568e38, TYPE_SINGLE)),
+        Token(
+            "NUM_LIT", Number(1.2345678901234568e38, TYPE_SINGLE, Number.Style.DEC, "!")
+        ),
     )
     check_expr(
         "123456789012345678901234567890123456789.0#",
-        Token("NUM_LIT", (1.2345678901234568e38, TYPE_DOUBLE)),
+        Token(
+            "NUM_LIT", Number(1.2345678901234568e38, TYPE_DOUBLE, Number.Style.DEC, "#")
+        ),
     )
     check_expr(
         "1234567890123456789012345678901234567890.0!",
@@ -184,15 +220,19 @@ def test_dec_lit_explicit_type():
     )
     check_expr(
         "1234567890123456789012345678901234567890.0#",
-        Token("NUM_LIT", (1.2345678901234568e39, TYPE_DOUBLE)),
+        Token(
+            "NUM_LIT", Number(1.2345678901234568e39, TYPE_DOUBLE, Number.Style.DEC, "#")
+        ),
     )
     check_expr(
         "1234567890123456789012345678901234567890.0##",
         Token(
             "NUM_LIT",
-            (
+            Number(
                 ExtendedFloat("1.234567890123456789012345678901234567890", "39"),
                 TYPE__FLOAT,
+                Number.Style.DEC,
+                "##",
             ),
         ),
     )
@@ -201,34 +241,58 @@ def test_dec_lit_explicit_type():
 def test_base_lit():
     check_expr(
         "&H123456789ABCDEF0",
-        Token("NUM_LIT", (0x123456789ABCDEF0, TYPE__INTEGER64)),
+        Token(
+            "NUM_LIT", Number(0x123456789ABCDEF0, TYPE__INTEGER64, Number.Style.HEXA)
+        ),
     )
-    check_expr("&h08", Token("NUM_LIT", (0x8, TYPE_INTEGER)))
-    check_expr("&B10", Token("NUM_LIT", (0b10, TYPE_INTEGER)))
-    check_expr("&b001", Token("NUM_LIT", (0b1, TYPE_INTEGER)))
-    check_expr("&O12345670", Token("NUM_LIT", (0o12345670, TYPE_LONG)))
-    check_expr("&o002", Token("NUM_LIT", (0o2, TYPE_INTEGER)))
+    check_expr("&h08", Token("NUM_LIT", Number(0x8, TYPE_INTEGER, Number.Style.HEXA)))
+    check_expr(
+        "&B10", Token("NUM_LIT", Number(0b10, TYPE_INTEGER, Number.Style.BINARY))
+    )
+    check_expr(
+        "&b001", Token("NUM_LIT", Number(0b1, TYPE_INTEGER, Number.Style.BINARY))
+    )
+    check_expr(
+        "&O12345670",
+        Token("NUM_LIT", Number(0o12345670, TYPE_LONG, Number.Style.OCTAL)),
+    )
+    check_expr("&o002", Token("NUM_LIT", Number(0o2, TYPE_INTEGER, Number.Style.OCTAL)))
 
 
 def test_base_lit_type_detection():
-    check_expr("&h0", Token("NUM_LIT", (0, TYPE_INTEGER)))
-    check_expr("&h7fff", Token("NUM_LIT", (0x7FFF, TYPE_INTEGER)))
+    check_expr("&h0", Token("NUM_LIT", Number(0, TYPE_INTEGER, Number.Style.HEXA)))
+    check_expr(
+        "&h7fff", Token("NUM_LIT", Number(0x7FFF, TYPE_INTEGER, Number.Style.HEXA))
+    )
     # This behaviour is whacky, probably deserves a warning
-    check_expr("&h8000", Token("NUM_LIT", (-0x8000, TYPE_INTEGER)))
-    check_expr("&hDEAD", Token("NUM_LIT", (-8531, TYPE_INTEGER)))
-    check_expr("&h7fffffff", Token("NUM_LIT", (0x7FFFFFFF, TYPE_LONG)))
-    check_expr("&h80000000", Token("NUM_LIT", (-0x80000000, TYPE_LONG)))
+    check_expr(
+        "&h8000", Token("NUM_LIT", Number(-0x8000, TYPE_INTEGER, Number.Style.HEXA))
+    )
+    check_expr(
+        "&hDEAD", Token("NUM_LIT", Number(-8531, TYPE_INTEGER, Number.Style.HEXA))
+    )
+    check_expr(
+        "&h7fffffff", Token("NUM_LIT", Number(0x7FFFFFFF, TYPE_LONG, Number.Style.HEXA))
+    )
+    check_expr(
+        "&h80000000",
+        Token("NUM_LIT", Number(-0x80000000, TYPE_LONG, Number.Style.HEXA)),
+    )
     check_expr(
         "&h7fffffffffffffff",
-        Token("NUM_LIT", (0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64)),
+        Token(
+            "NUM_LIT", Number(0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64, Number.Style.HEXA)
+        ),
     )
     check_expr(
         "&h8000000000000000",
-        Token("NUM_LIT", (-0x8000000000000000, TYPE__INTEGER64)),
+        Token(
+            "NUM_LIT", Number(-0x8000000000000000, TYPE__INTEGER64, Number.Style.HEXA)
+        ),
     )
     check_expr(
         "&hffffffffffffffff",
-        Token("NUM_LIT", (-1, TYPE__INTEGER64)),
+        Token("NUM_LIT", Number(-1, TYPE__INTEGER64, Number.Style.HEXA)),
     )
     check_expr("&h10000000000000000", diag=diag.E_NUM_LIT_MAX_BIG)
 
@@ -244,112 +308,303 @@ def test_base_lit_explicit_bitn():
 
 
 def test_base_lit_explicit_type():
-    check_expr("&b0`", Token("NUM_LIT", (0, TYPE__BIT)))
-    check_expr("&b1`", Token("NUM_LIT", (-1, TYPE__BIT)))
+    check_expr(
+        "&b0`", Token("NUM_LIT", Number(0, TYPE__BIT, Number.Style.BINARY, sigil="`"))
+    )
+    check_expr(
+        "&b1`", Token("NUM_LIT", Number(-1, TYPE__BIT, Number.Style.BINARY, sigil="`"))
+    )
     check_expr("&b10`", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("&o0~`", Token("NUM_LIT", (0, TYPE__UNSIGNED__BIT)))
-    check_expr("&o1~`", Token("NUM_LIT", (1, TYPE__UNSIGNED__BIT)))
+    check_expr(
+        "&o0~`",
+        Token(
+            "NUM_LIT", Number(0, TYPE__UNSIGNED__BIT, Number.Style.OCTAL, sigil="~`")
+        ),
+    )
+    check_expr(
+        "&o1~`",
+        Token(
+            "NUM_LIT", Number(1, TYPE__UNSIGNED__BIT, Number.Style.OCTAL, sigil="~`")
+        ),
+    )
     check_expr("&o2~`", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("&h7f%%", Token("NUM_LIT", (0x7F, TYPE__BYTE)))
-    check_expr("&h80%%", Token("NUM_LIT", (-0x80, TYPE__BYTE)))
-    check_expr("&h80~%%", Token("NUM_LIT", (0x80, TYPE__UNSIGNED__BYTE)))
+    check_expr(
+        "&h7f%%",
+        Token("NUM_LIT", Number(0x7F, TYPE__BYTE, Number.Style.HEXA, sigil="%%")),
+    )
+    check_expr(
+        "&h80%%",
+        Token("NUM_LIT", Number(-0x80, TYPE__BYTE, Number.Style.HEXA, sigil="%%")),
+    )
+    check_expr(
+        "&h80~%%",
+        Token(
+            "NUM_LIT",
+            Number(0x80, TYPE__UNSIGNED__BYTE, Number.Style.HEXA, sigil="~%%"),
+        ),
+    )
     check_expr("&h100~%%", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("&h7fff%", Token("NUM_LIT", (0x7FFF, TYPE_INTEGER)))
-    check_expr("&h8000%", Token("NUM_LIT", (-0x8000, TYPE_INTEGER)))
-    check_expr("&h8000~%", Token("NUM_LIT", (0x8000, TYPE__UNSIGNED_INTEGER)))
-    check_expr("&hffff~%", Token("NUM_LIT", (0xFFFF, TYPE__UNSIGNED_INTEGER)))
+    check_expr(
+        "&h7fff%",
+        Token("NUM_LIT", Number(0x7FFF, TYPE_INTEGER, Number.Style.HEXA, sigil="%")),
+    )
+    check_expr(
+        "&h8000%",
+        Token("NUM_LIT", Number(-0x8000, TYPE_INTEGER, Number.Style.HEXA, sigil="%")),
+    )
+    check_expr(
+        "&h8000~%",
+        Token(
+            "NUM_LIT",
+            Number(0x8000, TYPE__UNSIGNED_INTEGER, Number.Style.HEXA, sigil="~%"),
+        ),
+    )
+    check_expr(
+        "&hffff~%",
+        Token(
+            "NUM_LIT",
+            Number(0xFFFF, TYPE__UNSIGNED_INTEGER, Number.Style.HEXA, sigil="~%"),
+        ),
+    )
     check_expr("&h10000%", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
-    check_expr("&h7fffffff&", Token("NUM_LIT", (0x7FFFFFFF, TYPE_LONG)))
-    check_expr("&h80000000&", Token("NUM_LIT", (-0x80000000, TYPE_LONG)))
-    check_expr("&h80000000~&", Token("NUM_LIT", (0x80000000, TYPE__UNSIGNED_LONG)))
-    check_expr("&hffffffff~&", Token("NUM_LIT", (0xFFFFFFFF, TYPE__UNSIGNED_LONG)))
+    check_expr(
+        "&h7fffffff&",
+        Token("NUM_LIT", Number(0x7FFFFFFF, TYPE_LONG, Number.Style.HEXA, sigil="&")),
+    )
+    check_expr(
+        "&h80000000&",
+        Token("NUM_LIT", Number(-0x80000000, TYPE_LONG, Number.Style.HEXA, sigil="&")),
+    )
+    check_expr(
+        "&h80000000~&",
+        Token(
+            "NUM_LIT",
+            Number(0x80000000, TYPE__UNSIGNED_LONG, Number.Style.HEXA, sigil="~&"),
+        ),
+    )
+    check_expr(
+        "&hffffffff~&",
+        Token(
+            "NUM_LIT",
+            Number(0xFFFFFFFF, TYPE__UNSIGNED_LONG, Number.Style.HEXA, sigil="~&"),
+        ),
+    )
     check_expr("&h100000000~&", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
     check_expr(
         "&h7fffffffffffffff&&",
-        Token("NUM_LIT", (0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64)),
+        Token(
+            "NUM_LIT",
+            Number(0x7FFFFFFFFFFFFFFF, TYPE__INTEGER64, Number.Style.HEXA, sigil="&&"),
+        ),
     )
     check_expr(
         "&h8000000000000000&&",
-        Token("NUM_LIT", (-0x8000000000000000, TYPE__INTEGER64)),
+        Token(
+            "NUM_LIT",
+            Number(-0x8000000000000000, TYPE__INTEGER64, Number.Style.HEXA, sigil="&&"),
+        ),
     )
     check_expr(
         "&h8000000000000000~&&",
-        Token("NUM_LIT", (0x8000000000000000, TYPE__UNSIGNED__INTEGER64)),
+        Token(
+            "NUM_LIT",
+            Number(
+                0x8000000000000000,
+                TYPE__UNSIGNED__INTEGER64,
+                Number.Style.HEXA,
+                sigil="~&&",
+            ),
+        ),
     )
     check_expr(
         "&hffffffffffffffff~&&",
-        Token("NUM_LIT", (0xFFFFFFFFFFFFFFFF, TYPE__UNSIGNED__INTEGER64)),
+        Token(
+            "NUM_LIT",
+            Number(
+                0xFFFFFFFFFFFFFFFF,
+                TYPE__UNSIGNED__INTEGER64,
+                Number.Style.HEXA,
+                sigil="~&&",
+            ),
+        ),
     )
     check_expr(
         "&h10000000000000000~&&",
         Token("ERROR"),
         diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE,
     )
-    check_expr("&b1&&", Token("NUM_LIT", (1, TYPE__INTEGER64)))
+    check_expr(
+        "&b1&&",
+        Token("NUM_LIT", Number(1, TYPE__INTEGER64, Number.Style.BINARY, sigil="&&")),
+    )
 
 
 def test_exp_e_lit():
     expected_type = TYPE_SINGLE
     for c in "e", "E":
-        check_expr(f"17{c}2", Token("NUM_LIT", (1700, expected_type)))
-        check_expr(f"17.25{c}2", Token("NUM_LIT", (1725, expected_type)))
-        check_expr(f"1.725{c}+2", Token("NUM_LIT", (172.5, expected_type)))
-        check_expr(f".1725{c}2", Token("NUM_LIT", (17.25, expected_type)))
-        check_expr(f".1725{c}10", Token("NUM_LIT", (0.1725e10, expected_type)))
-        check_expr(f"17{c}", Token("NUM_LIT", (17, expected_type)))
-        check_expr(f"17.25{c}", Token("NUM_LIT", (17.25, expected_type)))
-        check_expr(f".25{c}", Token("NUM_LIT", (0.25, expected_type)))
-        check_expr(f"25.{c}", Token("NUM_LIT", (25, expected_type)))
-        check_expr(f"25{c}-2", Token("NUM_LIT", (0.25, expected_type)))
-        check_expr(f"2.5{c}-10", Token("NUM_LIT", (2.5e-10, expected_type)))
+        check_expr(
+            f"17{c}2", Token("NUM_LIT", Number(1700, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"17.25{c}2",
+            Token("NUM_LIT", Number(1725, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f"1.725{c}+2",
+            Token("NUM_LIT", Number(172.5, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f".1725{c}2",
+            Token("NUM_LIT", Number(17.25, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f".1725{c}10",
+            Token("NUM_LIT", Number(0.1725e10, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f"17{c}", Token("NUM_LIT", Number(17, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"17.25{c}",
+            Token("NUM_LIT", Number(17.25, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f".25{c}", Token("NUM_LIT", Number(0.25, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"25.{c}", Token("NUM_LIT", Number(25, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"25{c}-2", Token("NUM_LIT", Number(0.25, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"2.5{c}-10",
+            Token("NUM_LIT", Number(2.5e-10, expected_type, Number.Style.EXP)),
+        )
     check_expr("3e39", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
 
 
 def test_exp_d_lit():
     expected_type = TYPE_DOUBLE
     for c in "d", "D":
-        check_expr(f"17{c}2", Token("NUM_LIT", (1700, expected_type)))
-        check_expr(f"17.25{c}2", Token("NUM_LIT", (1725, expected_type)))
-        check_expr(f"1.725{c}+2", Token("NUM_LIT", (172.5, expected_type)))
-        check_expr(f".1725{c}2", Token("NUM_LIT", (17.25, expected_type)))
-        check_expr(f".1725{c}10", Token("NUM_LIT", (0.1725e10, expected_type)))
-        check_expr(f"17{c}", Token("NUM_LIT", (17, expected_type)))
-        check_expr(f"17.25{c}", Token("NUM_LIT", (17.25, expected_type)))
-        check_expr(f".25{c}", Token("NUM_LIT", (0.25, expected_type)))
-        check_expr(f"25.{c}", Token("NUM_LIT", (25, expected_type)))
-        check_expr(f"25{c}-2", Token("NUM_LIT", (0.25, expected_type)))
-        check_expr(f"2.5{c}-10", Token("NUM_LIT", (2.5e-10, expected_type)))
+        check_expr(
+            f"17{c}2", Token("NUM_LIT", Number(1700, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"17.25{c}2",
+            Token("NUM_LIT", Number(1725, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f"1.725{c}+2",
+            Token("NUM_LIT", Number(172.5, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f".1725{c}2",
+            Token("NUM_LIT", Number(17.25, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f".1725{c}10",
+            Token("NUM_LIT", Number(0.1725e10, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f"17{c}", Token("NUM_LIT", Number(17, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"17.25{c}",
+            Token("NUM_LIT", Number(17.25, expected_type, Number.Style.EXP)),
+        )
+        check_expr(
+            f".25{c}", Token("NUM_LIT", Number(0.25, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"25.{c}", Token("NUM_LIT", Number(25, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"25{c}-2", Token("NUM_LIT", Number(0.25, expected_type, Number.Style.EXP))
+        )
+        check_expr(
+            f"2.5{c}-10",
+            Token("NUM_LIT", Number(2.5e-10, expected_type, Number.Style.EXP)),
+        )
     check_expr("1.8d308", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
 
 
 def test_exp_f_lit():
     expected_type = TYPE__FLOAT
     for c in "f", "F":
-        check_expr(f"17{c}2", Token("NUM_LIT", (ExtendedFloat("1700"), expected_type)))
         check_expr(
-            f"17.25{c}2", Token("NUM_LIT", (ExtendedFloat("1725"), expected_type))
+            f"17{c}2",
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("1700"), expected_type, Number.Style.EXP),
+            ),
         )
         check_expr(
-            f"1.725{c}+2", Token("NUM_LIT", (ExtendedFloat("172.5"), expected_type))
+            f"17.25{c}2",
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("1725"), expected_type, Number.Style.EXP),
+            ),
         )
         check_expr(
-            f".1725{c}2", Token("NUM_LIT", (ExtendedFloat("17.25"), expected_type))
+            f"1.725{c}+2",
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("172.5"), expected_type, Number.Style.EXP),
+            ),
+        )
+        check_expr(
+            f".1725{c}2",
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("17.25"), expected_type, Number.Style.EXP),
+            ),
         )
         check_expr(
             f".1725{c}10",
-            Token("NUM_LIT", (ExtendedFloat("1.725", "9"), expected_type)),
-        )
-        check_expr(f"17{c}", Token("NUM_LIT", (ExtendedFloat("17"), expected_type)))
-        check_expr(
-            f"17.25{c}", Token("NUM_LIT", (ExtendedFloat("17.25"), expected_type))
-        )
-        check_expr(f".25{c}", Token("NUM_LIT", (ExtendedFloat(".25"), expected_type)))
-        check_expr(f"25.{c}", Token("NUM_LIT", (ExtendedFloat("25"), expected_type)))
-        check_expr(
-            f"25{c}-2", Token("NUM_LIT", (ExtendedFloat("2.5", "-1"), expected_type))
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("1.725", "9"), expected_type, Number.Style.EXP),
+            ),
         )
         check_expr(
-            f"2.5{c}-10", Token("NUM_LIT", (ExtendedFloat("2.5", "-10"), expected_type))
+            f"17{c}",
+            Token(
+                "NUM_LIT", Number(ExtendedFloat("17"), expected_type, Number.Style.EXP)
+            ),
+        )
+        check_expr(
+            f"17.25{c}",
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("17.25"), expected_type, Number.Style.EXP),
+            ),
+        )
+        check_expr(
+            f".25{c}",
+            Token(
+                "NUM_LIT", Number(ExtendedFloat(".25"), expected_type, Number.Style.EXP)
+            ),
+        )
+        check_expr(
+            f"25.{c}",
+            Token(
+                "NUM_LIT", Number(ExtendedFloat("25"), expected_type, Number.Style.EXP)
+            ),
+        )
+        check_expr(
+            f"25{c}-2",
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("2.5", "-1"), expected_type, Number.Style.EXP),
+            ),
+        )
+        check_expr(
+            f"2.5{c}-10",
+            Token(
+                "NUM_LIT",
+                Number(ExtendedFloat("2.5", "-10"), expected_type, Number.Style.EXP),
+            ),
         )
     check_expr("1.2f4932", diag=diag.E_NUM_LIT_OUTSIDE_GIVEN_RANGE)
 
