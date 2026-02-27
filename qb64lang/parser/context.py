@@ -1,3 +1,4 @@
+import contextlib
 import os
 from dataclasses import dataclass, field
 
@@ -106,9 +107,10 @@ class ParseContext:
         # This function must progress, so unconditionally drop the first
         # token. This might result in an extra line being dropped but this
         # is already an error recovery scenario.
-        next(self)
-        while not self.at_line_terminator():
+        with contextlib.suppress(diag.DiagnosticError):
             next(self)
+            while not self.at_line_terminator():
+                next(self)
 
     def do_metacommand(self):
         match self.tok.value:

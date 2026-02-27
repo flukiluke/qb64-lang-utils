@@ -1,6 +1,6 @@
 from .. import parse
 from ..ast import If, Print
-from ..diagnostics import E_UNEXPECTED_ITEM
+from ..diagnostics import E_UNEXPECTED_ITEM, E_UNKNOWN_CHARACTERS
 from .helpers import Ast
 
 
@@ -14,6 +14,11 @@ def test_bad_expr_drops_line():
     """)
     assert prog.diagnostics.has(E_UNEXPECTED_ITEM)
     assert prog.main.find(If) == Ast(If, true_branch=[Ast(Print), Ast(Print)])
+
+
+def test_double_fault():
+    prog = parse("print !@foo")
+    assert prog.diagnostics.has(E_UNKNOWN_CHARACTERS)
 
 
 def test_bad_stmt():
