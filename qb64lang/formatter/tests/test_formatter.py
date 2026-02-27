@@ -61,3 +61,16 @@ def test_numbers():
 
 def test_string():
     assert format_clean('Print "abc"') == 'PRINT "abc"'
+
+
+def test_func_call():
+    assert format_clean("print _autodisplay+1") == "PRINT _AUTODISPLAY + 1"
+    assert format_clean('print lcase$("hello")') == 'PRINT LCASE$("hello")'
+    assert format_clean('print left$("hello",123)') == 'PRINT LEFT$("hello", 123)'
+    assert format_clean('print val("2")') == 'PRINT VAL("2")'
+
+
+def test_sub_call():
+    assert format_clean("_autodisplay") == "_AUTODISPLAY"
+    assert format_clean("mkdir foo$") == "MKDIR foo$"
+    assert format_clean("out a, b") == "OUT a, b"

@@ -17,13 +17,13 @@ The following metacommands are used heavily:
 HEADER = """
 $overload:on
 $syntax:strictsigil
-declare sub mkdir (path$)
-declare sub out (address%, value%)
-declare function left$ (s$, i&&)
-declare function lcase$ (s$)
-declare function val## (s$)
-declare sub _autodisplay
-declare function _autodisplay%%
+declare sub MkDir (path$)
+declare sub Out (address%, value%)
+declare function Left$ (s$, i&&)
+declare function LCase$ (s$)
+declare function Val## (s$)
+declare sub _AutoDisplay
+declare function _AutoDisplay%%
 """
 
 

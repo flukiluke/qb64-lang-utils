@@ -315,9 +315,9 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
             case ("PROCEDURE", proc):
                 assert isinstance(proc, Procedure)
                 name, _ = _split_name_sigil(proc.source_name)
-                _, sigil = _split_name_sigil(ctx.tok.plain_value)
+                used_name, sigil = _split_name_sigil(ctx.tok.plain_value)
                 stmt = ctx.at_statment_position
-                ctx.add(name + sigil)
+                ctx.add(ctx.case(name, used_name) + sigil)
                 if stmt:
                     ctx.post_flex()
             case ("TYPE", type):
@@ -353,6 +353,9 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
             case ("PUNCTUATION", "(" | ")" as c):
                 assert isinstance(c, str)
                 ctx.add(c)
+            case ("PUNCTUATION", ","):
+                ctx.add(",")
+                ctx.post_flex()
             case ("PUNCTUATION", c):
                 assert isinstance(c, str)
                 ctx.pre_flex()
