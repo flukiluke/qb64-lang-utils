@@ -7,3 +7,9 @@ def format_clean(input: str):
     assert program.diagnostics.has_none(), program.diagnostics.diagnostics
     result = format(program)
     return result
+
+
+def format_text(input: str):
+    program = parse(input)
+    result = format(program)
+    return result

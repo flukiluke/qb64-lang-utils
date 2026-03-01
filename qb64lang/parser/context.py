@@ -35,7 +35,6 @@ class ParseContext:
         self.tok.value = ""
         self.current_subproc: None | ProcDefinition = None
         self.flags = _Flags()
-        next(self)
 
     def __next__(self):
         self._advance()
@@ -109,7 +108,8 @@ class ParseContext:
         # is already an error recovery scenario.
         with contextlib.suppress(diag.DiagnosticError):
             next(self)
-            while not self.at_line_terminator():
+        while not self.at_line_terminator():
+            with contextlib.suppress(diag.DiagnosticError):
                 next(self)
 
     def do_metacommand(self):

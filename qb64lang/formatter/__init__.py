@@ -218,8 +218,8 @@ class FormatContext:
         self.ast_walker = _ast_walk(program.main, 0, program.main)
         self.node = next(self.ast_walker)
         self.main = program.main
+        self.input = program.input
         self.token_stream.input(program.input)
-        next(self)
 
     def __next__(self):
         try:
@@ -236,6 +236,18 @@ class FormatContext:
         except StopIteration:
             self.node = self.main
         return self.tok
+
+    def skip_line(self):
+        # Rewind to start of line
+        input_start = self.input.rfind("\n", 0, self.tok.lexpos) + 1
+        self.result = self.result[: self.result.rfind("\n") + 1]
+        # Find next newline
+        with contextlib.suppress(DiagnosticError):
+            next(self)
+        while not self.at_a("NEWLINE", "\n") and not self.at_a("EOF"):
+            with contextlib.suppress(DiagnosticError):
+                next(self)
+        self.result += self.input[input_start : self.tok.lexpos]
 
     def at_a(self, type: str, value: str | None = None) -> bool:
         return self.tok.type == type and (value is None or self.tok.value == value)
@@ -285,6 +297,11 @@ class FormatContext:
 
 def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
     ctx = FormatContext(program, caps_style)
+    try:
+        next(ctx)
+    except DiagnosticError as e:
+        ctx.tok = e.source
+        ctx.skip_line()
     while not ctx.at_a("EOF"):
         match (ctx.tok.type, ctx.tok.value):
             case ("NEWLINE", "rem"):
@@ -361,8 +378,11 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
                 ctx.pre_flex()
                 ctx.add(c)
                 ctx.post_flex()
-        with contextlib.suppress(DiagnosticError):
+        try:
             next(ctx)
+        except DiagnosticError as e:
+            ctx.tok = e.source
+            ctx.skip_line()
     return ctx.result
 
 

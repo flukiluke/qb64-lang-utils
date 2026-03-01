@@ -1,4 +1,4 @@
-from .helpers import format_clean
+from .helpers import format_clean, format_text
 
 
 def test_comment():
@@ -74,3 +74,14 @@ def test_sub_call():
     assert format_clean("_autodisplay") == "_AUTODISPLAY"
     assert format_clean("mkdir foo$") == "MKDIR foo$"
     assert format_clean("out a, b") == "OUT a, b"
+
+
+def test_continue_on_lex_error():
+    assert format_text("print !@hi") == "print !@hi"
+    assert format_text("print ! @ hi") == "print ! @ hi"
+    assert format_text("! @ hi") == "! @ hi"
+    assert format_text("print x\nprint !hi\nprint y") == "PRINT x\nprint !hi\nPRINT y"
+
+
+def test_continue_on_parse_error():
+    assert format_text("x = 1 2 3") == "x = 1 2 3"

@@ -63,8 +63,9 @@ class _Diagnostic:
 
 
 class DiagnosticError(Exception):
-    def __init__(self, diagnostic: _Diagnostic):
+    def __init__(self, diagnostic: _Diagnostic, source: LexToken):
         self.diagnostic = diagnostic
+        self.source = source
 
 
 class DiagnosticStore:
@@ -82,7 +83,7 @@ class DiagnosticStore:
     def raise_error(self, template: DiagTemplate, source: LexToken, *args: Any):
         diag = _Diagnostic(template, source.lexpos, source.lexend, *args)
         self.diagnostics.append(diag)
-        raise DiagnosticError(diag)
+        raise DiagnosticError(diag, source)
 
     def has(self, template: DiagTemplate):
         return any(diag.template == template for diag in self.diagnostics)

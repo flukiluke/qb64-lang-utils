@@ -441,6 +441,10 @@ def do_main(ctx: ParseContext):
             lex_end=0,
         )
         ctx.symbols.add_procedure(Procedure("_main", "_Main", [main]))
+    try:
+        next(ctx)
+    except diag.DiagnosticError:
+        ctx.drop_line()
     while not ctx.at_a("EOF"):
         ctx.symbols.set_scope(main.symbols)
         main.statements.extend(do_block(ctx))
