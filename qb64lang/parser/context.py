@@ -103,11 +103,12 @@ class ParseContext:
         return self.prev.type == type and (value is None or self.prev.value == value)
 
     def drop_line(self):
-        # This function must progress, so unconditionally drop the first
-        # token. This might result in an extra line being dropped but this
-        # is already an error recovery scenario.
+        # This function must progress, so unconditionally drop the first token.
+        at_line_terminator = self.at_line_terminator()
         with contextlib.suppress(diag.DiagnosticError):
             next(self)
+        if at_line_terminator:
+            return
         while not self.at_line_terminator():
             with contextlib.suppress(diag.DiagnosticError):
                 next(self)

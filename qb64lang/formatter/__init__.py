@@ -24,7 +24,7 @@ from ..parser.ast import (
     Variable,
 )
 from ..parser.datatypes import TYPE__NONE, Type
-from ..parser.diagnostics import DiagnosticError, DiagnosticStore
+from ..parser.diagnostics import DiagLevel, DiagnosticError, DiagnosticStore
 from ..parser.lexer import Lexer
 from ..parser.ply import LexToken
 
@@ -220,6 +220,30 @@ class FormatContext:
         self.main = program.main
         self.input = program.input
         self.token_stream.input(program.input)
+        self.error_locations = [
+            (d.startpos, d.endpos)
+            for d in program.diagnostics.diagnostics
+            if d.template.level == DiagLevel.ERR_SYN
+        ]
+        self.error_index = 0
+
+    def advance(self):
+        try:
+            next(self)
+        except DiagnosticError as e:
+            self.tok = e.source
+            self.skip_line()
+            return
+        while self.error_index < len(self.error_locations):
+            err = self.error_locations[self.error_index]
+            pos = self.tok.lexpos
+            if pos < err[0]:
+                return
+            elif err[0] <= pos < err[1]:
+                self.skip_line()
+                return
+            else:
+                self.error_index += 1
 
     def __next__(self):
         try:
@@ -297,11 +321,7 @@ class FormatContext:
 
 def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
     ctx = FormatContext(program, caps_style)
-    try:
-        next(ctx)
-    except DiagnosticError as e:
-        ctx.tok = e.source
-        ctx.skip_line()
+    ctx.advance()
     while not ctx.at_a("EOF"):
         match (ctx.tok.type, ctx.tok.value):
             case ("NEWLINE", "rem"):
@@ -378,11 +398,7 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
                 ctx.pre_flex()
                 ctx.add(c)
                 ctx.post_flex()
-        try:
-            next(ctx)
-        except DiagnosticError as e:
-            ctx.tok = e.source
-            ctx.skip_line()
+        ctx.advance()
     return ctx.result
 
 

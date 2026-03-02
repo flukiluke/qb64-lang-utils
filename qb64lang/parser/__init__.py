@@ -42,4 +42,5 @@ class Program:
 def parse(input: str):
     program = Program(input)
     typecheck(program)
+    program.diagnostics.sort()
     return program

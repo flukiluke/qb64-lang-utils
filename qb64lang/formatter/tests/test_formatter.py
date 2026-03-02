@@ -85,3 +85,16 @@ def test_continue_on_lex_error():
 
 def test_continue_on_parse_error():
     assert format_text("x = 1 2 3") == "x = 1 2 3"
+    assert format_text("print next") == "print next"
+    assert format_text("if 1\nprint 2\nend if") == "if 1\nprint 2\nend if"
+    assert format_text("x=1 2 3\ny=4") == "x=1 2 3\ny = 4"
+    assert format_text("x=1 2 3\nx=1 2 3\ny=4") == "x=1 2 3\nx=1 2 3\ny = 4"
+    assert (
+        format_text("for i = 1 to 3\nprint next\nnext i")
+        == "FOR i = 1 TO 3\nprint next\nNEXT i"
+    )
+
+
+def test_semantic_errors_formatted():
+    assert format_text("x$=3") == "x$ = 3"
+    assert format_text("if Foo$ then print foo$") == "IF Foo$ THEN PRINT Foo$"

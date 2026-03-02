@@ -30,3 +30,9 @@ def test_bad_stmt():
     """)
     assert prog.diagnostics.has(E_UNEXPECTED_ITEM)
     assert prog.main.find(If) == Ast(If, true_branch=[Ast(Print)])
+
+
+def test_diags_in_order():
+    prog = parse("x$ = 3 : print next")
+    assert prog.diagnostics.diagnostics[0].startpos == 0
+    assert prog.diagnostics.diagnostics[1].startpos == 15
