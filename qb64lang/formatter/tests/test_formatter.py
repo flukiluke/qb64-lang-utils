@@ -98,3 +98,10 @@ def test_continue_on_parse_error():
 def test_semantic_errors_formatted():
     assert format_text("x$=3") == "x$ = 3"
     assert format_text("if Foo$ then print foo$") == "IF Foo$ THEN PRINT Foo$"
+
+
+def test_compound_type_definition():
+    assert (
+        format_text("type foo\na as long\nas string b,c\nend type")
+        == "TYPE foo\na AS LONG\nAS STRING b, c\nEND TYPE"
+    )

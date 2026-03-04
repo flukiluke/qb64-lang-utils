@@ -366,7 +366,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             t.type = proc_tok[0]
             t.value = proc_tok[1]
             return t
-        elif var := symbols.find_variable(name, sigil):
+        elif not symbols.return_var_as_id and (
+            var := symbols.find_variable(name, sigil)
+        ):
             t.type = "VARIABLE"
             t.value = var
             return t

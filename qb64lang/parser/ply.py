@@ -62,13 +62,12 @@ class LexToken(object):
     type: str
     value: Any
     plain_value: Any
-    lineno: int
     lexpos: int
     lexer: "Lexer"
     lexend: int
 
     def __str__(self):
-        return 'LexToken(%s,%r,%d,%d)' % (self.type, self.value, self.lineno, self.lexpos)
+        return 'LexToken(%s,%r,%d)' % (self.type, self.value, self.lexpos)
 
     def __repr__(self):
         return str(self)
@@ -113,7 +112,6 @@ class NullLogger(object):
 #    token()          -  Get the next token
 #    clone()          -  Clone the lexer
 #
-#    lineno           -  Current line number
 #    lexpos           -  Current position in the input string
 # -----------------------------------------------------------------------------
 
@@ -143,7 +141,6 @@ class Lexer:
         self.lexignore = ''           # Ignored characters
         self.lexliterals = ''         # Literal characters that can be passed through
         self.lexmodule = None         # Module
-        self.lineno = 1               # Current line number
         self.lexoptimize = False      # Optimized mode
 
     def clone(self, object=None):
@@ -330,7 +327,6 @@ class Lexer:
                 tok = LexToken()
                 tok.value = m.group()
                 tok.plain_value = tok.value
-                tok.lineno = self.lineno
                 tok.lexpos = lexpos
                 tok.lexend = lexpos + len(tok.value)
 
@@ -375,7 +371,6 @@ class Lexer:
                 if lexdata[lexpos] in self.lexliterals:
                     tok = LexToken()
                     tok.value = lexdata[lexpos]
-                    tok.lineno = self.lineno
                     tok.type = tok.value
                     tok.lexpos = lexpos
                     self.lexpos = lexpos + 1
@@ -385,7 +380,6 @@ class Lexer:
                 if self.lexerrorf:
                     tok = LexToken()
                     tok.value = self.lexdata[lexpos:]
-                    tok.lineno = self.lineno
                     tok.type = 'error'
                     tok.lexer = self
                     tok.lexpos = lexpos
@@ -406,7 +400,6 @@ class Lexer:
             tok = LexToken()
             tok.type = 'eof'
             tok.value = ''
-            tok.lineno = self.lineno
             tok.lexpos = lexpos
             tok.lexer = self
             self.lexpos = lexpos
@@ -1093,7 +1086,7 @@ def runmain(lexer=None, data=None):
         tok = _token()
         if not tok:
             break
-        sys.stdout.write('(%s,%r,%d,%d)\n' % (tok.type, tok.value, tok.lineno, tok.lexpos))
+        sys.stdout.write('(%s,%r,%d)\n' % (tok.type, tok.value, tok.lexpos))
 
 # -----------------------------------------------------------------------------
 # @TOKEN(regex)

@@ -132,8 +132,21 @@ E_EXISTING_DEF_SIGIL_CLASH = DiagTemplate(
 E_SIGIL_WITH_AS = DiagTemplate(
     DiagLevel.ERR_SYN, "Type suffixes cannot be used with an AS TYPE clause."
 )
+E_SIGIL_WITH_TYPE_NAME = DiagTemplate(
+    DiagLevel.ERR_SYN, "Type suffixes cannot be used with a custom type name."
+)
+E_SIGIL_WITH_FIELD_NAME = DiagTemplate(
+    DiagLevel.ERR_SYN, "Type suffixes cannot be used with a field of a custom type."
+)
+E_MISSING_AS_TYPE = DiagTemplate(DiagLevel.ERR_SYN, "AS TYPE clause must be present.")
 E_DUPE_AS_TYPE = DiagTemplate(DiagLevel.ERR_SYN, "AS TYPE clause cannot be repeated.")
 E_EMPTY_DIM = DiagTemplate(DiagLevel.ERR_SYN, "At least one variable must be defined.")
+E_EMPTY_COMPOUND = DiagTemplate(
+    DiagLevel.ERR_SEM, "Custom type must have at least one field."
+)
+E_DUPE_COMPOUND_FIELD = DiagTemplate(
+    DiagLevel.ERR_SEM, "The field {} is already defined."
+)
 E_BAD_TYPE_WIDTH = DiagTemplate(
     DiagLevel.ERR_SYN, "The {} type only allows fixed-widths in range [{} to {}]."
 )

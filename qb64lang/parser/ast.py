@@ -15,6 +15,8 @@ from .datatypes import (
     TYPE_SINGLE,
     TYPE_STRING,
     BitnType,
+    CompoundField,
+    CompoundType,
     ExtendedFloat,
     Parameter,
     StringType,
@@ -99,6 +101,20 @@ class ProcDefinitionLocation(Statement):
 class ProcDeclaration(Statement):
     name: str
     signature: TypeSignature
+
+
+@dataclass
+class CompoundFieldDefinition(Statement):
+    items: list[CompoundField]
+
+
+@dataclass
+class CompoundDefinition(Statement):
+    type: CompoundType
+    field_defs: list[CompoundFieldDefinition]
+
+    def children(self):
+        return self.field_defs
 
 
 @dataclass
@@ -293,6 +309,7 @@ KEYWORDS = {
     "sub": "Sub",
     "function": "Function",
     "declare": "Declare",
+    "type": "Type",
     # Conditionals
     "if": "If",
     "then": "Then",
@@ -487,6 +504,7 @@ class SymbolStore:
         self.types: dict[str, Type] = {}
         self.default_type: Type = TYPE_SINGLE
         self.return_proc_as_id: bool = False
+        self.return_var_as_id: bool = False
         for proc in PROCS:
             self.add_procedure(proc)
 
@@ -508,6 +526,13 @@ class SymbolStore:
 
     def find_type(self, name: str) -> Type | None:
         return BUILTIN_TYPES.get(name, self.types.get(name))
+
+    def create_compound_type(
+        self, name: str, source_name: str, fields: list[CompoundField]
+    ):
+        new_type = CompoundType(name, source_name, "", fields)
+        self.types[name] = new_type
+        return new_type
 
     def lookup_sigil(self, sigil: str | None) -> Type:
         if sigil is None:
@@ -564,6 +589,8 @@ class AstWalk(Generic[T]):
             Assignment: self.assignment,
             Call: self.call,
             Cast: self.cast,
+            CompoundDefinition: self.compound_definition,
+            CompoundFieldDefinition: self.compound_field_definition,
             Constant: self.constant,
             Dim: self.kw_dim,
             For: self.kw_for,
@@ -585,6 +612,10 @@ class AstWalk(Generic[T]):
     def call(self, node: Call) -> T: ...
 
     def cast(self, node: Cast) -> T: ...
+
+    def compound_definition(self, node: CompoundDefinition) -> T: ...
+
+    def compound_field_definition(self, node: CompoundFieldDefinition) -> T: ...
 
     def constant(self, node: Constant) -> T: ...
 

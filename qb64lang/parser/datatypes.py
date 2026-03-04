@@ -85,6 +85,24 @@ class Type:
     def is_number(self) -> bool:
         return False
 
+    def is_builtin(self) -> bool:
+        return True
+
+
+@dataclass
+class CompoundField:
+    type: Type
+    name: str
+    source_name: str
+
+
+@dataclass
+class CompoundType(Type):
+    fields: list[CompoundField]
+
+    def is_builtin(self):
+        return False
+
 
 @dataclass
 class FloatType(Type):

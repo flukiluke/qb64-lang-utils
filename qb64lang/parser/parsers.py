@@ -1,9 +1,12 @@
 from collections.abc import Callable
+from typing import cast
 
 from . import diagnostics as diag
 from .ast import (
     Assignment,
     Call,
+    CompoundDefinition,
+    CompoundFieldDefinition,
     Constant,
     Dim,
     Expr,
@@ -24,6 +27,7 @@ from .datatypes import (
     TYPE__BYTE,
     TYPE__NONE,
     TYPE_STRING,
+    CompoundField,
     Parameter,
     Type,
     TypeSignature,
@@ -366,6 +370,89 @@ def do_dim(ctx: ParseContext):
     )
 
 
+def do_type(ctx: ParseContext):
+    """
+    Expects: TYPE
+    """
+    lex_start = ctx.tok.lexpos
+    field_defs = list[CompoundFieldDefinition]()
+    fields = dict[str, CompoundField]()
+
+    def bare_list(as_clause: Type):
+        lex_start = ctx.tok.lexpos
+        result = list[CompoundField]()
+        while ctx.at_a("ID"):
+            if ctx.tok.value[2] is not None:
+                ctx.diags.raise_error(diag.E_SIGIL_WITH_FIELD_NAME, ctx.tok)
+            result.append(
+                CompoundField(as_clause, ctx.tok.value[0], ctx.tok.plain_value)
+            )
+            next(ctx)
+            if ctx.at_a("PUNCTUATION", ","):
+                next(ctx)
+            else:
+                break
+        return CompoundFieldDefinition(
+            result, lex_start=lex_start, lex_end=ctx.prev.lexend
+        )
+
+    def typed_item():
+        lex_start = ctx.tok.lexpos
+        if not ctx.at_a("ID"):
+            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
+        if ctx.tok.value[2] is not None:
+            ctx.diags.raise_error(diag.E_SIGIL_WITH_FIELD_NAME, ctx.tok)
+        name: str = ctx.tok.value[0]
+        cased_name: str = ctx.tok.plain_value
+        next(ctx)
+        as_clause = do_as_type_clause(ctx)
+        if as_clause is None:
+            ctx.diags.raise_error(diag.E_MISSING_AS_TYPE, ctx.tok)
+        return CompoundFieldDefinition(
+            [CompoundField(as_clause, name, cased_name)],
+            lex_start=lex_start,
+            lex_end=ctx.prev.lexend,
+        )
+
+    try:
+        ctx.symbols.return_proc_as_id = True
+        ctx.symbols.return_var_as_id = True
+        next(ctx)
+        if not ctx.at_a("ID"):
+            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
+        name: str = ctx.tok.value[0]
+        cased_name: str = ctx.tok.plain_value
+        sigil: str | None = ctx.tok.value[2]
+        if sigil is not None:
+            ctx.diags.raise_error(diag.E_SIGIL_WITH_TYPE_NAME, ctx.tok)
+        next(ctx)
+        ctx.consume("NEWLINE")
+        while not ctx.at_a("KEYWORD", "end"):
+            as_clause = do_as_type_clause(ctx)
+            new_fields = bare_list(as_clause) if as_clause else typed_item()
+            field_defs.append(new_fields)
+            for field in new_fields.items:
+                if field.name in fields:
+                    ctx.diags.create(
+                        diag.E_DUPE_COMPOUND_FIELD, new_fields, field.source_name
+                    )
+                else:
+                    fields[field.name] = field
+            ctx.consume("NEWLINE")
+        ctx.consume("KEYWORD", "end")
+        ctx.consume("KEYWORD", "type")
+    finally:
+        ctx.symbols.return_proc_as_id = False
+        ctx.symbols.return_var_as_id = False
+    new_type = ctx.symbols.create_compound_type(name, cased_name, list(fields.values()))
+    cdef = CompoundDefinition(
+        new_type, field_defs, lex_start=lex_start, lex_end=ctx.prev.lexend
+    )
+    if len(fields) == 0:
+        ctx.diags.create(diag.E_EMPTY_COMPOUND, cdef)
+    return cdef
+
+
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "print": do_print,
     "?": do_print,
@@ -376,6 +463,7 @@ KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "declare": do_declare,
     "dim": do_dim,
     "redim": do_dim,
+    "type": do_type,
 }
 
 
@@ -665,7 +753,9 @@ def do_unknown_var_or_procedure(ctx: ParseContext) -> Statement:
         # call to an unknown subprocedure.
         raise ParseError("Unimplemented implicit array")
     else:
-        raise ParseError("Unimplemented procedure call")
+        # Unimplemented procedure call
+        ctx.drop_line()
+        return cast(Statement, None)
 
 
 def do_assignment(ctx: ParseContext):

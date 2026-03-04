@@ -180,10 +180,12 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
             case ("TYPE", type):
                 assert isinstance(type, Type)
                 ctx.pre_flex()
-                ctx.add(ctx.case(type.name, ctx.tok.plain_value))
+                if type.is_builtin():
+                    ctx.add(ctx.case(type.source_name, ctx.tok.plain_value))
+                else:
+                    ctx.add(type.source_name)
                 ctx.post_flex()
             case ("ID", c):
-                # An ID should never be encountered because we have a full symbol table.
                 ctx.add(c[0])
                 if c[2] is not None:
                     ctx.add(c[2])
