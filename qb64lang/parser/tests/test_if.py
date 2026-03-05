@@ -18,20 +18,8 @@ def test_single_line():
         parse_clean('if 1 then print "a";\nif 1 then print "b";').main.find_all(If)
     )
     assert stmts == [
-        Ast(
-            If,
-            ONE,
-            [PrintStr("a")],
-            [],
-            [],
-        ),
-        Ast(
-            If,
-            ONE,
-            [PrintStr("b")],
-            [],
-            [],
-        ),
+        Ast(If, ONE, [PrintStr("a")], [], [], is_single_line=True),
+        Ast(If, ONE, [PrintStr("b")], [], [], is_single_line=True),
     ]
 
 
@@ -47,13 +35,7 @@ def test_single_line_else():
         )
     )
     assert stmts == [
-        Ast(
-            If,
-            ONE,
-            [PrintStr("x")],
-            [],
-            [PrintStr("y")],
-        ),
+        Ast(If, ONE, [PrintStr("x")], [], [PrintStr("y")], is_single_line=True),
         Ast(Print, [TWO]),
     ]
 
@@ -63,13 +45,7 @@ def test_trailing_else():
         parse_clean('if 1 then print "x"; else\nprint "y";').main.find_all(Statement)
     )
     assert stmts == [
-        Ast(
-            If,
-            ONE,
-            [PrintStr("x")],
-            [],
-            [],
-        ),
+        Ast(If, ONE, [PrintStr("x")], [], [], is_single_line=True),
         PrintStr("y"),
     ]
 
@@ -97,34 +73,17 @@ def test_multi_line():
 """).main.find_all(Statement)
     )
     assert stmts == [
-        Ast(
-            If,
-            ONE,
-            [PrintStr("x"), PrintStr("y")],
-            [],
-            [],
-        ),
+        Ast(If, ONE, [PrintStr("x"), PrintStr("y")], [], [], is_single_line=False),
         Ast(
             If,
             ONE,
             [PrintStr("a")],
             [],
             [PrintStr("b"), PrintStr("c")],
+            is_single_line=False,
         ),
-        Ast(
-            If,
-            ONE,
-            [],
-            [],
-            [PrintStr("d")],
-        ),
-        Ast(
-            If,
-            ONE,
-            [PrintStr("e")],
-            [],
-            [],
-        ),
+        Ast(If, ONE, [], [], [PrintStr("d")], is_single_line=False),
+        Ast(If, ONE, [PrintStr("e")], [], [], is_single_line=False),
     ]
 
 
@@ -147,11 +106,7 @@ def test_elseif():
     )
     assert stmts == [
         Ast(
-            If,
-            ONE,
-            [PrintStr("a")],
-            [(TWO, [PrintStr("b")])],
-            [],
+            If, ONE, [PrintStr("a")], [(TWO, [PrintStr("b")])], [], is_single_line=False
         ),
         Ast(
             If,
@@ -168,6 +123,7 @@ def test_elseif():
                 ),
             ],
             [PrintStr("f")],
+            is_single_line=False,
         ),
     ]
 
@@ -199,13 +155,20 @@ def test_single_line_colons():
     """).main.find_all(Statement)
     )
     assert stmts == [
-        Ast(If, ONE, [PrintStr("a"), PrintStr("b")], [], []),
-        Ast(If, ONE, [], [], []),
-        Ast(If, ONE, [PrintStr("c")], [], []),
-        Ast(If, ONE, [PrintStr("d"), PrintStr("e")], [], []),
-        Ast(If, ONE, [PrintStr("f")], [], []),
-        Ast(If, ONE, [PrintStr("g")], [], [PrintStr("h"), PrintStr("i")]),
-        Ast(If, ONE, [PrintStr("j")], [], [PrintStr("k")]),
+        Ast(If, ONE, [PrintStr("a"), PrintStr("b")], [], [], is_single_line=True),
+        Ast(If, ONE, [], [], [], is_single_line=True),
+        Ast(If, ONE, [PrintStr("c")], [], [], is_single_line=True),
+        Ast(If, ONE, [PrintStr("d"), PrintStr("e")], [], [], is_single_line=True),
+        Ast(If, ONE, [PrintStr("f")], [], [], is_single_line=True),
+        Ast(
+            If,
+            ONE,
+            [PrintStr("g")],
+            [],
+            [PrintStr("h"), PrintStr("i")],
+            is_single_line=True,
+        ),
+        Ast(If, ONE, [PrintStr("j")], [], [PrintStr("k")], is_single_line=True),
     ]
 
 
@@ -224,9 +187,9 @@ def test_rem():
             """).main.find_all(Statement)
     )
     assert stmts == [
-        Ast(If, ONE, [], [], []),
-        Ast(If, ONE, [PrintStr("a")], [], []),
-        Ast(If, ONE, [], [], [PrintStr("b")]),
+        Ast(If, ONE, [], [], [], is_single_line=True),
+        Ast(If, ONE, [PrintStr("a")], [], [], is_single_line=False),
+        Ast(If, ONE, [], [], [PrintStr("b")], is_single_line=False),
     ]
 
 

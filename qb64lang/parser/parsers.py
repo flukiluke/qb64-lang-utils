@@ -104,16 +104,26 @@ def do_if(ctx: ParseContext):
     # A REM after THEN acts as a command; we remain in single-line if mode
     if ctx.at_a("NEWLINE", "rem"):
         # Do not advance token so we leave it at a NEWLINE
-        return If(guard, [], [], [], lex_start=lex_start, lex_end=ctx.prev.lexend)
+        return If(
+            guard,
+            [],
+            [],
+            [],
+            is_single_line=True,
+            lex_start=lex_start,
+            lex_end=ctx.prev.lexend,
+        )
 
     elses = []
     elseifs: list[tuple[Expr, list[Statement]]] = []
+    is_single_line = False
     if not ctx.at_a("NEWLINE", "\n"):
         # Single-line IF
         thens = single_line_block(then_section=True)
         if ctx.at_a("KEYWORD", "else"):
             next(ctx)
             elses = single_line_block(then_section=False)
+        is_single_line = True
     else:
         thens = do_block(ctx)
         while ctx.at_a("KEYWORD", "elseif"):
@@ -135,7 +145,13 @@ def do_if(ctx: ParseContext):
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end if"
             )
     return If(
-        guard, thens, elseifs, elses, lex_start=lex_start, lex_end=ctx.prev.lexend
+        guard,
+        thens,
+        elseifs,
+        elses,
+        is_single_line=is_single_line,
+        lex_start=lex_start,
+        lex_end=ctx.prev.lexend,
     )
 
 

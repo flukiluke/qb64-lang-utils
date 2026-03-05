@@ -103,5 +103,5 @@ def test_semantic_errors_formatted():
 def test_compound_type_definition():
     assert (
         format_text("type foo\na as long\nas string b,c\nend type")
-        == "TYPE foo\na AS LONG\nAS STRING b, c\nEND TYPE"
+        == "TYPE foo\n    a AS LONG\n    AS STRING b, c\nEND TYPE"
     )

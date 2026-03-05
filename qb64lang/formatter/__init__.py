@@ -8,6 +8,7 @@ from qb64lang.parser.ast import Call
 from ..parser import Program
 from ..parser.ast import (
     KEYWORDS,
+    If,
     Node,
     Procedure,
     Variable,
@@ -25,12 +26,13 @@ class Capitalisation(Enum):
 
 
 class FormatContext:
-    def __init__(self, program: Program, caps_style: Capitalisation):
+    def __init__(self, program: Program, caps_style: Capitalisation, indent_size: int):
         self.diags = DiagnosticStore()
         self.tok: LexToken = LexToken()
         self.symbols = program.symbols
         self.token_stream = Lexer(self.symbols, self.diags)
         self.caps_style = caps_style
+        self.indent_size = indent_size
         self.result = ""
         self.at_statment_position = True
         self.at_flex_space = False
@@ -46,6 +48,7 @@ class FormatContext:
             if d.template.level == DiagLevel.ERR_SYN
         ]
         self.error_index = 0
+        self.indent_level = 0
 
     def advance(self):
         try:
@@ -110,7 +113,9 @@ class FormatContext:
         return actual
 
     def add(self, text: str):
-        if self.at_flex_space and not self.at_force_stick:
+        if len(self.result) and self.result[-1] == "\n":
+            self.result += " " * (self.indent_level * self.indent_size)
+        elif self.at_flex_space and not self.at_force_stick:
             self.result += " "
         self.at_flex_space = False
         self.at_force_stick = False
@@ -138,9 +143,19 @@ class FormatContext:
     def statement_position(self):
         self.at_statment_position = True
 
+    def indent(self):
+        self.indent_level += 1
 
-def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
-    ctx = FormatContext(program, caps_style)
+    def outdent(self, n: int = 1):
+        self.indent_level = max(0, self.indent_level - n)
+
+
+def format(
+    program: Program,
+    caps_style: Capitalisation = Capitalisation.UPPER,
+    indent_size: int = 4,
+):
+    ctx = FormatContext(program, caps_style, indent_size)
     ctx.advance()
     while not ctx.at_a("EOF"):
         match (ctx.tok.type, ctx.tok.value):
@@ -160,10 +175,7 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
             case ("NEWLINE", "\n"):
                 ctx.newline()
             case ("KEYWORD", keyword):
-                assert isinstance(keyword, str)
-                ctx.pre_flex()
-                ctx.add(ctx.case(KEYWORDS[keyword], ctx.tok.plain_value))
-                ctx.post_flex()
+                _format_keyword(ctx, keyword)
             case ("VARIABLE", var):
                 assert isinstance(var, Variable)
                 name, _ = _split_name_sigil(var.source_name)
@@ -227,6 +239,50 @@ def format(program: Program, caps_style: Capitalisation = Capitalisation.UPPER):
                 ctx.post_flex()
         ctx.advance()
     return ctx.result
+
+
+def _format_keyword(ctx: FormatContext, keyword: str):
+    statement = ctx.at_statment_position
+    if statement:
+        _handle_indent_before(ctx, keyword)
+    ctx.pre_flex()
+    ctx.add(ctx.case(KEYWORDS[keyword], ctx.tok.plain_value))
+    ctx.post_flex()
+    if statement:
+        _handle_indent_after(ctx, keyword)
+
+
+def _handle_indent_before(ctx: FormatContext, keyword: str):
+    match keyword:
+        case "elseif" | "endif" | "loop" | "wend":
+            ctx.outdent()
+        case "else":
+            if isinstance(ctx.node, If) and not ctx.node.is_single_line:
+                ctx.outdent()
+        case "next":
+            # Check for NEXT j, i style
+            i = ctx.tok.lexpos
+            while i < len(ctx.input) and re.match(r"[a-zA-Z0-9 \t,]", ctx.input[i]):
+                i += 1
+            line = ctx.input[ctx.tok.lexpos : i]
+            ctx.outdent(line.count(",") + 1)
+        case "case":
+            pass
+        case "end":
+            if not isinstance(ctx.node, Call):
+                # Ignore END command
+                ctx.outdent()
+
+
+def _handle_indent_after(ctx: FormatContext, keyword: str):
+    match keyword:
+        case "do" | "for" | "while" | "select" | "type" | "sub" | "function":
+            ctx.indent()
+        case "if" | "elseif" | "else":
+            if isinstance(ctx.node, If) and not ctx.node.is_single_line:
+                ctx.indent()
+        case "case":
+            pass
 
 
 def _split_name_sigil(s: str):

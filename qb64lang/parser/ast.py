@@ -213,6 +213,8 @@ class If(Statement):
         default_factory=list, repr=False
     )
     false_branch: list[Statement] = field(default_factory=list, repr=False)
+    # For the convenience of the formatter
+    is_single_line: bool = False
 
     def children(self):
         return chain(
