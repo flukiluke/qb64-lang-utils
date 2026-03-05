@@ -334,7 +334,7 @@ def do_declare(ctx: ParseContext):
         name += "$"
     proc = ctx.symbols.find_procedure(name)
     if proc is None:
-        proc = Procedure(name, cased_name, [])
+        proc = Procedure(name, cased_name, [], ctx.flags.builtin)
         ctx.symbols.add_procedure(proc)
     elif not ctx.flags.allow_proc_overloads:
         ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, ctx.prev, name)
@@ -581,7 +581,7 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
     # Procedure may exist if pre-declared, or other impls exist
     proc = ctx.symbols.find_procedure(name)
     if proc is None:
-        proc = Procedure(name, cased_name, [])
+        proc = Procedure(name, cased_name, [], ctx.flags.builtin)
         ctx.symbols.add_procedure(proc)
     params = do_param_list(ctx)
     sig = TypeSignature(ret, params)

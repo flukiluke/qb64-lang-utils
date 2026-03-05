@@ -264,6 +264,7 @@ class Procedure:
     name: str
     source_name: str
     impls: list[ProcDefinition] = field(default_factory=list, repr=False)
+    builtin: bool = True
 
     def sigs(self):
         return [i.signature for i in self.impls]

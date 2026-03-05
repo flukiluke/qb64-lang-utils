@@ -186,7 +186,10 @@ def format(
                 name, _ = _split_name_sigil(proc.source_name)
                 used_name, sigil = _split_name_sigil(ctx.tok.plain_value)
                 stmt = ctx.at_statment_position
-                ctx.add(ctx.case(name, used_name) + sigil)
+                if proc.builtin:
+                    ctx.add(ctx.case(name, used_name) + sigil)
+                else:
+                    ctx.add(name)
                 if stmt:
                     ctx.post_flex()
             case ("TYPE", type):

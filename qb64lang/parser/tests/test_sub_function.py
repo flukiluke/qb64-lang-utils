@@ -46,6 +46,7 @@ def test_no_params():
                 statements=[Ast(Print)],
             )
         ],
+        False,
     )
     assert prog.symbols.find_procedure("f") == Procedure(
         "f",
@@ -58,6 +59,7 @@ def test_no_params():
                 statements=[Ast(Print)],
             )
         ],
+        False,
     )
     assert prog.main == Ast(
         ProcDefinition,
@@ -295,10 +297,10 @@ def test_declare_signatures():
         ),
     ]
     assert prog.symbols.find_procedure("foo") == Procedure(
-        "foo", "Foo", [Ast(ProcDefinition, "foo", decl_only=True)]
+        "foo", "Foo", [Ast(ProcDefinition, "foo", decl_only=True)], False
     )
     assert prog.symbols.find_procedure("bar") == Procedure(
-        "bar", "bar#", [Ast(ProcDefinition, "bar", decl_only=True)]
+        "bar", "bar#", [Ast(ProcDefinition, "bar", decl_only=True)], False
     )
 
 
@@ -308,6 +310,7 @@ def test_declare_match_definition():
         "foo",
         "foo",
         [Ast(ProcDefinition, "foo", statements=[Ast(Assignment)], decl_only=False)],
+        False,
     )
 
 
@@ -354,6 +357,7 @@ def test_declare_overload():
                 ),
             ),
         ],
+        False,
     )
 
 
@@ -365,6 +369,7 @@ def test_declare_match_def_overload():
         "foo",
         "foo",
         [Ast(ProcDefinition, "foo", statements=[Ast(Assignment)], decl_only=False)],
+        False,
     )
 
 
@@ -389,6 +394,7 @@ def test_declare_mismatch_def_overload():
                 ),
             ),
         ],
+        False,
     )
 
 
@@ -413,4 +419,5 @@ def test_def_overload():
                 ),
             ),
         ],
+        False,
     )

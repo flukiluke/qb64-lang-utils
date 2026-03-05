@@ -7,7 +7,8 @@ from .typerules import typecheck
 """
 Below are definitions for almost all built-in commands. Omitted are infix operators,
 structural keywords, declarations and those with highly custom syntax.
-The following metacommands are used heavily:
+The following metacommands are used:
+ - $builtin to generally flag these as built-ins
  - $overload to allow declaring the same name multiple times, with different
    type signatures.
  - $syntax to specify special syntax rules. This is a comma-separated list of flags:
@@ -15,6 +16,7 @@ The following metacommands are used heavily:
       functions returning a number, require no sigil be used.
 """
 HEADER = """
+$builtin:on
 $overload:on
 $syntax:strictsigil
 declare sub MkDir (path$)

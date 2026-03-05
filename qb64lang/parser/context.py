@@ -18,6 +18,8 @@ class _Flags:
     allow_proc_overloads: bool = False
     # $syntax:key=value,key=value,...
     syntax: dict[str, str] = field(default_factory=dict)
+    # $builtin:on/off
+    builtin: bool = False
 
 
 class ParseContext:
@@ -125,6 +127,10 @@ class ParseContext:
                 self.flags.allow_proc_overloads = True
             case ("$overload", "off"):
                 self.flags.allow_proc_overloads = False
+            case ("$builtin", "on"):
+                self.flags.builtin = True
+            case ("$builtin", "off"):
+                self.flags.builtin = False
             case ("$syntax", syntax):
                 for item in syntax.split(","):
                     if "=" in item:

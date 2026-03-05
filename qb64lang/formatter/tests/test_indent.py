@@ -97,3 +97,15 @@ def test_loops():
         format_clean("do while x > 1\nprint x\nloop")
         == "DO WHILE x > 1\n    PRINT x\nLOOP"
     )
+
+
+def test_subroutines():
+    assert (
+        format_clean("sub s\nprint 1\nprint 2\nend sub")
+        == "SUB s\n    PRINT 1\n    PRINT 2\nEND SUB"
+    )
+    assert (
+        format_clean("function f\nprint 1\nprint 2\nend function")
+        == "FUNCTION f\n    PRINT 1\n    PRINT 2\nEND FUNCTION"
+    )
+    assert format_clean("declare function f\nprint 1") == "DECLARE FUNCTION f\nPRINT 1"
