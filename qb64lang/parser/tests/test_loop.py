@@ -11,7 +11,7 @@ def test_do_while():
             print "hi"
         loop"""
     ).main.find(Loop)
-    assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [Ast(Print)], top_check=True)
+    assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [Ast(Print)], None)
 
 
 def test_do_until():
@@ -26,7 +26,7 @@ def test_do_until():
         Loop,
         Ast(Call, builtin_proc("<>"), [Ast(Call, builtin_proc(">")), Ast(Constant, 0)]),
         [Ast(Print)],
-        top_check=True,
+        None,
     )
 
 
@@ -38,9 +38,7 @@ def test_loop_while():
         loop while x > 1
     """
     ).main.find(Loop)
-    assert loop == Ast(
-        Loop, Ast(Call, builtin_proc(">")), [Ast(Print)], top_check=False
-    )
+    assert loop == Ast(Loop, None, [Ast(Print)], Ast(Call, builtin_proc(">")))
 
 
 def test_loop_until():
@@ -53,9 +51,9 @@ def test_loop_until():
     ).main.find(Loop)
     assert loop == Ast(
         Loop,
-        Ast(Call, builtin_proc("<>"), [Ast(Call, builtin_proc(">")), Ast(Constant, 0)]),
+        None,
         [Ast(Print)],
-        top_check=False,
+        Ast(Call, builtin_proc("<>"), [Ast(Call, builtin_proc(">")), Ast(Constant, 0)]),
     )
 
 
@@ -67,7 +65,7 @@ def test_infinite_loop():
         loop
         """
     ).main.find(Loop)
-    assert loop == Ast(Loop, Ast(Constant, 1), [Ast(Print)])
+    assert loop == Ast(Loop, None, [Ast(Print)], None)
 
 
 def test_while():
@@ -78,12 +76,12 @@ def test_while():
         wend
     """
     ).main.find(Loop)
-    assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [Ast(Print)], top_check=True)
+    assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [Ast(Print)], None)
 
 
 def test_empty_loop():
     loop = parse_clean("while x > 1:wend").main.find(Loop)
-    assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [], top_check=True)
+    assert loop == Ast(Loop, Ast(Call, builtin_proc(">")), [], None)
 
 
 def test_nested_loop():
@@ -99,8 +97,8 @@ def test_nested_loop():
     assert loop == Ast(
         Loop,
         Ast(Call, builtin_proc(">")),
-        [Ast(Loop, Ast(Call, builtin_proc("<")), [Ast(Print)], top_check=False)],
-        top_check=True,
+        [Ast(Loop, None, [Ast(Print)], Ast(Call, builtin_proc("<")))],
+        None,
     )
 
 
@@ -115,7 +113,7 @@ def test_multi_guard():
         loop until x > 1
     """)
     assert prog.diagnostics.has(diag.E_TOO_MANY_LOOP_GUARDS)
-    assert prog.main.find(Loop) == Ast(Loop, Ast(Call), [Ast(Print)], top_check=True)
+    assert prog.main.find(Loop) == Ast(Loop, Ast(Call), [Ast(Print)], Ast(Call))
 
 
 def test_missing_guard():

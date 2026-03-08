@@ -86,15 +86,16 @@ def do_if(ctx: ParseContext):
     def single_line_block(then_section: bool) -> list[Statement]:
         stmts: list[Statement] = []
         ctx.skip("NEWLINE", ":")
-        while not (
-            ctx.at_a("NEWLINE", "\n")
-            or ctx.at_a("EOF")
-            or (then_section and ctx.at_a("KEYWORD", "else"))
-        ):
-            stmt = do_stmt(ctx)
-            if stmt:
-                stmts.append(stmt)
-            ctx.skip("NEWLINE", ":")
+        with ctx.nestings.nest(node):
+            while not (
+                ctx.at_a("NEWLINE", "\n")
+                or ctx.at_a("EOF")
+                or (then_section and ctx.at_a("KEYWORD", "else"))
+            ):
+                stmt = do_stmt(ctx)
+                if stmt:
+                    stmts.append(stmt)
+                ctx.skip("NEWLINE", ":")
         return stmts
 
     lex_start = ctx.tok.lexpos
@@ -114,27 +115,29 @@ def do_if(ctx: ParseContext):
             lex_end=ctx.prev.lexend,
         )
 
-    elses = []
-    elseifs: list[tuple[Expr, list[Statement]]] = []
-    is_single_line = False
+    node = If(guard, lex_start=lex_start, lex_end=ctx.tok.lexend)
+
     if not ctx.at_a("NEWLINE", "\n"):
         # Single-line IF
-        thens = single_line_block(then_section=True)
+        node.true_branch = single_line_block(then_section=True)
         if ctx.at_a("KEYWORD", "else"):
             next(ctx)
-            elses = single_line_block(then_section=False)
-        is_single_line = True
+            node.false_branch = single_line_block(then_section=False)
+        node.is_single_line = True
     else:
-        thens = do_block(ctx)
+        with ctx.nestings.nest(node):
+            node.true_branch = do_block(ctx)
         while ctx.at_a("KEYWORD", "elseif"):
             next(ctx)
             elseif_guard = do_expr(ctx)
             ctx.consume("KEYWORD", "then")
-            elseif_thens = do_block(ctx)
-            elseifs.append((elseif_guard, elseif_thens))
+            with ctx.nestings.nest(node):
+                elseif_thens = do_block(ctx)
+            node.elseifs.append((elseif_guard, elseif_thens))
         if ctx.at_a("KEYWORD", "else"):
             next(ctx)
-            elses = do_block(ctx)
+            with ctx.nestings.nest(node):
+                node.false_branch = do_block(ctx)
         if ctx.at_a("KEYWORD", "endif"):
             next(ctx)
         elif ctx.at_a("KEYWORD", "end"):
@@ -144,15 +147,8 @@ def do_if(ctx: ParseContext):
             ctx.diags.raise_error(
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end if"
             )
-    return If(
-        guard,
-        thens,
-        elseifs,
-        elses,
-        is_single_line=is_single_line,
-        lex_start=lex_start,
-        lex_end=ctx.prev.lexend,
-    )
+    node.lex_end = ctx.prev.lexend
+    return node
 
 
 def do_do(ctx: ParseContext):
@@ -191,47 +187,33 @@ def do_do(ctx: ParseContext):
                 "while or until or <newline>",
             )
 
-    lex_start = ctx.tok.lexpos
+    node = Loop(None, [], None, lex_start=ctx.tok.lexpos, lex_end=ctx.tok.lexend)
     next(ctx)
-    top = loop_guard()
+    node.top_guard = loop_guard()
     ctx.consume("NEWLINE")
-    block = do_block(ctx)
-    loop_tok = ctx.tok
+    with ctx.nestings.nest(node):
+        node.block = do_block(ctx)
     ctx.consume("KEYWORD", "loop")
-    bottom = loop_guard()
-    if top and bottom:
-        ctx.diags.create(diag.E_TOO_MANY_LOOP_GUARDS, loop_tok)
-        guard = top
-    elif top:
-        guard = top
-    elif bottom:
-        guard = bottom
-    else:
-        guard = Constant(
-            1, TYPE__BYTE, lex_start=ctx.prev.lexend, lex_end=ctx.prev.lexend
-        )
-    return Loop(
-        guard,
-        block,
-        top_check=(top is not None),
-        lex_start=lex_start,
-        lex_end=ctx.prev.lexend,
-    )
+    node.bottom_guard = loop_guard()
+    node.lex_end = ctx.prev.lexend
+    if node.top_guard and node.bottom_guard:
+        ctx.diags.create(diag.E_TOO_MANY_LOOP_GUARDS, node)
+    return node
 
 
 def do_while(ctx: ParseContext):
     """
     Expects: WHILE
     """
-    lex_start = ctx.tok.lexpos
+    node = Loop(None, [], None, lex_start=ctx.tok.lexpos, lex_end=ctx.tok.lexend)
     next(ctx)
-    guard = do_expr(ctx)
+    node.top_guard = do_expr(ctx)
     ctx.consume("NEWLINE")
-    block = do_block(ctx)
+    with ctx.nestings.nest(node):
+        node.block = do_block(ctx)
     ctx.consume("KEYWORD", "wend")
-    return Loop(
-        guard, block, top_check=True, lex_start=lex_start, lex_end=ctx.prev.lexend
-    )
+    node.lex_end = ctx.prev.lexend
+    return node
 
 
 def do_for(ctx: ParseContext):
@@ -257,7 +239,17 @@ def do_for(ctx: ParseContext):
             diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "step or <newline>"
         )
     ctx.consume("NEWLINE")
-    block = do_block(ctx)
+    node = For(
+        var,
+        start_value,
+        end_value,
+        step_value,
+        [],
+        lex_start=lex_start,
+        lex_end=ctx.tok.lexend,
+    )
+    with ctx.nestings.nest(node):
+        node.block = do_block(ctx)
     ctx.consume("KEYWORD", "next")
     if not ctx.at_line_terminator():
         next_var_tok = ctx.tok
@@ -278,15 +270,8 @@ def do_for(ctx: ParseContext):
             ctx.tok.value = "next"
             ctx.reverse()
 
-    return For(
-        var,
-        start_value,
-        end_value,
-        step_value,
-        block,
-        lex_start=lex_start,
-        lex_end=ctx.prev.lexend,
-    )
+    node.lex_end = ctx.prev.lexend
+    return node
 
 
 def do_proc_ident(ctx: ParseContext) -> tuple[str, str, Type]:
@@ -352,6 +337,8 @@ def do_declare(ctx: ParseContext):
     """
     Expects: DECLARE
     """
+    if ctx.nestings.items:
+        ctx.diags.raise_error(diag.E_NOT_TOPLEVEL, ctx.tok, ctx.tok.plain_value)
     lex_start = ctx.tok.lexpos
     next(ctx)
     name, _, ret = do_proc_ident(ctx)
@@ -640,6 +627,8 @@ def do_sub_function_prepass(ctx: ParseContext):
 
 
 def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
+    if ctx.nestings.items:
+        ctx.diags.raise_error(diag.E_NOT_TOPLEVEL, ctx.tok, ctx.tok.plain_value)
     lex_start = ctx.tok.lexpos
     name, _, ret = do_proc_ident(ctx)
     proc = ctx.symbols.find_procedure(name)
@@ -656,8 +645,7 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
         assert param.name is not None
         assert param.source_name is not None
         ctx.symbols.create_local(param.name, param.source_name, param.type)
-    ctx.current_subproc = impl
-    try:
+    with ctx.nestings.nest(impl):
         ctx.consume("NEWLINE")
         impl.statements = do_block(ctx)
 
@@ -671,8 +659,6 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
         return ProcDefinitionLocation(
             impl, lex_start=lex_start, lex_end=ctx.prev.lexend
         )
-    finally:
-        ctx.current_subproc = None
 
 
 def do_as_type_clause(ctx: ParseContext):
@@ -754,10 +740,11 @@ def do_block(ctx: ParseContext) -> list[Statement]:
 
     block: list[Statement] = []
     ctx.skip("NEWLINE")
-    if ctx.current_subproc is not None and (
+    if ctx.nestings.items and (
         ctx.at_a("KEYWORD", "sub") or ctx.at_a("KEYWORD", "function")
     ):
-        ctx.diags.raise_error(diag.E_NOT_TOPLEVEL, ctx.tok)
+        ctx.diags.create(diag.E_NOT_TOPLEVEL, ctx.tok, ctx.tok.plain_value)
+        ctx.drop_line()
     while not is_eob(ctx):
         try:
             stmt = do_stmt(ctx)
@@ -784,9 +771,10 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
             result = do_assignment(ctx)
         case "PROCEDURE":
             if (
-                ctx.current_subproc is not None
-                and ctx.tok.value.name == ctx.current_subproc.name
-                and ctx.current_subproc.signature.ret != TYPE__NONE
+                ctx.nestings.items
+                and isinstance(ctx.nestings.items[0], ProcDefinition)
+                and ctx.nestings.items[0].name == ctx.tok.value.name
+                and ctx.nestings.items[0].signature.ret != TYPE__NONE
             ):
                 result = do_set_return(ctx)
             else:
@@ -841,10 +829,9 @@ def do_set_return(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     next(ctx)
     ctx.consume("PUNCTUATION", "=")
-    assert ctx.current_subproc is not None
-    return SetReturn(
-        ctx.current_subproc, do_expr(ctx), lex_start=lex_start, lex_end=ctx.prev.lexend
-    )
+    impl = ctx.nestings.items[0]
+    assert isinstance(impl, ProcDefinition)
+    return SetReturn(impl, do_expr(ctx), lex_start=lex_start, lex_end=ctx.prev.lexend)
 
 
 def do_procedure_call(ctx: ParseContext):

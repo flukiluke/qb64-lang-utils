@@ -3,7 +3,7 @@ import os
 from dataclasses import dataclass, field
 
 from . import diagnostics as diag
-from .ast import ProcDefinition, SymbolStore
+from .ast import Node, SymbolStore
 from .lexer import Lexer
 from .ply import LexToken
 
@@ -22,6 +22,20 @@ class _Flags:
     builtin: bool = False
 
 
+class NestList:
+    def __init__(self):
+        self.items = list[Node]()
+
+    @contextlib.contextmanager
+    def nest(self, item: Node):
+        self.items.append(item)
+        index = len(self.items) - 1
+        try:
+            yield
+        finally:
+            del self.items[index]
+
+
 class ParseContext:
     def __init__(self, input: str, symbols: SymbolStore, diags: diag.DiagnosticStore):
         self.diags = diags
@@ -35,7 +49,9 @@ class ParseContext:
         self.tok.lexer = self.token_stream
         self.tok.type = ""
         self.tok.value = ""
-        self.current_subproc: None | ProcDefinition = None
+        # Any syntactic structures which can hold statements need to be
+        # recorded here.
+        self.nestings = NestList()
         self.flags = _Flags()
 
     def __next__(self):

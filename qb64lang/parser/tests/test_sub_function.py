@@ -277,7 +277,7 @@ def test_function_return_bad_type():
 
 def test_nested_proc():
     assert parse("sub s : sub t : end sub : end sub").diagnostics.has(
-        diag.E_NESTED_PROC
+        diag.E_NOT_TOPLEVEL
     )
 
 
@@ -425,5 +425,21 @@ def test_def_overload():
     )
 
 
+def test_sub_nested():
+    assert parse("if x then sub s: end sub").diagnostics.has(diag.E_UNEXPECTED_KEYWORD)
+
+
 def test_declare_nested():
     assert parse("if x then declare sub s").diagnostics.has(diag.E_NOT_TOPLEVEL)
+    assert parse("if x then\nelse\ndeclare sub s\nend if").diagnostics.has(
+        diag.E_NOT_TOPLEVEL
+    )
+    assert parse("do while x > 1: declare sub s: loop").diagnostics.has(
+        diag.E_NOT_TOPLEVEL
+    )
+    assert parse("while x > 1: declare sub s: wend").diagnostics.has(
+        diag.E_NOT_TOPLEVEL
+    )
+    assert parse("for i = 1 to 10: declare sub s: next").diagnostics.has(
+        diag.E_NOT_TOPLEVEL
+    )

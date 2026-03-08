@@ -229,13 +229,16 @@ class If(Statement):
 @dataclass
 class Loop(Statement):
     # Loop while guard is true, UNTIL has a negation added
-    guard: Expr
+    top_guard: Expr | None
     block: list[Statement]
-    # True => DO WHILE/UNTIL or WHILE, False => LOOP WHILE/UNTIL
-    top_check: bool
+    bottom_guard: Expr | None
 
     def children(self):
-        return chain([self.guard], self.block)
+        return chain(
+            [self.top_guard] if self.top_guard else [],
+            self.block,
+            [self.bottom_guard] if self.bottom_guard else [],
+        )
 
 
 @dataclass

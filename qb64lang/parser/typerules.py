@@ -271,9 +271,11 @@ class TypePass(AstWalk[None | Type]):
                 self.evaluate(stmt)
 
     def kw_loop(self, node: Loop):
-        type = self.evaluate(node.guard)
-        if not type.is_number():
-            self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, node.guard)
+        for guard in node.top_guard, node.bottom_guard:
+            if guard:
+                type = self.evaluate(guard)
+                if not type.is_number():
+                    self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, guard)
         for stmt in node.block:
             self.evaluate(stmt)
 
