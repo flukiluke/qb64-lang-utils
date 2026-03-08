@@ -308,8 +308,6 @@ def do_proc_ident(ctx: ParseContext) -> tuple[str, str, Type]:
         next(ctx)
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
-        elif not ctx.symbols.is_proc_name_free(ctx.tok.value[0]):
-            ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value[0])
     finally:
         ctx.symbols.default_type = default_type
         ctx.symbols.return_proc_as_id = False
@@ -322,7 +320,7 @@ def do_proc_ident(ctx: ParseContext) -> tuple[str, str, Type]:
     return (name, cased_name, ret)
 
 
-def do_declare(ctx: ParseContext):
+def do_declare_prepass(ctx: ParseContext):
     """
     Expects: DECLARE
     """
@@ -348,6 +346,27 @@ def do_declare(ctx: ParseContext):
         lex_end=ctx.prev.lexend,
     )
     proc.impls.append(impl)
+
+
+def do_declare(ctx: ParseContext):
+    """
+    Expects: DECLARE
+    """
+    lex_start = ctx.tok.lexpos
+    next(ctx)
+    name, _, ret = do_proc_ident(ctx)
+    strictsigil = ctx.flags.syntax.get("strictsigil") is not None
+    if strictsigil and ret == TYPE_STRING:
+        name += "$"
+    proc = ctx.symbols.find_procedure(name)
+    if proc is None:
+        # All valid procs exist from the prepass, so this one had some kind of error.
+        ctx.diags.raise_error(diag.E_UNFOUND_PROC, ctx.tok)
+    params = do_param_list(ctx)
+    impl = proc.find_impl(TypeSignature(ret, params))
+    if impl is None:
+        # All valid impls exist from the prepass, so this one had some kind of error.
+        ctx.diags.raise_error(diag.E_UNFOUND_PROC, ctx.tok)
     return ProcDeclaration(
         name, impl.signature, lex_start=lex_start, lex_end=ctx.prev.lexend
     )
@@ -533,6 +552,28 @@ def name_close_match(ctx: ParseContext):
             return "opening keyword"
 
 
+def do_prepass(ctx: ParseContext):
+    def do_prepass_line():
+        ctx.skip("NEWLINE")
+        match (ctx.tok.type, ctx.tok.value):
+            case ("KEYWORD", "declare"):
+                do_declare_prepass(ctx)
+            case ("KEYWORD", "sub" | "function"):
+                do_sub_function_prepass(ctx)
+            case _:
+                ctx.drop_line()
+
+    try:
+        next(ctx)
+    except diag.DiagnosticError:
+        ctx.drop_line()
+    while not ctx.at_a("EOF"):
+        try:
+            do_prepass_line()
+        except diag.DiagnosticError:
+            ctx.drop_line()
+
+
 def do_main(ctx: ParseContext):
     if main_proc := ctx.symbols.find_procedure("_main"):
         main = main_proc.impls[0]
@@ -572,7 +613,7 @@ def do_main(ctx: ParseContext):
     return main
 
 
-def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
+def do_sub_function_prepass(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     # Grab this token for error reporting purposes
     start_tok = ctx.tok
@@ -586,22 +627,30 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
     params = do_param_list(ctx)
     sig = TypeSignature(ret, params)
 
-    # Find any pre-declared impl with matching type signature
-    for probe_impl in proc.impls:
-        if sig.equivalent_to(probe_impl.signature):
-            if probe_impl.decl_only:
-                # Definition of pre-declared, undefined impl
-                impl = probe_impl
-                impl.decl_only = False
-                break
-            # equivalent definitions are always illegal
-            ctx.diags.raise_error(diag.E_NAME_IN_USE, start_tok, name)
-        elif not ctx.flags.allow_proc_overloads:
-            ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, start_tok, name)
-    else:
+    impl = proc.find_impl(sig)
+    if not impl and len(proc.impls) and not ctx.flags.allow_proc_overloads:
+        ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, start_tok, name)
+    elif not impl:
         impl = ProcDefinition(name, sig, lex_start=lex_start, lex_end=ctx.prev.lexend)
         proc.impls.append(impl)
+    elif impl.decl_only:
+        impl.decl_only = False
+    else:
+        ctx.diags.raise_error(diag.E_NAME_IN_USE, start_tok, name)
 
+
+def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
+    lex_start = ctx.tok.lexpos
+    name, _, ret = do_proc_ident(ctx)
+    proc = ctx.symbols.find_procedure(name)
+    if proc is None:
+        # All valid procs exist from the prepass, so this one had some kind of error.
+        ctx.diags.raise_error(diag.E_UNFOUND_PROC, ctx.tok)
+    params = do_param_list(ctx)
+    impl = proc.find_impl(TypeSignature(ret, params))
+    if impl is None:
+        # All valid impls exist from the prepass, so this one had some kind of error.
+        ctx.diags.raise_error(diag.E_UNFOUND_PROC, ctx.tok)
     ctx.symbols.set_scope(impl.symbols)
     for param in params:
         assert param.name is not None
@@ -708,7 +757,7 @@ def do_block(ctx: ParseContext) -> list[Statement]:
     if ctx.current_subproc is not None and (
         ctx.at_a("KEYWORD", "sub") or ctx.at_a("KEYWORD", "function")
     ):
-        ctx.diags.raise_error(diag.E_NESTED_PROC, ctx.tok)
+        ctx.diags.raise_error(diag.E_NOT_TOPLEVEL, ctx.tok)
     while not is_eob(ctx):
         try:
             stmt = do_stmt(ctx)

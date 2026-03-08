@@ -220,3 +220,7 @@ E_DUPE_USING = DiagTemplate(
 E_USING_NON_STRING = DiagTemplate(
     DiagLevel.ERR_SEM, "USING must be followed by a string expression"
 )
+E_UNFOUND_PROC = DiagTemplate(DiagLevel.ERR_SYN, "Proc not registered")
+E_NOT_TOPLEVEL = DiagTemplate(
+    DiagLevel.ERR_SYN, "{} keyword cannot be nested inside other statements."
+)

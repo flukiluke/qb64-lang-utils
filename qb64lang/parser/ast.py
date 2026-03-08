@@ -269,6 +269,12 @@ class Procedure:
     def sigs(self):
         return [i.signature for i in self.impls]
 
+    def find_impl(self, sig: TypeSignature):
+        for probe_impl in self.impls:
+            if sig.equivalent_to(probe_impl.signature):
+                return probe_impl
+        return None
+
 
 @dataclass
 class Variable:
@@ -568,18 +574,6 @@ class SymbolStore:
         if procedure.name in self.procedures:
             raise ParseError(f"Duplicate procedure definition of {procedure.name}")
         self.procedures[procedure.name] = procedure
-
-    def is_proc_name_free(self, name: str):
-        """
-        Check if the given name clashes with local/global variables.
-        Note: does not check against existing proc name, to allow
-        for pre-declarations and overloads.
-        """
-        for proc in self.procedures.values():
-            for impl in proc.impls:
-                if name in impl.symbols.variables:
-                    return False
-        return name not in self.global_vars
 
 
 T = TypeVar("T")

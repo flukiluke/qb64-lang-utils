@@ -1,11 +1,11 @@
 from .ast import SymbolStore
 from .context import ParseContext
 from .diagnostics import DiagnosticStore
-from .parsers import do_main
+from .parsers import do_main, do_prepass
 from .typerules import typecheck
 
 """
-Below are definitions for almost all built-in commands. Omitted are infix operators,
+Below are declarations for almost all built-in commands. Omitted are infix operators,
 structural keywords, declarations and those with highly custom syntax.
 The following metacommands are used:
  - $builtin to generally flag these as built-ins
@@ -34,10 +34,8 @@ class Program:
         self.input = input
         self.diagnostics = DiagnosticStore()
         self.symbols = SymbolStore()
-        self.main = do_main(ParseContext(HEADER, self.symbols, self.diagnostics))
-        # Throw away structural results of parsing the header, we are only interested in
-        # the symbols recorded.
-        self.main.statements = []
+        do_prepass(ParseContext(HEADER, self.symbols, self.diagnostics))
+        do_prepass(ParseContext(input, self.symbols, self.diagnostics))
         self.main = do_main(ParseContext(input, self.symbols, self.diagnostics))
 
 

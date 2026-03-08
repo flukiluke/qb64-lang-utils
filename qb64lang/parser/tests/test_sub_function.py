@@ -135,12 +135,14 @@ def test_in_use_name():
     assert parse("function f: end function: sub f: end sub").diagnostics.has(
         diag.E_OVERLOAD_PROHIBITED
     )
-    assert parse("x = 3: function x: end function").diagnostics.has(diag.E_NAME_IN_USE)
+    assert parse("x = 3: function x: end function").diagnostics.has(
+        diag.E_UNEXPECTED_ITEM
+    )
     assert parse("""
         sub s
             x = 3
         end sub
-        function x: end function""").diagnostics.has(diag.E_NAME_IN_USE)
+        function x: end function""").diagnostics.has(diag.E_UNEXPECTED_ITEM)
 
 
 def test_proc_redefinition():
@@ -421,3 +423,7 @@ def test_def_overload():
         ],
         False,
     )
+
+
+def test_declare_nested():
+    assert parse("if x then declare sub s").diagnostics.has(diag.E_NOT_TOPLEVEL)
