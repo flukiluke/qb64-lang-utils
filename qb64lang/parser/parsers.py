@@ -423,6 +423,8 @@ def do_type_prepass(ctx: ParseContext):
                 ctx.diags.create(
                     diag.E_DUPE_COMPOUND_FIELD, ctx.tok, ctx.tok.plain_value
                 )
+            elif "." in name:
+                ctx.diags.create(diag.E_DOT_PROHIBITED, ctx.tok, ctx.tok.plain_value)
             else:
                 result.append(CompoundField(as_clause, name, ctx.tok.plain_value))
                 field_names.add(name)
@@ -448,6 +450,9 @@ def do_type_prepass(ctx: ParseContext):
         if name in field_names:
             ctx.diags.create(diag.E_DUPE_COMPOUND_FIELD, name_tok, name_tok.plain_value)
             return []
+        elif "." in name:
+            ctx.diags.create(diag.E_DOT_PROHIBITED, ctx.tok, ctx.tok.plain_value)
+            return []
         else:
             field_names.add(name)
             return [CompoundField(as_clause, name, cased_name)]
@@ -463,6 +468,8 @@ def do_type_prepass(ctx: ParseContext):
         sigil: str | None = ctx.tok.value[2]
         if sigil is not None:
             ctx.diags.raise_error(diag.E_SIGIL_WITH_TYPE_NAME, ctx.tok)
+        if "." in name:
+            ctx.diags.raise_error(diag.E_DOT_PROHIBITED, ctx.tok, ctx.tok.plain_value)
         next(ctx)
         ctx.consume("NEWLINE")
         while not ctx.at_a("KEYWORD", "end"):

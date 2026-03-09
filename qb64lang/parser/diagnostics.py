@@ -221,3 +221,4 @@ E_UNFOUND_PROC = DiagTemplate(DiagLevel.ERR_SYN, "Proc not registered")
 E_NOT_TOPLEVEL = DiagTemplate(
     DiagLevel.ERR_SYN, "{} keyword cannot be nested inside other statements."
 )
+E_DOT_PROHIBITED = DiagTemplate(DiagLevel.ERR_SYN, "Dot is not allowed in the name {}")
