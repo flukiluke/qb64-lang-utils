@@ -104,17 +104,8 @@ class ProcDeclaration(Statement):
 
 
 @dataclass
-class CompoundFieldDefinition(Statement):
-    items: list[CompoundField]
-
-
-@dataclass
 class CompoundDefinition(Statement):
     type: CompoundType
-    field_defs: list[CompoundFieldDefinition]
-
-    def children(self):
-        return self.field_defs
 
 
 @dataclass
@@ -590,7 +581,6 @@ class AstWalk(Generic[T]):
             Call: self.call,
             Cast: self.cast,
             CompoundDefinition: self.compound_definition,
-            CompoundFieldDefinition: self.compound_field_definition,
             Constant: self.constant,
             Dim: self.kw_dim,
             For: self.kw_for,
@@ -614,8 +604,6 @@ class AstWalk(Generic[T]):
     def cast(self, node: Cast) -> T: ...
 
     def compound_definition(self, node: CompoundDefinition) -> T: ...
-
-    def compound_field_definition(self, node: CompoundFieldDefinition) -> T: ...
 
     def constant(self, node: Constant) -> T: ...
 

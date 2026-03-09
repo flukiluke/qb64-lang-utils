@@ -29,11 +29,10 @@ class NestList:
     @contextlib.contextmanager
     def nest(self, item: Node):
         self.items.append(item)
-        index = len(self.items) - 1
         try:
             yield
         finally:
-            del self.items[index]
+            self.items.pop()
 
 
 class ParseContext:

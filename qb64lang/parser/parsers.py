@@ -6,7 +6,6 @@ from .ast import (
     Assignment,
     Call,
     CompoundDefinition,
-    CompoundFieldDefinition,
     Constant,
     Dim,
     Expr,
@@ -28,6 +27,7 @@ from .datatypes import (
     TYPE__NONE,
     TYPE_STRING,
     CompoundField,
+    CompoundType,
     Parameter,
     Type,
     TypeSignature,
@@ -393,48 +393,66 @@ def do_dim(ctx: ParseContext):
 
 
 def do_type(ctx: ParseContext):
+    lex_start = ctx.tok.lexpos
+    next(ctx)
+    if not ctx.at_a("TYPE") or ctx.tok.value.is_builtin():
+        ctx.diags.raise_error(diag.E_UNFOUND_PROC, ctx.tok)
+    type: CompoundType = ctx.tok.value
+    while not ctx.at_a("KEYWORD", "end"):
+        next(ctx)
+    ctx.consume("KEYWORD", "end")
+    ctx.consume("KEYWORD", "type")
+    node = CompoundDefinition(type, lex_start=lex_start, lex_end=ctx.prev.lexend)
+    if len(type.fields) == 0:
+        ctx.diags.create(diag.E_EMPTY_COMPOUND, node)
+    return node
+
+
+def do_type_prepass(ctx: ParseContext):
     """
     Expects: TYPE
     """
-    lex_start = ctx.tok.lexpos
-    field_defs = list[CompoundFieldDefinition]()
-    fields = dict[str, CompoundField]()
+    fields = list[CompoundField]()
+    field_names = set[str]()
 
-    def bare_list(as_clause: Type):
-        lex_start = ctx.tok.lexpos
+    def bare_list(as_clause: Type) -> list[CompoundField]:
         result = list[CompoundField]()
         while ctx.at_a("ID"):
             if ctx.tok.value[2] is not None:
                 ctx.diags.raise_error(diag.E_SIGIL_WITH_FIELD_NAME, ctx.tok)
-            result.append(
-                CompoundField(as_clause, ctx.tok.value[0], ctx.tok.plain_value)
-            )
+            name: str = ctx.tok.value[0]
+            if name in field_names:
+                ctx.diags.create(
+                    diag.E_DUPE_COMPOUND_FIELD, ctx.tok, ctx.tok.plain_value
+                )
+            else:
+                result.append(CompoundField(as_clause, name, ctx.tok.plain_value))
+                field_names.add(name)
             next(ctx)
             if ctx.at_a("PUNCTUATION", ","):
                 next(ctx)
             else:
                 break
-        return CompoundFieldDefinition(
-            result, lex_start=lex_start, lex_end=ctx.prev.lexend
-        )
+        return result
 
-    def typed_item():
-        lex_start = ctx.tok.lexpos
+    def typed_item() -> list[CompoundField]:
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
         if ctx.tok.value[2] is not None:
             ctx.diags.raise_error(diag.E_SIGIL_WITH_FIELD_NAME, ctx.tok)
+        name_tok = ctx.tok
         name: str = ctx.tok.value[0]
         cased_name: str = ctx.tok.plain_value
         next(ctx)
         as_clause = do_as_type_clause(ctx)
         if as_clause is None:
             ctx.diags.raise_error(diag.E_MISSING_AS_TYPE, ctx.tok)
-        return CompoundFieldDefinition(
-            [CompoundField(as_clause, name, cased_name)],
-            lex_start=lex_start,
-            lex_end=ctx.prev.lexend,
-        )
+        if name in field_names:
+            ctx.diags.create(diag.E_DUPE_COMPOUND_FIELD, name_tok, name_tok.plain_value)
+            return []
+        else:
+            field_names.add(name)
+            return [CompoundField(as_clause, name, cased_name)]
 
     try:
         ctx.symbols.return_proc_as_id = True
@@ -451,28 +469,14 @@ def do_type(ctx: ParseContext):
         ctx.consume("NEWLINE")
         while not ctx.at_a("KEYWORD", "end"):
             as_clause = do_as_type_clause(ctx)
-            new_fields = bare_list(as_clause) if as_clause else typed_item()
-            field_defs.append(new_fields)
-            for field in new_fields.items:
-                if field.name in fields:
-                    ctx.diags.create(
-                        diag.E_DUPE_COMPOUND_FIELD, new_fields, field.source_name
-                    )
-                else:
-                    fields[field.name] = field
+            fields.extend(bare_list(as_clause) if as_clause else typed_item())
             ctx.consume("NEWLINE")
         ctx.consume("KEYWORD", "end")
         ctx.consume("KEYWORD", "type")
     finally:
         ctx.symbols.return_proc_as_id = False
         ctx.symbols.return_var_as_id = False
-    new_type = ctx.symbols.create_compound_type(name, cased_name, list(fields.values()))
-    cdef = CompoundDefinition(
-        new_type, field_defs, lex_start=lex_start, lex_end=ctx.prev.lexend
-    )
-    if len(fields) == 0:
-        ctx.diags.create(diag.E_EMPTY_COMPOUND, cdef)
-    return cdef
+    ctx.symbols.create_compound_type(name, cased_name, fields)
 
 
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
@@ -547,6 +551,8 @@ def do_prepass(ctx: ParseContext):
                 do_declare_prepass(ctx)
             case ("KEYWORD", "sub" | "function"):
                 do_sub_function_prepass(ctx)
+            case ("KEYWORD", "type"):
+                do_type_prepass(ctx)
             case _:
                 ctx.drop_line()
 

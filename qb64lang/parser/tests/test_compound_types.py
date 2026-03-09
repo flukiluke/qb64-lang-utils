@@ -1,6 +1,6 @@
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import CompoundDefinition, CompoundFieldDefinition
+from ..ast import CompoundDefinition
 from ..datatypes import TYPE_LONG, TYPE_STRING, CompoundField, CompoundType
 from .helpers import Ast, parse_clean
 
@@ -15,16 +15,6 @@ def test_definition_node():
     assert prog.main.find(CompoundDefinition) == Ast(
         CompoundDefinition,
         prog.symbols.find_type("t"),
-        [
-            Ast(CompoundFieldDefinition, [CompoundField(TYPE_LONG, "a", "a")]),
-            Ast(
-                CompoundFieldDefinition,
-                [
-                    CompoundField(TYPE_STRING, "b", "b"),
-                    CompoundField(TYPE_STRING, "c", "c"),
-                ],
-            ),
-        ],
     )
 
 
