@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from typing import cast
 
 from . import diagnostics as diag
 from .ast import (
@@ -33,7 +32,6 @@ from .datatypes import (
     TypeSignature,
     validate_fixed_width,
 )
-from .diagnostics import ParseError
 from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
 from .lexer import Number
 
@@ -787,9 +785,8 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
                 # Call to existing procedure
                 result = do_procedure_call(ctx)
         case "ID":
-            # May be assignment to new variable, or call
-            # to not-yet-defined procedure
-            result = do_unknown_var_or_procedure(ctx)
+            # Assignment to an implicitly declared variable
+            result = do_assignment(ctx)
         case _:
             ctx.diags.raise_error(
                 diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "a statement"
@@ -799,22 +796,6 @@ def do_stmt(ctx: ParseContext) -> Statement | None:
             diag.E_UNEXPECTED_ITEM, ctx.tok, ctx.tok.value, "end of statement"
         )
     return result
-
-
-def do_unknown_var_or_procedure(ctx: ParseContext) -> Statement:
-    next(ctx)
-    if ctx.at_a("PUNCTUATION", "="):
-        # Assignment to an implicitly declared scalar variable
-        ctx.reverse()
-        return do_assignment(ctx)
-    elif ctx.at_a("PUNCTUATION", "("):
-        # This could be either an implicit array declaration or a
-        # call to an unknown subprocedure.
-        raise ParseError("Unimplemented implicit array")
-    else:
-        # Unimplemented procedure call
-        ctx.drop_line()
-        return cast(Statement, None)
 
 
 def do_assignment(ctx: ParseContext):
