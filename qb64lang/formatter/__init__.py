@@ -8,6 +8,7 @@ from qb64lang.parser.ast import Call
 from ..parser import Program
 from ..parser.ast import (
     KEYWORDS,
+    FieldAccess,
     If,
     Node,
     Procedure,
@@ -201,9 +202,16 @@ def format(
                     ctx.add(type.source_name)
                 ctx.post_flex()
             case ("ID", c):
-                ctx.add(c[0])
+                ctx.add(ctx.tok.plain_value)
                 if c[2] is not None:
                     ctx.add(c[2])
+            case ("DOTTED_ID", _):
+                if isinstance(ctx.node, FieldAccess):
+                    ctx.add(".")
+                    ctx.add(ctx.node.field.source_name)
+                else:
+                    # Not expected to occur
+                    ctx.add(ctx.tok.plain_value)
             case ("STRING_LIT", text):
                 assert isinstance(text, str)
                 ctx.add('"' + text + '"')

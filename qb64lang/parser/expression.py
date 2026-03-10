@@ -1,7 +1,7 @@
 from . import diagnostics as diag
-from .ast import Call, Constant, Expr, LValue, Var
+from .ast import Call, Constant, Expr, FieldAccess, LValue, Var
 from .context import ParseContext
-from .datatypes import TYPE_STRING
+from .datatypes import TYPE_STRING, CompoundType
 
 PRECEDENCE = {
     "imp": 2,
@@ -89,8 +89,9 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
             case "PROCEDURE", _:
                 ctx.reverse()
                 return do_func_call(ctx)
-            case "VARIABLE", var:
-                return Var(var, lex_start=token.lexpos, lex_end=token.lexend)
+            case "VARIABLE", _:
+                ctx.reverse()
+                return do_lvalue(ctx)
             case _:
                 ctx.diags.raise_error(
                     diag.E_UNEXPECTED_ITEM, token, token.value, "an expression"
@@ -122,10 +123,33 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
 
 def do_lvalue(ctx: ParseContext) -> LValue:
-    return do_bare_var(ctx)
+    result = do_bare_var(ctx)
+    type = result.target.type
+    while ctx.at_a("DOTTED_ID"):
+        if not isinstance(type, CompoundType):
+            ctx.diags.raise_error(
+                diag.E_FIELD_ACCESS_NON_COMPOUND,
+                ctx.tok,
+                ctx.tok.plain_value,
+                type.source_name,
+            )
+        field = type.get_field(ctx.tok.value)
+        if not field:
+            ctx.diags.raise_error(
+                diag.E_UNKNOWN_FIELD, ctx.tok, ctx.tok.plain_value, type.source_name
+            )
+        result = FieldAccess(
+            result, field, lex_start=ctx.tok.lexpos, lex_end=ctx.tok.lexend
+        )
+        type = field.type
+        next(ctx)
+    return result
 
 
 def do_bare_var(ctx: ParseContext) -> Var:
+    """
+    A variable with no compound field access or array indexing
+    """
     if ctx.tok.type == "VARIABLE":
         result = Var(ctx.tok.value, lex_start=ctx.tok.lexpos, lex_end=ctx.tok.lexend)
     elif ctx.tok.type == "ID":

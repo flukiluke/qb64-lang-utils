@@ -1,6 +1,8 @@
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from qb64lang.parser.ast import FieldAccess
+
 from . import diagnostics as diag
 
 if TYPE_CHECKING:
@@ -278,6 +280,10 @@ class TypePass(AstWalk[None | Type]):
                     self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, guard)
         for stmt in node.block:
             self.evaluate(stmt)
+
+    def field_access(self, node: FieldAccess):
+        self.evaluate(node.base)
+        return node.field.type
 
     def kw_for(self, node: For):
         var_type = self.evaluate(node.iterator)

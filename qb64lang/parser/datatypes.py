@@ -103,6 +103,12 @@ class CompoundType(Type):
     def is_builtin(self):
         return False
 
+    def get_field(self, name: str):
+        for field in self.fields:
+            if field.name == name:
+                return field
+        return None
+
 
 @dataclass
 class FloatType(Type):

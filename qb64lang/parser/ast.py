@@ -132,6 +132,15 @@ class Var(LValue):
 
 
 @dataclass
+class FieldAccess(LValue):
+    base: LValue
+    field: CompoundField
+
+    def children(self):
+        return [self.base]
+
+
+@dataclass
 class Call(Expr, Statement):
     class Style(Enum):
         FUNCTION = auto()
@@ -520,12 +529,36 @@ class SymbolStore:
     def find_procedure(self, ident: str) -> Procedure | None:
         return self.procedures.get(ident)
 
-    def find_variable(self, ident: str, sigil: str | None = None) -> Variable | None:
-        type_name = self.lookup_sigil(sigil).name
-        for pool in self.scope.variables, self.global_vars:
-            if (typeset := pool.get(ident)) and (result := typeset.get(type_name)):
-                return result
-        return None
+    def find_variable(self, ident: str, type: Type | None) -> Variable | None:
+        """
+        Lookup variable with name and type in current local scope then global scope.
+
+        If type is None, the requested variable is either of compound type, or the
+        default scalar type (priority given to the former). Default scalars in the
+        local scope take priority over compound variables in the global scope.
+        """
+
+        def find_compound_var(typeset):
+            for var in typeset.values():
+                if not var.type.is_builtin():
+                    return var
+
+        local_typeset = self.scope.variables.get(ident)
+        global_typeset = self.global_vars.get(ident)
+        if type:
+            if local_typeset and (var := local_typeset.get(type.name)):
+                return var
+            if global_typeset and (var := global_typeset.get(type.name)):
+                return var
+        else:
+            if local_typeset and (var := find_compound_var(local_typeset)):
+                return var
+            if local_typeset and (var := local_typeset.get(self.default_type.name)):
+                return var
+            if global_typeset and (var := find_compound_var(global_typeset)):
+                return var
+            if global_typeset and (var := global_typeset.get(self.default_type.name)):
+                return var
 
     def find_type(self, name: str) -> Type | None:
         return BUILTIN_TYPES.get(name, self.types.get(name))
@@ -583,6 +616,7 @@ class AstWalk(Generic[T]):
             CompoundDefinition: self.compound_definition,
             Constant: self.constant,
             Dim: self.kw_dim,
+            FieldAccess: self.field_access,
             For: self.kw_for,
             If: self.kw_if,
             Loop: self.kw_loop,
@@ -608,6 +642,8 @@ class AstWalk(Generic[T]):
     def constant(self, node: Constant) -> T: ...
 
     def kw_dim(self, node: Dim) -> T: ...
+
+    def field_access(self, node: FieldAccess) -> T: ...
 
     def kw_for(self, node: For) -> T: ...
 

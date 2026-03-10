@@ -2,6 +2,7 @@ import dataclasses
 from typing import Any
 
 from .. import ast, parse
+from ..datatypes import TYPE_SINGLE, Type
 from ..diagnostics import DiagTemplate
 
 
@@ -32,9 +33,9 @@ def check(
         assert prog.diagnostics.has_none()
 
 
-def run_var(input: str, variable_name: str):
+def run_var(input: str, variable_name: str, type: Type = TYPE_SINGLE):
     program = parse(input)
-    variable = program.symbols.find_variable(variable_name)
+    variable = program.symbols.find_variable(variable_name, type)
     assert variable is not None
     assert variable.name == variable_name
     assert program.diagnostics.has_none(), program.diagnostics.diagnostics

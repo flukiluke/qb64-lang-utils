@@ -102,6 +102,25 @@ def test_semantic_errors_formatted():
 
 def test_compound_type_definition():
     assert (
-        format_text("type foo\na as long\nas string b,c\nend type")
-        == "TYPE foo\n    a AS LONG\n    AS STRING b, c\nEND TYPE"
+        format_text("type foo\nA as long\nas string b,c\nend type")
+        == "TYPE foo\n    A AS LONG\n    AS STRING b, c\nEND TYPE"
+    )
+
+
+def test_field_access():
+    assert (
+        format_text("""
+        type foo
+        Bar as long
+        end type
+        dim Baz as foo
+        print baz.bar
+        """)
+        == """
+TYPE foo
+    Bar AS LONG
+END TYPE
+DIM Baz AS foo
+PRINT Baz.Bar
+"""
     )

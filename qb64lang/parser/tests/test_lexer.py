@@ -19,6 +19,7 @@ from ..datatypes import (
     TYPE_LONG,
     TYPE_SINGLE,
     TYPE_STRING,
+    CompoundField,
     ExtendedFloat,
     TypeSignature,
 )
@@ -683,7 +684,32 @@ def test_id():
     check("Foo_bar", Token("ID", ("foo_bar", TYPE_SINGLE, None)))
     check("_foo", Token("ID", ("_foo", TYPE_SINGLE, None)))
     check("foo23x", Token("ID", ("foo23x", TYPE_SINGLE, None)))
+
+
+def test_dotted_id():
     check("foo.bar", Token("ID", ("foo.bar", TYPE_SINGLE, None)))
+    check("foo.bar.baz!", Token("ID", ("foo.bar.baz", TYPE_SINGLE, "!")))
+
+
+def test_dotted_variable():
+    symbols = SymbolStore()
+    type = symbols.create_compound_type("t", "t", [CompoundField(TYPE_LONG, "a", "a")])
+    var = symbols.create_local("foo", "foo", type)
+
+    check(
+        "foo.bar",
+        [Token("VARIABLE", var), Token("DOTTED_ID", "bar", ".bar")],
+        symbols=symbols,
+    )
+    check(
+        "foo.bar.baz",
+        [
+            Token("VARIABLE", var),
+            Token("DOTTED_ID", "bar", ".bar"),
+            Token("DOTTED_ID", "baz", ".baz"),
+        ],
+        symbols=symbols,
+    )
 
 
 def test_id_builtin_sigil():

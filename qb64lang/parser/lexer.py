@@ -46,6 +46,7 @@ tokens = (
     "VARIABLE",
     "PROCEDURE",
     "TYPE",
+    "DOTTED_ID",
     "STRING_LIT",
     "NUM_LIT",
     "BASE_LIT",  # Returned as NUM_LIT
@@ -56,7 +57,7 @@ tokens = (
     "BAD_CHAR",
 )
 
-states = (("meta", "exclusive"),)
+states = (("meta", "exclusive"), ("dotted", "exclusive"))
 
 ws = "[ \t]"
 nl = r"(?:\r?\n)"
@@ -335,8 +336,8 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         """
     )
     def t_ID(t: LexToken):
-        name = t.lexer.lexmatch.group("id_name").lower()
-        sigil = t.lexer.lexmatch.group("id_sigil")
+        name: str = t.lexer.lexmatch.group("id_name").lower()
+        sigil: str | None = t.lexer.lexmatch.group("id_sigil")
         if sigil is not None:
             validate_sigil(sigil, t, diags)
         # The presence or absence of the $ is critical for detecting some builtins.
@@ -362,18 +363,52 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                     diag.E_KW_BAD_SIGIL, t, sigil, t.lexer.lexmatch.group("id_name")
                 )
             # case of sigil "$" falls through below
+
         if proc_tok := lookup_proc(name, sigil, symbols, t, diags):
             t.type = proc_tok[0]
             t.value = proc_tok[1]
             return t
         elif not symbols.return_var_as_id and (
-            var := symbols.find_variable(name, sigil)
+            var := symbols.find_variable(
+                name, symbols.lookup_sigil(sigil) if sigil else None
+            )
         ):
             t.type = "VARIABLE"
             t.value = var
             return t
+        elif "." in name:
+            # Return a in `a.b.c` if it is a known VARIABLE. Otherwise
+            # return the entire `a.b.c` as an ID.
+            i = name.find(".")
+            stem = name[:i]
+            if not symbols.return_var_as_id and (
+                var := symbols.find_variable(stem, None)
+            ):
+                t.plain_value = t.plain_value[:i]
+                t.lexer.lexpos = t.lexpos + i
+                t.lexend = t.lexpos + i
+                t.lexer.begin("dotted")
+                t.type = "VARIABLE"
+                t.value = var
+                return t
+
         # otherwise remain as ID
         t.value = (name, symbols.lookup_sigil(sigil), sigil)
+        return t
+
+    @Token(rf"\.({letter}|{digit}|\.|_)*")
+    def t_dotted_ID(t: LexToken):
+        t.type = "DOTTED_ID"
+        name: str = t.value
+        i = name.find(".", 1)
+        if i == -1:
+            t.lexer.begin("INITIAL")
+            t.value = name[1:]
+            return t
+        t.value = name[1:i]
+        t.plain_value = name[:i]
+        t.lexer.lexpos = t.lexpos + i
+        t.lexend = t.lexpos + i
         return t
 
     @Token(r"""<= | >= | <>

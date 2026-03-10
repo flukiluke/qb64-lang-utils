@@ -222,3 +222,9 @@ E_NOT_TOPLEVEL = DiagTemplate(
     DiagLevel.ERR_SYN, "{} keyword cannot be nested inside other statements."
 )
 E_DOT_PROHIBITED = DiagTemplate(DiagLevel.ERR_SYN, "Dot is not allowed in the name {}")
+E_FIELD_ACCESS_NON_COMPOUND = DiagTemplate(
+    DiagLevel.ERR_SYN, "Cannot access field {} on non-compound type {}."
+)
+E_UNKNOWN_FIELD = DiagTemplate(
+    DiagLevel.ERR_SYN, "The field {} does not exist in the type {}."
+)

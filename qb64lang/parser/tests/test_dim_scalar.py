@@ -12,23 +12,23 @@ def test_empty_list():
 
 def test_bare_var():
     prog = parse_clean("dim x")
-    var = prog.symbols.find_variable("x")
+    var = prog.symbols.find_variable("x", TYPE_SINGLE)
     assert var is not None and var.type == TYPE_SINGLE
     assert prog.main.statements == [Ast(Dim, [var], is_redim=False, leading_type=None)]
 
 
 def test_redim():
     prog = parse_clean("redim x")
-    var = prog.symbols.find_variable("x")
+    var = prog.symbols.find_variable("x", TYPE_SINGLE)
     assert var is not None and var.type == TYPE_SINGLE
     assert prog.main.statements == [Ast(Dim, [var], is_redim=True, leading_type=None)]
 
 
 def test_leading_type():
     prog = parse_clean("dim as long x, y, z")
-    var1 = prog.symbols.find_variable("x", "&")
-    var2 = prog.symbols.find_variable("y", "&")
-    var3 = prog.symbols.find_variable("z", "&")
+    var1 = prog.symbols.find_variable("x", TYPE_LONG)
+    var2 = prog.symbols.find_variable("y", TYPE_LONG)
+    var3 = prog.symbols.find_variable("z", TYPE_LONG)
     assert var1 is not None and var1.type == TYPE_LONG
     assert var2 is not None and var2.type == TYPE_LONG
     assert var3 is not None and var3.type == TYPE_LONG
@@ -39,9 +39,9 @@ def test_leading_type():
 
 def test_trailing_type():
     prog = parse_clean("dim x as long, y, z as string")
-    var1 = prog.symbols.find_variable("x", "&")
-    var2 = prog.symbols.find_variable("y", "!")
-    var3 = prog.symbols.find_variable("z", "$")
+    var1 = prog.symbols.find_variable("x", TYPE_LONG)
+    var2 = prog.symbols.find_variable("y", TYPE_SINGLE)
+    var3 = prog.symbols.find_variable("z", TYPE_STRING)
     assert var1 is not None and var1.type == TYPE_LONG
     assert var2 is not None and var2.type == TYPE_SINGLE
     assert var3 is not None and var3.type == TYPE_STRING
@@ -52,9 +52,9 @@ def test_trailing_type():
 
 def test_sigils():
     prog = parse_clean("dim x&, y, z$")
-    var1 = prog.symbols.find_variable("x", "&")
-    var2 = prog.symbols.find_variable("y", "!")
-    var3 = prog.symbols.find_variable("z", "$")
+    var1 = prog.symbols.find_variable("x", TYPE_LONG)
+    var2 = prog.symbols.find_variable("y", TYPE_SINGLE)
+    var3 = prog.symbols.find_variable("z", TYPE_STRING)
     assert var1 is not None and var1.type == TYPE_LONG
     assert var2 is not None and var2.type == TYPE_SINGLE
     assert var3 is not None and var3.type == TYPE_STRING
@@ -83,7 +83,7 @@ def test_missing_type():
 
 def test_as_unsigned():
     prog = parse_clean("dim as _unsigned long x")
-    var = prog.symbols.find_variable("x", "~&")
+    var = prog.symbols.find_variable("x", TYPE__UNSIGNED_LONG)
     assert var is not None and var.type == TYPE__UNSIGNED_LONG
     assert prog.main.statements == [
         Ast(Dim, [var], is_redim=False, leading_type=TYPE__UNSIGNED_LONG)
@@ -97,16 +97,18 @@ def test_bad_unsigned():
 
 def test_fixed_width_bit():
     prog = parse_clean("dim as _unsigned _bit * 7 x")
-    var = prog.symbols.find_variable("x", "~`7")
     type = prog.symbols.find_type("_unsigned _bit * 7")
+    assert type is not None
+    var = prog.symbols.find_variable("x", type)
     assert var is not None and var.type == type
     assert prog.main.statements == [Ast(Dim, [var], is_redim=False, leading_type=type)]
 
 
 def test_fixed_width_string():
     prog = parse_clean("dim x as string * 100")
-    var = prog.symbols.find_variable("x", "$100")
     type = prog.symbols.find_type("string * 100")
+    assert type is not None
+    var = prog.symbols.find_variable("x", type)
     assert var is not None and var.type == type
     assert prog.main.statements == [Ast(Dim, [var], is_redim=False, leading_type=None)]
 
