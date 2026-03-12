@@ -931,3 +931,20 @@ def test_type_name_bad_sigil():
 
 def test_type_name_string_name():
     check("single$", Token("ID", ("single", TYPE_STRING, "$")))
+
+
+def test_paren_array_detection():
+    symbols = SymbolStore()
+    type = symbols.lookup_array_type(TYPE_SINGLE, 1)
+    array_var = symbols.create_local("foo", "foo", type)
+    scalar_var = symbols.create_local("foo", "foo", TYPE_SINGLE)
+    check(
+        "foo +2",
+        [Token("VARIABLE", scalar_var), Token("PUNCTUATION", "+"), Token("NUM_LIT")],
+        symbols=symbols,
+    )
+    check(
+        "foo (2",
+        [Token("VARIABLE", array_var), Token("PUNCTUATION", "("), Token("NUM_LIT")],
+        symbols=symbols,
+    )

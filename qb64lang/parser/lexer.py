@@ -333,6 +333,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 |~%%|~&&|~%&|~%|~&
                 |!|[#][#]|[#]
                 |\${digit}*)?
+                ({ws}*\()?
         """
     )
     def t_ID(t: LexToken):
@@ -340,6 +341,15 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         sigil: str | None = t.lexer.lexmatch.group("id_sigil")
         if sigil is not None:
             validate_sigil(sigil, t, diags)
+        is_array = False
+        if t.value.endswith("("):
+            # '(' is trailing context to indicate the ID is an array
+            is_array = True
+            t.value = t.value.rstrip(" (")
+            t.plain_value = t.plain_value[0 : len(t.value)]
+            t.lexend = t.lexpos + len(t.value)
+            t.lexer.lexpos -= 1
+
         # The presence or absence of the $ is critical for detecting some builtins.
         # `if` is a keyword, but `if$ = 3` is valid. Similarly `left$` is a function,
         # but `left = 3` is valid.
@@ -370,7 +380,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             return t
         elif not symbols.return_var_as_id and (
             var := symbols.find_variable(
-                name, symbols.lookup_sigil(sigil) if sigil else None
+                name, symbols.lookup_sigil(sigil) if sigil else None, as_array=is_array
             )
         ):
             t.type = "VARIABLE"

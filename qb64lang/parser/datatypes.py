@@ -90,6 +90,18 @@ class Type:
 
 
 @dataclass
+class ArrayType(Type):
+    element_type: Type
+    dimensions: int
+
+    def is_builtin(self):
+        return False
+
+    def undim_name(self):
+        return self.element_type.name + "[]"
+
+
+@dataclass
 class CompoundField:
     type: Type
     name: str

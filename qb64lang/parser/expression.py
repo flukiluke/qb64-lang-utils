@@ -1,7 +1,7 @@
 from . import diagnostics as diag
-from .ast import Call, Constant, Expr, FieldAccess, LValue, Var
+from .ast import ArrayAccess, Call, Constant, Expr, FieldAccess, LValue, Var
 from .context import ParseContext
-from .datatypes import TYPE_STRING, CompoundType
+from .datatypes import TYPE_STRING, ArrayType, CompoundType, Type
 
 PRECEDENCE = {
     "imp": 2,
@@ -123,9 +123,7 @@ def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:
 
 
 def do_lvalue(ctx: ParseContext) -> LValue:
-    result = do_bare_var(ctx)
-    type = result.target.type
-    while ctx.at_a("DOTTED_ID"):
+    def field_access(base: LValue, type: Type):
         if not isinstance(type, CompoundType):
             ctx.diags.raise_error(
                 diag.E_FIELD_ACCESS_NON_COMPOUND,
@@ -138,11 +136,41 @@ def do_lvalue(ctx: ParseContext) -> LValue:
             ctx.diags.raise_error(
                 diag.E_UNKNOWN_FIELD, ctx.tok, ctx.tok.plain_value, type.source_name
             )
-        result = FieldAccess(
-            result, field, lex_start=ctx.tok.lexpos, lex_end=ctx.tok.lexend
-        )
-        type = field.type
         next(ctx)
+        type = field.type
+        result = FieldAccess(
+            base, field, lex_start=ctx.prev.lexpos, lex_end=ctx.prev.lexend
+        )
+        return (result, type)
+
+    def array_access(base: LValue, type: Type):
+        if not isinstance(type, ArrayType):
+            ctx.diags.raise_error(
+                diag.E_ARRAY_ACCESS_NON_ARRAY, ctx.tok, type.source_name
+            )
+        lex_start = ctx.tok.lexpos
+        indices = list[Expr]()
+        ctx.consume("PUNCTUATION", "(")
+        while True:
+            indices.append(do_expr(ctx))
+            if ctx.at_a("PUNCTUATION", ","):
+                next(ctx)
+            else:
+                break
+        ctx.consume("PUNCTUATION", ")")
+        result = ArrayAccess(
+            base, indices, lex_start=lex_start, lex_end=ctx.prev.lexpos
+        )
+        type = type.element_type
+        return (result, type)
+
+    result = do_bare_var(ctx)
+    type = result.target.type
+    while ctx.at_a("DOTTED_ID") or ctx.at_a("PUNCTUATION", "("):
+        if ctx.at_a("DOTTED_ID"):
+            result, type = field_access(result, type)
+        else:
+            result, type = array_access(result, type)
     return result
 
 

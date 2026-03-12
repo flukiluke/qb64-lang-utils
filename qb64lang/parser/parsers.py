@@ -7,6 +7,8 @@ from .ast import (
     CompoundDefinition,
     Constant,
     Dim,
+    DimArrayItem,
+    DimScalarItem,
     Expr,
     For,
     If,
@@ -18,7 +20,6 @@ from .ast import (
     Procedure,
     SetReturn,
     Statement,
-    Variable,
 )
 from .context import ParseContext
 from .datatypes import (
@@ -357,36 +358,69 @@ def do_declare(ctx: ParseContext):
     )
 
 
+def do_array_bounds(ctx: ParseContext) -> list[Expr | tuple[Expr, Expr]]:
+    bounds = list[Expr | tuple[Expr, Expr]]()
+    ctx.consume("PUNCTUATION", "(")
+    while True:
+        bound = do_expr(ctx)
+        if ctx.at_a("KEYWORD", "to"):
+            lbound = bound
+            next(ctx)
+            ubound = do_expr(ctx)
+            bounds.append((lbound, ubound))
+        else:
+            bounds.append(bound)
+        if ctx.at_a("PUNCTUATION", ","):
+            next(ctx)
+        else:
+            break
+    ctx.consume("PUNCTUATION", ")")
+    return bounds
+
+
 def do_dim(ctx: ParseContext):
     """
     Expects: DIM or REDIM
     """
-    lex_start = ctx.tok.lexpos
-    variables = list[Variable]()
-    is_redim = ctx.at_a("KEYWORD", "redim")
-    next(ctx)
-    leading_type = do_as_type_clause(ctx)
-    while ctx.at_a("ID"):
+
+    def dim_item():
         var_tok = ctx.tok
         tok_val: tuple[str, Type, str | None] = var_tok.value
         next(ctx)
+        bounds = None
+        if ctx.at_a("PUNCTUATION", "("):
+            bounds = do_array_bounds(ctx)
         trailing_type = do_as_type_clause(ctx)
         if tok_val[2] and (leading_type or trailing_type):
             ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
         elif leading_type and trailing_type:
             ctx.diags.raise_error(diag.E_DUPE_AS_TYPE, var_tok)
         type = leading_type or trailing_type or tok_val[1]
-        variables.append(
-            ctx.symbols.create_local(tok_val[0], var_tok.plain_value, type)
-        )
+        if bounds:
+            type = ctx.symbols.lookup_array_type(type, len(bounds))
+        var = ctx.symbols.create_local(tok_val[0], var_tok.plain_value, type)
+        if bounds:
+            return DimArrayItem(
+                var, bounds, lex_start=var_tok.lexpos, lex_end=ctx.prev.lexend
+            )
+        else:
+            return DimScalarItem(var, lex_start=var_tok.lexpos, lex_end=ctx.prev.lexend)
+
+    lex_start = ctx.tok.lexpos
+    items = list[DimScalarItem | DimArrayItem]()
+    is_redim = ctx.at_a("KEYWORD", "redim")
+    next(ctx)
+    leading_type = do_as_type_clause(ctx)
+    while ctx.at_a("ID"):
+        items.append(dim_item())
         if ctx.at_a("PUNCTUATION", ","):
             next(ctx)
         else:
             break
-    if len(variables) == 0:
+    if len(items) == 0:
         ctx.diags.raise_error(diag.E_EMPTY_DIM, ctx.tok)
     return Dim(
-        variables, is_redim, leading_type, lex_start=lex_start, lex_end=ctx.prev.lexend
+        items, is_redim, leading_type, lex_start=lex_start, lex_end=ctx.prev.lexend
     )
 
 

@@ -1,6 +1,6 @@
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import Dim
+from ..ast import Dim, DimScalarItem
 from ..datatypes import TYPE__UNSIGNED_LONG, TYPE_LONG, TYPE_SINGLE, TYPE_STRING
 from .helpers import Ast, parse_clean
 
@@ -14,14 +14,18 @@ def test_bare_var():
     prog = parse_clean("dim x")
     var = prog.symbols.find_variable("x", TYPE_SINGLE)
     assert var is not None and var.type == TYPE_SINGLE
-    assert prog.main.statements == [Ast(Dim, [var], is_redim=False, leading_type=None)]
+    assert prog.main.statements == [
+        Ast(Dim, [Ast(DimScalarItem, var)], is_redim=False, leading_type=None)
+    ]
 
 
 def test_redim():
     prog = parse_clean("redim x")
     var = prog.symbols.find_variable("x", TYPE_SINGLE)
     assert var is not None and var.type == TYPE_SINGLE
-    assert prog.main.statements == [Ast(Dim, [var], is_redim=True, leading_type=None)]
+    assert prog.main.statements == [
+        Ast(Dim, [Ast(DimScalarItem, var)], is_redim=True, leading_type=None)
+    ]
 
 
 def test_leading_type():
@@ -33,7 +37,16 @@ def test_leading_type():
     assert var2 is not None and var2.type == TYPE_LONG
     assert var3 is not None and var3.type == TYPE_LONG
     assert prog.main.statements == [
-        Ast(Dim, [var1, var2, var3], is_redim=False, leading_type=TYPE_LONG)
+        Ast(
+            Dim,
+            [
+                Ast(DimScalarItem, var1),
+                Ast(DimScalarItem, var2),
+                Ast(DimScalarItem, var3),
+            ],
+            is_redim=False,
+            leading_type=TYPE_LONG,
+        )
     ]
 
 
@@ -46,7 +59,16 @@ def test_trailing_type():
     assert var2 is not None and var2.type == TYPE_SINGLE
     assert var3 is not None and var3.type == TYPE_STRING
     assert prog.main.statements == [
-        Ast(Dim, [var1, var2, var3], is_redim=False, leading_type=None)
+        Ast(
+            Dim,
+            [
+                Ast(DimScalarItem, var1),
+                Ast(DimScalarItem, var2),
+                Ast(DimScalarItem, var3),
+            ],
+            is_redim=False,
+            leading_type=None,
+        )
     ]
 
 
@@ -59,7 +81,16 @@ def test_sigils():
     assert var2 is not None and var2.type == TYPE_SINGLE
     assert var3 is not None and var3.type == TYPE_STRING
     assert prog.main.statements == [
-        Ast(Dim, [var1, var2, var3], is_redim=False, leading_type=None)
+        Ast(
+            Dim,
+            [
+                Ast(DimScalarItem, var1),
+                Ast(DimScalarItem, var2),
+                Ast(DimScalarItem, var3),
+            ],
+            is_redim=False,
+            leading_type=None,
+        )
     ]
 
 
@@ -86,7 +117,12 @@ def test_as_unsigned():
     var = prog.symbols.find_variable("x", TYPE__UNSIGNED_LONG)
     assert var is not None and var.type == TYPE__UNSIGNED_LONG
     assert prog.main.statements == [
-        Ast(Dim, [var], is_redim=False, leading_type=TYPE__UNSIGNED_LONG)
+        Ast(
+            Dim,
+            [Ast(DimScalarItem, var)],
+            is_redim=False,
+            leading_type=TYPE__UNSIGNED_LONG,
+        )
     ]
 
 
@@ -101,7 +137,9 @@ def test_fixed_width_bit():
     assert type is not None
     var = prog.symbols.find_variable("x", type)
     assert var is not None and var.type == type
-    assert prog.main.statements == [Ast(Dim, [var], is_redim=False, leading_type=type)]
+    assert prog.main.statements == [
+        Ast(Dim, [Ast(DimScalarItem, var)], is_redim=False, leading_type=type)
+    ]
 
 
 def test_fixed_width_string():
@@ -110,7 +148,9 @@ def test_fixed_width_string():
     assert type is not None
     var = prog.symbols.find_variable("x", type)
     assert var is not None and var.type == type
-    assert prog.main.statements == [Ast(Dim, [var], is_redim=False, leading_type=None)]
+    assert prog.main.statements == [
+        Ast(Dim, [Ast(DimScalarItem, var)], is_redim=False, leading_type=None)
+    ]
 
 
 def test_bad_fixed_width():

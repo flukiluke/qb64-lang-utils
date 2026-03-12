@@ -228,3 +228,9 @@ E_FIELD_ACCESS_NON_COMPOUND = DiagTemplate(
 E_UNKNOWN_FIELD = DiagTemplate(
     DiagLevel.ERR_SYN, "The field {} does not exist in the type {}."
 )
+E_ARRAY_ACCESS_NON_ARRAY = DiagTemplate(
+    DiagLevel.ERR_SYN, "Cannot access array element on non-array type {}."
+)
+E_ARRAY_BAD_NUM_DIMS = DiagTemplate(
+    DiagLevel.ERR_SEM, "Wrong number of array dimensions, expected {} but got {}."
+)

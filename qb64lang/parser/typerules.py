@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from qb64lang.parser.ast import FieldAccess
+from qb64lang.parser.ast import ArrayAccess, Dim, DimArrayItem, FieldAccess
 
 from . import diagnostics as diag
 
@@ -30,6 +30,7 @@ from .datatypes import (
     TYPE__NONE,
     TYPE_ANY,
     TYPE_STRING,
+    ArrayType,
     FloatType,
     Type,
     can_cast,
@@ -242,6 +243,59 @@ class TypePass(AstWalk[None | Type]):
     def constant(self, node: Constant):
         return node.type
 
+    def field_access(self, node: FieldAccess):
+        self.evaluate(node.base)
+        return node.field.type
+
+    def kw_dim(self, node: Dim):
+        for dim in node.items:
+            self.evaluate(dim)
+
+    def array_access(self, node: ArrayAccess):
+        base_type = self.evaluate(node.base)
+        # Base type is syntactically guaranteed to be an array
+        assert isinstance(base_type, ArrayType)
+
+        def check_index(index: Expr):
+            type = self.evaluate(index)
+            if not type.is_number():
+                self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, index)
+            if type == TYPE__INTEGER64:
+                return index
+            return Cast.wrap(index, TYPE__INTEGER64)
+
+        node.indices = list(map(check_index, node.indices))
+        if len(node.indices) != base_type.dimensions:
+            self.program.diagnostics.create(
+                diag.E_ARRAY_BAD_NUM_DIMS, node, base_type.dimensions, len(node.indices)
+            )
+        return base_type.element_type
+
+    def kw_dim_array_item(self, node: DimArrayItem):
+        def check_dim(dim: Expr | tuple[Expr, Expr]):
+            match dim:
+                case (lbound, ubound):
+                    lbound_type = self.evaluate(lbound)
+                    ubound_type = self.evaluate(ubound)
+                    if not lbound_type.is_number():
+                        self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, lbound)
+                    if not ubound_type.is_number():
+                        self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, ubound)
+                    if lbound_type != TYPE__INTEGER64:
+                        lbound = Cast.wrap(lbound, TYPE__INTEGER64)
+                    if ubound_type != TYPE__INTEGER64:
+                        ubound = Cast.wrap(ubound, TYPE__INTEGER64)
+                    return (lbound, ubound)
+                case bound:
+                    bound_type = self.evaluate(bound)
+                    if not bound_type.is_number():
+                        self.program.diagnostics.create(diag.E_NON_NUMERIC_EXPR, bound)
+                    if bound_type != TYPE__INTEGER64:
+                        bound = Cast.wrap(bound, TYPE__INTEGER64)
+                    return bound
+
+        node.bounds = list(map(check_dim, node.bounds))
+
     def kw_print(self, node: Print):
         using = False
         for arg in node.args:
@@ -280,10 +334,6 @@ class TypePass(AstWalk[None | Type]):
                     self.program.diagnostics.create(diag.E_NON_NUMERIC_CONDITION, guard)
         for stmt in node.block:
             self.evaluate(stmt)
-
-    def field_access(self, node: FieldAccess):
-        self.evaluate(node.base)
-        return node.field.type
 
     def kw_for(self, node: For):
         var_type = self.evaluate(node.iterator)

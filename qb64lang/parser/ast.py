@@ -14,6 +14,7 @@ from .datatypes import (
     TYPE_ANY,
     TYPE_SINGLE,
     TYPE_STRING,
+    ArrayType,
     BitnType,
     CompoundField,
     CompoundType,
@@ -109,14 +110,6 @@ class CompoundDefinition(Statement):
 
 
 @dataclass
-class Dim(Statement):
-    variables: list["Variable"]
-    is_redim: bool
-    # Initial AS T clause if present
-    leading_type: Type | None
-
-
-@dataclass
 class Expr(Node):
     expr_type: Type = field(default_factory=lambda: TYPE__NONE, kw_only=True)
     parens: int = field(default=0, kw_only=True)
@@ -138,6 +131,15 @@ class FieldAccess(LValue):
 
     def children(self):
         return [self.base]
+
+
+@dataclass
+class ArrayAccess(LValue):
+    base: LValue
+    indices: list[Expr]
+
+    def children(self):
+        return self.indices
 
 
 @dataclass
@@ -190,6 +192,28 @@ class Assignment(Statement):
 class Constant(Expr):
     value: str | int | float | ExtendedFloat
     type: Type
+
+
+@dataclass
+class DimScalarItem(Node):
+    variable: "Variable"
+
+
+@dataclass
+class DimArrayItem(Node):
+    variable: "Variable"
+    bounds: list[Expr | tuple[Expr, Expr]]
+
+
+@dataclass
+class Dim(Statement):
+    items: list[DimScalarItem | DimArrayItem]
+    is_redim: bool
+    # Initial AS T clause if present
+    leading_type: Type | None
+
+    def children(self):
+        return self.items
 
 
 @dataclass
@@ -529,35 +553,45 @@ class SymbolStore:
     def find_procedure(self, ident: str) -> Procedure | None:
         return self.procedures.get(ident)
 
-    def find_variable(self, ident: str, type: Type | None) -> Variable | None:
+    def find_variable(
+        self, ident: str, type: Type | None, as_array: bool = False
+    ) -> Variable | None:
         """
         Lookup variable with name and type in current local scope then global scope.
 
         If type is None, the requested variable is either of compound type, or the
         default scalar type (priority given to the former). Default scalars in the
         local scope take priority over compound variables in the global scope.
+
+        If as_array is True, the given type (or default scalar type if None) is
+        considered the element type of an array and an array type variable is looked
+        up. Array dimension is not considered.
         """
 
         def find_compound_var(typeset):
             for var in typeset.values():
-                if not var.type.is_builtin():
+                if isinstance(var.type, CompoundType):
                     return var
 
         local_typeset = self.scope.variables.get(ident)
         global_typeset = self.global_vars.get(ident)
         if type:
-            if local_typeset and (var := local_typeset.get(type.name)):
+            type_name = type.name + "[]" if as_array else type.name
+            if local_typeset and (var := local_typeset.get(type_name)):
                 return var
-            if global_typeset and (var := global_typeset.get(type.name)):
+            if global_typeset and (var := global_typeset.get(type_name)):
                 return var
         else:
+            type_name = (
+                self.default_type.name + "[]" if as_array else self.default_type.name
+            )
             if local_typeset and (var := find_compound_var(local_typeset)):
                 return var
-            if local_typeset and (var := local_typeset.get(self.default_type.name)):
+            if local_typeset and (var := local_typeset.get(type_name)):
                 return var
             if global_typeset and (var := find_compound_var(global_typeset)):
                 return var
-            if global_typeset and (var := global_typeset.get(self.default_type.name)):
+            if global_typeset and (var := global_typeset.get(type_name)):
                 return var
 
     def find_type(self, name: str) -> Type | None:
@@ -569,6 +603,12 @@ class SymbolStore:
         new_type = CompoundType(name, source_name, "", fields)
         self.types[name] = new_type
         return new_type
+
+    def lookup_array_type(self, element_type: Type, dimensions: int):
+        name = element_type.name + "[" + str(dimensions) + "]"
+        source_name = element_type.source_name + "[" + str(dimensions) + "]"
+        new_type = ArrayType(name, source_name, "", element_type, dimensions)
+        return self.types.setdefault(name, new_type)
 
     def lookup_sigil(self, sigil: str | None) -> Type:
         if sigil is None:
@@ -594,8 +634,17 @@ class SymbolStore:
         typeset = self.scope.variables.setdefault(name, {})
         if type.name in typeset:
             raise ParseError("Duplicate variable")
-        typeset[type.name] = Variable(name, cased_name, type)
-        return typeset[type.name]
+        var = Variable(name, cased_name, type)
+        typeset[type.name] = var
+        if isinstance(type, ArrayType):
+            name = type.undim_name()
+            if name in typeset:
+                raise ParseError("Duplicate variable")
+            # Arrays occupy a second spot in the typeset to prevent the existence
+            # of those that differ only by number of dimensions. It also allows
+            # looking up an array variable without knowing its dimension.
+            typeset[name] = var
+        return var
 
     def add_procedure(self, procedure: Procedure):
         if procedure.name in self.procedures:
@@ -610,12 +659,15 @@ class AstWalk(Generic[T]):
     def __init__(self, program: "Program"):
         self.program = program
         self.handlers: dict[type[Node], Callable] = {
+            ArrayAccess: self.array_access,
             Assignment: self.assignment,
             Call: self.call,
             Cast: self.cast,
             CompoundDefinition: self.compound_definition,
             Constant: self.constant,
             Dim: self.kw_dim,
+            DimArrayItem: self.kw_dim_array_item,
+            DimScalarItem: self.kw_dim_scalar_item,
             FieldAccess: self.field_access,
             For: self.kw_for,
             If: self.kw_if,
@@ -631,6 +683,8 @@ class AstWalk(Generic[T]):
     def evaluate(self, node: Node) -> T:
         return self.handlers[node.__class__](node)
 
+    def array_access(self, node: ArrayAccess) -> T: ...
+
     def assignment(self, node: Assignment) -> T: ...
 
     def call(self, node: Call) -> T: ...
@@ -642,6 +696,10 @@ class AstWalk(Generic[T]):
     def constant(self, node: Constant) -> T: ...
 
     def kw_dim(self, node: Dim) -> T: ...
+
+    def kw_dim_array_item(self, node: DimArrayItem) -> T: ...
+
+    def kw_dim_scalar_item(self, node: DimScalarItem) -> T: ...
 
     def field_access(self, node: FieldAccess) -> T: ...
 
