@@ -124,3 +124,13 @@ DIM Baz AS foo
 PRINT Baz.Bar
 """
     )
+
+
+def test_dim():
+    assert format_text("dim a(2,3),b$(1 to 5)") == "DIM a(2, 3), b$(1 TO 5)"
+
+
+def test_array_access():
+    assert (
+        format_text("dim Foo(2,3) : print Foo(1,2)") == "DIM Foo(2, 3): PRINT Foo(1, 2)"
+    )
