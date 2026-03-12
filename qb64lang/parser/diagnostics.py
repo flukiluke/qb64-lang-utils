@@ -21,6 +21,13 @@ class DiagLevel(Enum):
     INFO = auto()
 
 
+def lexpos2rowcol(input: str, lexpos: int) -> tuple[int, int]:
+    line = input.count("\n", 0, lexpos) + 1
+    nl = input.rfind("\n", 0, lexpos)
+    column = lexpos - nl
+    return (line, column)
+
+
 class DiagTemplate:
     counter = 1
 
