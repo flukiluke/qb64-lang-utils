@@ -203,8 +203,8 @@ def format(
                 ctx.post_flex()
             case ("ID", c):
                 ctx.add(ctx.tok.plain_value)
-                if c[2] is not None:
-                    ctx.add(c[2])
+                if c.sigil is not None:
+                    ctx.add(c.sigil)
             case ("DOTTED_ID", _):
                 if isinstance(ctx.node, FieldAccess):
                     ctx.add(".")
