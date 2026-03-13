@@ -34,7 +34,7 @@ from .datatypes import (
     validate_fixed_width,
 )
 from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
-from .lexer import Number
+from .lexer import Id, Number
 
 
 def do_print(ctx: ParseContext):
@@ -295,13 +295,12 @@ def do_proc_ident(ctx: ParseContext) -> tuple[str, str, Type]:
     finally:
         ctx.symbols.default_type = default_type
         ctx.symbols.return_proc_as_id = False
-    name: str = ctx.tok.value[0]
+    var_id: Id = ctx.tok.value
     cased_name: str = ctx.tok.plain_value
-    ret: Type = ctx.tok.value[1]
-    if is_sub and ret != TYPE__NONE:
+    if is_sub and var_id.sigil:
         ctx.diags.create(diag.E_SUB_WITH_TYPE, ctx.tok)
     next(ctx)
-    return (name, cased_name, ret)
+    return (var_id.name, cased_name, var_id.type)
 
 
 def do_declare_prepass(ctx: ParseContext):
@@ -385,20 +384,20 @@ def do_dim(ctx: ParseContext):
 
     def dim_item():
         var_tok = ctx.tok
-        tok_val: tuple[str, Type, str | None] = var_tok.value
+        tok_val: Id = var_tok.value
         next(ctx)
         bounds = None
         if ctx.at_a("PUNCTUATION", "("):
             bounds = do_array_bounds(ctx)
         trailing_type = do_as_type_clause(ctx)
-        if tok_val[2] and (leading_type or trailing_type):
+        if tok_val.sigil and (leading_type or trailing_type):
             ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
         elif leading_type and trailing_type:
             ctx.diags.raise_error(diag.E_DUPE_AS_TYPE, var_tok)
-        type = leading_type or trailing_type or tok_val[1]
+        type = leading_type or trailing_type or tok_val.type
         if bounds:
             type = ctx.symbols.lookup_array_type(type, len(bounds))
-        var = ctx.symbols.create_local(tok_val[0], var_tok.plain_value, type)
+        var = ctx.symbols.create_local(tok_val.name, var_tok.plain_value, type)
         if bounds:
             return DimArrayItem(
                 var, bounds, lex_start=var_tok.lexpos, lex_end=ctx.prev.lexend
@@ -450,18 +449,20 @@ def do_type_prepass(ctx: ParseContext):
     def bare_list(as_clause: Type) -> list[CompoundField]:
         result = list[CompoundField]()
         while ctx.at_a("ID"):
-            if ctx.tok.value[2] is not None:
+            var_id: Id = ctx.tok.value
+            if var_id.sigil is not None:
                 ctx.diags.raise_error(diag.E_SIGIL_WITH_FIELD_NAME, ctx.tok)
-            name: str = ctx.tok.value[0]
-            if name in field_names:
+            if var_id.name in field_names:
                 ctx.diags.create(
                     diag.E_DUPE_COMPOUND_FIELD, ctx.tok, ctx.tok.plain_value
                 )
-            elif "." in name:
+            elif "." in var_id.name:
                 ctx.diags.create(diag.E_DOT_PROHIBITED, ctx.tok, ctx.tok.plain_value)
             else:
-                result.append(CompoundField(as_clause, name, ctx.tok.plain_value))
-                field_names.add(name)
+                result.append(
+                    CompoundField(as_clause, var_id.name, ctx.tok.plain_value)
+                )
+                field_names.add(var_id.name)
             next(ctx)
             if ctx.at_a("PUNCTUATION", ","):
                 next(ctx)
@@ -472,24 +473,24 @@ def do_type_prepass(ctx: ParseContext):
     def typed_item() -> list[CompoundField]:
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
-        if ctx.tok.value[2] is not None:
+        var_id = ctx.tok.value
+        if var_id.sigil is not None:
             ctx.diags.raise_error(diag.E_SIGIL_WITH_FIELD_NAME, ctx.tok)
         name_tok = ctx.tok
-        name: str = ctx.tok.value[0]
         cased_name: str = ctx.tok.plain_value
         next(ctx)
         as_clause = do_as_type_clause(ctx)
         if as_clause is None:
             ctx.diags.raise_error(diag.E_MISSING_AS_TYPE, ctx.tok)
-        if name in field_names:
+        if var_id.name in field_names:
             ctx.diags.create(diag.E_DUPE_COMPOUND_FIELD, name_tok, name_tok.plain_value)
             return []
-        elif "." in name:
+        elif "." in var_id.name:
             ctx.diags.create(diag.E_DOT_PROHIBITED, ctx.tok, ctx.tok.plain_value)
             return []
         else:
-            field_names.add(name)
-            return [CompoundField(as_clause, name, cased_name)]
+            field_names.add(var_id.name)
+            return [CompoundField(as_clause, var_id.name, cased_name)]
 
     try:
         ctx.symbols.return_proc_as_id = True
@@ -497,12 +498,11 @@ def do_type_prepass(ctx: ParseContext):
         next(ctx)
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
-        name: str = ctx.tok.value[0]
+        var_id: Id = ctx.tok.value
         cased_name: str = ctx.tok.plain_value
-        sigil: str | None = ctx.tok.value[2]
-        if sigil is not None:
+        if var_id.sigil is not None:
             ctx.diags.raise_error(diag.E_SIGIL_WITH_TYPE_NAME, ctx.tok)
-        if "." in name:
+        if "." in var_id.name:
             ctx.diags.raise_error(diag.E_DOT_PROHIBITED, ctx.tok, ctx.tok.plain_value)
         next(ctx)
         ctx.consume("NEWLINE")
@@ -515,7 +515,7 @@ def do_type_prepass(ctx: ParseContext):
     finally:
         ctx.symbols.return_proc_as_id = False
         ctx.symbols.return_var_as_id = False
-    ctx.symbols.create_compound_type(name, cased_name, fields)
+    ctx.symbols.create_compound_type(var_id.name, cased_name, fields)
 
 
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
@@ -757,14 +757,15 @@ def do_param_list(ctx: ParseContext):
         if not ctx.at_a("ID"):
             ctx.diags.raise_error(diag.E_NAME_IN_USE, ctx.tok, ctx.tok.value)
         var_tok = ctx.tok
-        name, type, sigil = var_tok.value
+        var_id: Id = var_tok.value
+        type = var_id.type
         next(ctx)
         trailing_type = do_as_type_clause(ctx)
-        if trailing_type and sigil:
+        if trailing_type and var_id.sigil:
             ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
         elif trailing_type:
             type = trailing_type
-        result.append(Parameter(type, name, var_tok.plain_value))
+        result.append(Parameter(type, var_id.name, var_tok.plain_value))
         if ctx.at_a("PUNCTUATION", ")"):
             break
         ctx.consume("PUNCTUATION", ",")

@@ -24,7 +24,7 @@ from ..datatypes import (
     TypeSignature,
 )
 from ..diagnostics import DiagnosticStore, DiagTemplate
-from ..lexer import Lexer, Number
+from ..lexer import Id, Lexer, Number
 
 
 @dataclass
@@ -618,7 +618,7 @@ def test_keyword():
     check("?", Token("KEYWORD", "?"))
     check("if", Token("KEYWORD", "if"))
     check("if%", [], d=diag.E_KW_BAD_SIGIL)
-    check("if$", Token("ID", ("if", TYPE_STRING, "$")))
+    check("if$", Token("ID", Id("if", TYPE_STRING, "$")))
 
 
 def test_procedure():
@@ -673,22 +673,22 @@ def test_procedure():
     check("a_function!", [], symbols, d=diag.E_EXISTING_DEF_SIGIL_CLASH)
     check(
         "a_string_builtin",
-        Token("ID", ("a_string_builtin", TYPE_SINGLE, None)),
+        Token("ID", Id("a_string_builtin", TYPE_SINGLE, None)),
         symbols,
     )
     check("a_string_builtin$", Token("PROCEDURE", a_string_builtin), symbols)
 
 
 def test_id():
-    check("Foo", Token("ID", ("foo", TYPE_SINGLE, None)))
-    check("Foo_bar", Token("ID", ("foo_bar", TYPE_SINGLE, None)))
-    check("_foo", Token("ID", ("_foo", TYPE_SINGLE, None)))
-    check("foo23x", Token("ID", ("foo23x", TYPE_SINGLE, None)))
+    check("Foo", Token("ID", Id("foo", TYPE_SINGLE, None)))
+    check("Foo_bar", Token("ID", Id("foo_bar", TYPE_SINGLE, None)))
+    check("_foo", Token("ID", Id("_foo", TYPE_SINGLE, None)))
+    check("foo23x", Token("ID", Id("foo23x", TYPE_SINGLE, None)))
 
 
 def test_dotted_id():
-    check("foo.bar", Token("ID", ("foo.bar", TYPE_SINGLE, None)))
-    check("foo.bar.baz!", Token("ID", ("foo.bar.baz", TYPE_SINGLE, "!")))
+    check("foo.bar", Token("ID", Id("foo.bar", TYPE_SINGLE, None)))
+    check("foo.bar.baz!", Token("ID", Id("foo.bar.baz", TYPE_SINGLE, "!")))
 
 
 def test_dotted_variable():
@@ -713,22 +713,22 @@ def test_dotted_variable():
 
 
 def test_id_builtin_sigil():
-    check("foo`", Token("ID", ("foo", TYPE__BIT, "`")))
-    check("foo%%", Token("ID", ("foo", TYPE__BYTE, "%%")))
-    check("foo%", Token("ID", ("foo", TYPE_INTEGER, "%")))
-    check("foo&", Token("ID", ("foo", TYPE_LONG, "&")))
-    check("foo&&", Token("ID", ("foo", TYPE__INTEGER64, "&&")))
-    # check("foo%&", Token("ID", ("foo", BUILTIN_TYPES["_offset"])))
-    check("foo~`", Token("ID", ("foo", TYPE__UNSIGNED__BIT, "~`")))
-    check("foo~%%", Token("ID", ("foo", TYPE__UNSIGNED__BYTE, "~%%")))
-    check("foo~%", Token("ID", ("foo", TYPE__UNSIGNED_INTEGER, "~%")))
-    check("foo~&", Token("ID", ("foo", TYPE__UNSIGNED_LONG, "~&")))
-    check("foo~&&", Token("ID", ("foo", TYPE__UNSIGNED__INTEGER64, "~&&")))
-    # check("foo~%&", Token("ID", ("foo", BUILTIN_TYPES["_unsigned _offset"])))
-    check("foo!", Token("ID", ("foo", TYPE_SINGLE, "!")))
-    check("foo#", Token("ID", ("foo", TYPE_DOUBLE, "#")))
-    check("foo##", Token("ID", ("foo", TYPE__FLOAT, "##")))
-    check("foo$", Token("ID", ("foo", TYPE_STRING, "$")))
+    check("foo`", Token("ID", Id("foo", TYPE__BIT, "`")))
+    check("foo%%", Token("ID", Id("foo", TYPE__BYTE, "%%")))
+    check("foo%", Token("ID", Id("foo", TYPE_INTEGER, "%")))
+    check("foo&", Token("ID", Id("foo", TYPE_LONG, "&")))
+    check("foo&&", Token("ID", Id("foo", TYPE__INTEGER64, "&&")))
+    # check("foo%&", Token("ID", Id("foo", BUILTIN_TYPES["_offset"])))
+    check("foo~`", Token("ID", Id("foo", TYPE__UNSIGNED__BIT, "~`")))
+    check("foo~%%", Token("ID", Id("foo", TYPE__UNSIGNED__BYTE, "~%%")))
+    check("foo~%", Token("ID", Id("foo", TYPE__UNSIGNED_INTEGER, "~%")))
+    check("foo~&", Token("ID", Id("foo", TYPE__UNSIGNED_LONG, "~&")))
+    check("foo~&&", Token("ID", Id("foo", TYPE__UNSIGNED__INTEGER64, "~&&")))
+    # check("foo~%&", Token("ID", Id("foo", BUILTIN_TYPES["_unsigned _offset"])))
+    check("foo!", Token("ID", Id("foo", TYPE_SINGLE, "!")))
+    check("foo#", Token("ID", Id("foo", TYPE_DOUBLE, "#")))
+    check("foo##", Token("ID", Id("foo", TYPE__FLOAT, "##")))
+    check("foo$", Token("ID", Id("foo", TYPE_STRING, "$")))
 
 
 def test_id_custom_sigil():
@@ -740,7 +740,7 @@ def test_id_custom_sigil():
         type = symbols.find_type(type_name)
         assert type is not None
         assert result.type == "ID"
-        assert result.value == ("foo", type, type.sigil)
+        assert result.value == Id("foo", type, type.sigil)
 
     check_custom_sigil("foo`10", "_bit * 10")
     check_custom_sigil("foo~`10", "_unsigned _bit * 10")
@@ -796,16 +796,18 @@ def test_line_label():
     check("foo :", Token("LINE_LABEL", "foo"))
     check(
         "foo: bar",
-        [Token("LINE_LABEL", "foo"), Token("ID", ("bar", TYPE_SINGLE, None))],
+        [Token("LINE_LABEL", "foo"), Token("ID", Id("bar", TYPE_SINGLE, None))],
     )
     check("foo.bar23:", Token("LINE_LABEL", "foo.bar23"))
 
 
 def test_line_num():
     check("123", Token("LINE_NUM", "123"))
-    check("123foo", [Token("LINE_NUM", "123"), Token("ID", ("foo", TYPE_SINGLE, None))])
     check(
-        "123 foo", [Token("LINE_NUM", "123"), Token("ID", ("foo", TYPE_SINGLE, None))]
+        "123foo", [Token("LINE_NUM", "123"), Token("ID", Id("foo", TYPE_SINGLE, None))]
+    )
+    check(
+        "123 foo", [Token("LINE_NUM", "123"), Token("ID", Id("foo", TYPE_SINGLE, None))]
     )
 
 
@@ -815,7 +817,7 @@ def test_line_num_label():
         "123foo:bar",
         [
             Token("LINE_NUM_LABEL", ("123", "foo")),
-            Token("ID", ("bar", TYPE_SINGLE, None)),
+            Token("ID", Id("bar", TYPE_SINGLE, None)),
         ],
     )
 
@@ -835,25 +837,25 @@ def test_line_join():
     check(
         "foo_\nbar",
         [
-            Token("ID", ("foo", TYPE_SINGLE, None)),
-            Token("ID", ("bar", TYPE_SINGLE, None)),
+            Token("ID", Id("foo", TYPE_SINGLE, None)),
+            Token("ID", Id("bar", TYPE_SINGLE, None)),
         ],
     )
     check(
         "foo_ \nbar",
         [
-            Token("ID", ("foo", TYPE_SINGLE, None)),
-            Token("ID", ("bar", TYPE_SINGLE, None)),
+            Token("ID", Id("foo", TYPE_SINGLE, None)),
+            Token("ID", Id("bar", TYPE_SINGLE, None)),
         ],
     )
-    check("foo_\n", Token("ID", ("foo", TYPE_SINGLE, None)))
+    check("foo_\n", Token("ID", Id("foo", TYPE_SINGLE, None)))
     check("_\n", [])
     check(
         "foo_\nbar_\nbaz",
         [
-            Token("ID", ("foo", TYPE_SINGLE, None)),
-            Token("ID", ("bar", TYPE_SINGLE, None)),
-            Token("ID", ("baz", TYPE_SINGLE, None)),
+            Token("ID", Id("foo", TYPE_SINGLE, None)),
+            Token("ID", Id("bar", TYPE_SINGLE, None)),
+            Token("ID", Id("baz", TYPE_SINGLE, None)),
         ],
     )
 
@@ -930,7 +932,7 @@ def test_type_name_bad_sigil():
 
 
 def test_type_name_string_name():
-    check("single$", Token("ID", ("single", TYPE_STRING, "$")))
+    check("single$", Token("ID", Id("single", TYPE_STRING, "$")))
 
 
 def test_paren_array_detection():

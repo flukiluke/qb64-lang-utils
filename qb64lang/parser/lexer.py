@@ -90,6 +90,14 @@ class Number:
     sigil: str | None = None
 
 
+@dataclass
+class Id:
+    name: str
+    type: Type
+    sigil: str | None
+    is_array: bool = False
+
+
 def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
     def t_ANY_error(t: LexToken):
         t.lexer.skip(len(t.value))
@@ -377,6 +385,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         if proc_tok := lookup_proc(name, sigil, symbols, t, diags):
             t.type = proc_tok[0]
             t.value = proc_tok[1]
+            t.value.is_array = is_array
             return t
         elif not symbols.return_var_as_id and (
             var := symbols.find_variable(
@@ -403,7 +412,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 return t
 
         # otherwise remain as ID
-        t.value = (name, symbols.lookup_sigil(sigil), sigil)
+        t.value = Id(name, symbols.lookup_sigil(sigil), sigil, is_array)
         return t
 
     @Token(rf"\.({letter}|{digit}|\.|_)*")
@@ -566,7 +575,7 @@ def lookup_proc(
         )
 
     if symbols.return_proc_as_id and (proc_plain or proc_string):
-        return ("ID", (name, symbols.lookup_sigil(sigil), sigil))
+        return ("ID", Id(name, symbols.lookup_sigil(sigil), sigil))
 
     if sigil is None:
         if proc_plain is None:

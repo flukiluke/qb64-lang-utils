@@ -2,6 +2,7 @@ from . import diagnostics as diag
 from .ast import ArrayAccess, Call, Constant, Expr, FieldAccess, LValue, Var
 from .context import ParseContext
 from .datatypes import TYPE_STRING, ArrayType, CompoundType, Type
+from .lexer import Id
 
 PRECEDENCE = {
     "imp": 2,
@@ -181,10 +182,9 @@ def do_bare_var(ctx: ParseContext) -> Var:
     if ctx.tok.type == "VARIABLE":
         result = Var(ctx.tok.value, lex_start=ctx.tok.lexpos, lex_end=ctx.tok.lexend)
     elif ctx.tok.type == "ID":
+        var_id: Id = ctx.tok.value
         result = Var(
-            ctx.symbols.create_local(
-                ctx.tok.value[0], ctx.tok.plain_value, ctx.tok.value[1]
-            ),
+            ctx.symbols.create_local(var_id.name, ctx.tok.plain_value, var_id.type),
             lex_start=ctx.tok.lexpos,
             lex_end=ctx.tok.lexend,
         )
