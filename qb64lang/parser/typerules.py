@@ -248,6 +248,8 @@ class TypePass(AstWalk[None | Type]):
         return node.field.type
 
     def kw_dim(self, node: Dim):
+        if len(node.items) == 0:
+            self.program.diagnostics.create(diag.E_EMPTY_DIM, node)
         for dim in node.items:
             self.evaluate(dim)
 

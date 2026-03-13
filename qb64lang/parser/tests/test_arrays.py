@@ -2,6 +2,7 @@ from .. import diagnostics as diag
 from .. import parse
 from ..ast import (
     ArrayAccess,
+    Assignment,
     Call,
     Cast,
     Constant,
@@ -45,6 +46,19 @@ def test_dim_multi_dimensions():
             )
         ],
     )
+
+
+def test_redim():
+    prog = parse_clean("dim x(1, 2) : redim x(3, 4)")
+    type = prog.symbols.find_type("single[2]")
+    var = prog.symbols.find_variable("x", None, as_array=True)
+    assert var is not None
+    assert type is not None and isinstance(type, ArrayType)
+    assert type.dimensions == 2
+    assert prog.main.find_all(Dim) == [
+        Ast(Dim, is_redim=False),
+        Ast(Dim, [Ast(DimArrayItem, var)], is_redim=True),
+    ]
 
 
 def test_custom_lbound():
@@ -191,3 +205,49 @@ def test_array_scalar_name_clashes():
             Ast(ArrayAccess, Ast(Var, array_var), [Ast(Cast, Ast(Constant, 1))]),
         ],
     )
+
+
+def test_cannot_change_dimensions():
+    parse_clean("dim x(1,2) : dim x(1)")
+
+
+def test_implicit_array():
+    prog = parse_clean("x(2) = x(3)")
+    var = prog.symbols.find_variable("x", TYPE_SINGLE, True)
+    assert var is not None
+    assert var.type == prog.symbols.find_type("single[1]")
+    assert prog.main.find(Assignment).lval == Ast(
+        ArrayAccess, Ast(Var, var), [Ast(Cast, Ast(Constant, 2))]
+    )
+    assert prog.main.find(Assignment).rval == Ast(
+        ArrayAccess, Ast(Var, var), [Ast(Cast, Ast(Constant, 3))]
+    )
+
+
+def test_implicit_nested_array():
+    prog = parse_clean("x(x(1, 2), 3) = 4")
+    var = prog.symbols.find_variable("x", TYPE_SINGLE, True)
+    assert var is not None
+    assert var.type == prog.symbols.find_type("single[2]")
+    assert prog.main.find(Assignment).lval == Ast(
+        ArrayAccess,
+        Ast(Var, var),
+        [
+            Ast(
+                Cast,
+                Ast(
+                    ArrayAccess,
+                    Ast(Var, var),
+                    [
+                        Ast(Cast, Ast(Constant, 1)),
+                        Ast(Cast, Ast(Constant, 2)),
+                    ],
+                ),
+            ),
+            Ast(Cast, Ast(Constant, 3)),
+        ],
+    )
+
+
+def test_implicit_nested_bad_dims():
+    assert parse("x(1, x(2)) = 3").diagnostics.has(diag.E_ARRAY_BAD_NUM_DIMS)

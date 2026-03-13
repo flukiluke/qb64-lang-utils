@@ -165,13 +165,39 @@ def do_lvalue(ctx: ParseContext) -> LValue:
         type = type.element_type
         return (result, type)
 
-    result = do_bare_var(ctx)
+    implicit_array_id: Id | None = None
+    implicit_array: Var | None = None
+    if ctx.at_a("ID") and ctx.tok.value.is_array:
+        implicit_array_id = ctx.tok.value
+        assert implicit_array_id is not None
+        implicit_array = Var(
+            ctx.symbols.create_local(
+                implicit_array_id.name,
+                ctx.tok.plain_value,
+                ctx.symbols.lookup_array_type(implicit_array_id.type, 0),
+            ),
+            lex_start=ctx.tok.lexpos,
+            lex_end=ctx.tok.lexend,
+        )
+        result = implicit_array
+        next(ctx)
+    else:
+        result = do_bare_var(ctx)
     type = result.target.type
     while ctx.at_a("DOTTED_ID") or ctx.at_a("PUNCTUATION", "("):
         if ctx.at_a("DOTTED_ID"):
             result, type = field_access(result, type)
         else:
             result, type = array_access(result, type)
+        if implicit_array and implicit_array_id:
+            assert isinstance(result, ArrayAccess)
+            assert isinstance(implicit_array.target.type, ArrayType)
+            actual_type = ctx.symbols.lookup_array_type(
+                implicit_array_id.type, len(result.indices)
+            )
+            ctx.symbols.reregister_local_array(implicit_array.target, actual_type)
+            implicit_array = None
+            implicit_array_id = None
     return result
 
 

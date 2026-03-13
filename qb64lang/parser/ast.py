@@ -576,14 +576,14 @@ class SymbolStore:
         local_typeset = self.scope.variables.get(ident)
         global_typeset = self.global_vars.get(ident)
         if type:
-            type_name = type.name + "[]" if as_array else type.name
+            type_name = type.name + "[0]" if as_array else type.name
             if local_typeset and (var := local_typeset.get(type_name)):
                 return var
             if global_typeset and (var := global_typeset.get(type_name)):
                 return var
         else:
             type_name = (
-                self.default_type.name + "[]" if as_array else self.default_type.name
+                self.default_type.name + "[0]" if as_array else self.default_type.name
             )
             if local_typeset and (var := find_compound_var(local_typeset)):
                 return var
@@ -593,6 +593,15 @@ class SymbolStore:
                 return var
             if global_typeset and (var := global_typeset.get(type_name)):
                 return var
+
+    def reregister_local_array(self, var: Variable, type: ArrayType):
+        typeset = self.scope.variables.get(var.name)
+        if typeset is None:
+            raise ParseError("Cannot re-register unregistered array")
+        if type.name in typeset:
+            raise ParseError("Duplicate variable")
+        typeset[type.name] = var
+        var.type = type
 
     def find_type(self, name: str) -> Type | None:
         return BUILTIN_TYPES.get(name, self.types.get(name))
@@ -604,11 +613,11 @@ class SymbolStore:
         self.types[name] = new_type
         return new_type
 
-    def lookup_array_type(self, element_type: Type, dimensions: int):
+    def lookup_array_type(self, element_type: Type, dimensions: int) -> ArrayType:
         name = element_type.name + "[" + str(dimensions) + "]"
         source_name = element_type.source_name + "[" + str(dimensions) + "]"
         new_type = ArrayType(name, source_name, "", element_type, dimensions)
-        return self.types.setdefault(name, new_type)
+        return cast(ArrayType, self.types.setdefault(name, new_type))
 
     def lookup_sigil(self, sigil: str | None) -> Type:
         if sigil is None:
@@ -638,8 +647,6 @@ class SymbolStore:
         typeset[type.name] = var
         if isinstance(type, ArrayType):
             name = type.undim_name()
-            if name in typeset:
-                raise ParseError("Duplicate variable")
             # Arrays occupy a second spot in the typeset to prevent the existence
             # of those that differ only by number of dimensions. It also allows
             # looking up an array variable without knowing its dimension.

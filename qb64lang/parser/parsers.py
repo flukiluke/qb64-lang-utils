@@ -416,8 +416,6 @@ def do_dim(ctx: ParseContext):
             next(ctx)
         else:
             break
-    if len(items) == 0:
-        ctx.diags.raise_error(diag.E_EMPTY_DIM, ctx.tok)
     return Dim(
         items, is_redim, leading_type, lex_start=lex_start, lex_end=ctx.prev.lexend
     )

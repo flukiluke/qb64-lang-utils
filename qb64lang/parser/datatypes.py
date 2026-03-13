@@ -98,7 +98,7 @@ class ArrayType(Type):
         return False
 
     def undim_name(self):
-        return self.element_type.name + "[]"
+        return self.element_type.name + "[0]"
 
 
 @dataclass
