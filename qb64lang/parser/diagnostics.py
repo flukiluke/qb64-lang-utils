@@ -241,3 +241,4 @@ E_ARRAY_ACCESS_NON_ARRAY = DiagTemplate(
 E_ARRAY_BAD_NUM_DIMS = DiagTemplate(
     DiagLevel.ERR_SEM, "Wrong number of array dimensions, expected {} but got {}."
 )
+E_DUPE_DIM = DiagTemplate(DiagLevel.ERR_SEM, "Cannot DIM existing variable {}.")

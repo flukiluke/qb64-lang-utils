@@ -26,6 +26,7 @@ from .datatypes import (
     TYPE__BYTE,
     TYPE__NONE,
     TYPE_STRING,
+    ArrayType,
     CompoundField,
     CompoundType,
     Parameter,
@@ -388,7 +389,9 @@ def do_dim(ctx: ParseContext):
         next(ctx)
         bounds = None
         if ctx.at_a("PUNCTUATION", "("):
+            ctx.symbols.return_var_as_id = False
             bounds = do_array_bounds(ctx)
+            ctx.symbols.return_var_as_id = True
         trailing_type = do_as_type_clause(ctx)
         if tok_val.sigil and (leading_type or trailing_type):
             ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
@@ -397,7 +400,11 @@ def do_dim(ctx: ParseContext):
         type = leading_type or trailing_type or tok_val.type
         if bounds:
             type = ctx.symbols.lookup_array_type(type, len(bounds))
-        var = ctx.symbols.create_local(tok_val.name, var_tok.plain_value, type)
+        var = ctx.symbols.find_variable(tok_val.name, type, local_only=True)
+        if var and (not is_redim or not isinstance(var.type, ArrayType)):
+            ctx.diags.create(diag.E_DUPE_DIM, var_tok, var.source_name)
+        elif var is None:
+            var = ctx.symbols.create_local(tok_val.name, var_tok.plain_value, type)
         if bounds:
             return DimArrayItem(
                 var, bounds, lex_start=var_tok.lexpos, lex_end=ctx.prev.lexend
@@ -408,14 +415,18 @@ def do_dim(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     items = list[DimScalarItem | DimArrayItem]()
     is_redim = ctx.at_a("KEYWORD", "redim")
-    next(ctx)
-    leading_type = do_as_type_clause(ctx)
-    while ctx.at_a("ID"):
-        items.append(dim_item())
-        if ctx.at_a("PUNCTUATION", ","):
-            next(ctx)
-        else:
-            break
+    try:
+        ctx.symbols.return_var_as_id = True
+        next(ctx)
+        leading_type = do_as_type_clause(ctx)
+        while ctx.at_a("ID"):
+            items.append(dim_item())
+            if ctx.at_a("PUNCTUATION", ","):
+                next(ctx)
+            else:
+                break
+    finally:
+        ctx.symbols.return_var_as_id = False
     return Dim(
         items, is_redim, leading_type, lex_start=lex_start, lex_end=ctx.prev.lexend
     )

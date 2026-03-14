@@ -155,3 +155,8 @@ def test_fixed_width_string():
 
 def test_bad_fixed_width():
     assert parse("dim x as long * 3").diagnostics.has(diag.E_UNFIXABLE_TYPE)
+
+
+def test_cannot_redim_scalar():
+    assert parse("dim x : dim x").diagnostics.has(diag.E_DUPE_DIM)
+    assert parse("dim x : redim x").diagnostics.has(diag.E_DUPE_DIM)

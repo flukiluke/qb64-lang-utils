@@ -55,7 +55,7 @@ def test_redim():
     assert var is not None
     assert type is not None and isinstance(type, ArrayType)
     assert type.dimensions == 2
-    assert prog.main.find_all(Dim) == [
+    assert list(prog.main.find_all(Dim)) == [
         Ast(Dim, is_redim=False),
         Ast(Dim, [Ast(DimArrayItem, var)], is_redim=True),
     ]
@@ -209,6 +209,7 @@ def test_array_scalar_name_clashes():
 
 def test_cannot_change_dimensions():
     parse_clean("dim x(1,2) : dim x(1)")
+    parse_clean("dim x(1,2) : redim x(1)")
 
 
 def test_implicit_array():

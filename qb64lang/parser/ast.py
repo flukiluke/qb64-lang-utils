@@ -554,7 +554,11 @@ class SymbolStore:
         return self.procedures.get(ident)
 
     def find_variable(
-        self, ident: str, type: Type | None, as_array: bool = False
+        self,
+        ident: str,
+        type: Type | None,
+        as_array: bool = False,
+        local_only: bool = False,
     ) -> Variable | None:
         """
         Lookup variable with name and type in current local scope then global scope.
@@ -574,7 +578,7 @@ class SymbolStore:
                     return var
 
         local_typeset = self.scope.variables.get(ident)
-        global_typeset = self.global_vars.get(ident)
+        global_typeset = self.global_vars.get(ident) if not local_only else None
         if type:
             type_name = type.name + "[0]" if as_array else type.name
             if local_typeset and (var := local_typeset.get(type_name)):
