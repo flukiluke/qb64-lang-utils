@@ -22,7 +22,13 @@ $syntax:strictsigil
 declare sub MkDir (path$)
 declare sub Out (address%, value%)
 declare function Left$ (s$, i&&)
+declare function Right$ (s$, i&&)
+declare function Mid$ (s$, pos&&)
+declare function Mid$ (s$, pos&&, length&&)
 declare function LCase$ (s$)
+declare function UCase$ (s$)
+declare function InStr&& (haystack$, needle$)
+declare function InStr&& (start&&, haystack$, needle$)
 declare function Val## (s$)
 declare sub _AutoDisplay
 declare function _AutoDisplay%%
