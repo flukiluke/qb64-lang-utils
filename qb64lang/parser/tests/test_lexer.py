@@ -694,7 +694,7 @@ def test_dotted_id():
 def test_dotted_variable():
     symbols = SymbolStore()
     type = symbols.create_compound_type("t", "t", [CompoundField(TYPE_LONG, "a", "a")])
-    var = symbols.create_local("foo", "foo", type)
+    var = symbols.create_local("foo", "foo", type, False)
 
     check(
         "foo.bar",
@@ -938,8 +938,8 @@ def test_type_name_string_name():
 def test_paren_array_detection():
     symbols = SymbolStore()
     type = symbols.lookup_array_type(TYPE_SINGLE, 1)
-    array_var = symbols.create_local("foo", "foo", type)
-    scalar_var = symbols.create_local("foo", "foo", TYPE_SINGLE)
+    array_var = symbols.create_local("foo", "foo", type, False)
+    scalar_var = symbols.create_local("foo", "foo", TYPE_SINGLE, True)
     check(
         "foo +2",
         [Token("VARIABLE", scalar_var), Token("PUNCTUATION", "+"), Token("NUM_LIT")],

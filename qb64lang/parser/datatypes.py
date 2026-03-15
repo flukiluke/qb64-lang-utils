@@ -205,6 +205,7 @@ class Parameter:
     # names may be omitted for builtins
     name: str | None = None
     source_name: str | None = None
+    has_sigil: bool = False
 
 
 @dataclass

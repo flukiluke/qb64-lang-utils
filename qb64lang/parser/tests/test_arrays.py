@@ -208,8 +208,7 @@ def test_array_scalar_name_clashes():
 
 
 def test_cannot_change_dimensions():
-    parse_clean("dim x(1,2) : dim x(1)")
-    parse_clean("dim x(1,2) : redim x(1)")
+    assert parse("dim x(1,2) : redim x(1)").diagnostics.has(diag.E_ARRAY_BAD_NUM_DIMS)
 
 
 def test_implicit_array():

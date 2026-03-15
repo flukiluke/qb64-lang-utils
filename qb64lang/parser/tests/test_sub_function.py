@@ -11,6 +11,7 @@ from ..ast import (
     ProcDefinitionLocation,
     Procedure,
     SetReturn,
+    Typeset,
     Variable,
 )
 from ..datatypes import (
@@ -171,11 +172,11 @@ def test_one_param():
     proc = prog.symbols.find_procedure("f")
     assert proc is not None
     assert proc.impls[0].signature == TypeSignature(
-        TYPE_SINGLE, [Parameter(TYPE_LONG, "a", "A&")]
+        TYPE_SINGLE, [Parameter(TYPE_LONG, "a", "A&", True)]
     )
-    assert proc.impls[0].symbols.variables == {
-        "a": {"long": Variable("a", "A&", TYPE_LONG)}
-    }
+    assert proc.impls[0].symbols.variables["a"] == Typeset(
+        sigiled={"long": Variable("a", "A&", TYPE_LONG)}
+    )
 
 
 def test_multi_param():
@@ -185,15 +186,18 @@ def test_multi_param():
     assert proc.impls[0].signature == TypeSignature(
         TYPE__NONE,
         [
-            Parameter(TYPE_LONG, "a", "a&"),
+            Parameter(TYPE_LONG, "a", "a&", True),
             Parameter(TYPE_SINGLE, "b", "b"),
-            Parameter(TYPE_STRING, "c", "c$"),
+            Parameter(TYPE_STRING, "c", "c$", True),
         ],
     )
     assert proc.impls[0].symbols.variables == {
-        "a": {"long": Variable("a", "a&", TYPE_LONG)},
-        "b": {"single": Variable("b", "b", TYPE_SINGLE)},
-        "c": {"string": Variable("c", "c$", TYPE_STRING)},
+        "a": Typeset(sigiled={"long": Variable("a", "a&", TYPE_LONG)}),
+        "b": Typeset(
+            unsigiled=Variable("b", "b", TYPE_SINGLE),
+            sigiled={"single": Variable("b", "b", TYPE_SINGLE)},
+        ),
+        "c": Typeset(sigiled={"string": Variable("c", "c$", TYPE_STRING)}),
     }
 
 
@@ -215,9 +219,8 @@ def test_local_var():
     prog = parse_clean("sub s: x = 3: end sub")
     proc = prog.symbols.find_procedure("s")
     assert proc is not None
-    assert proc.impls[0].symbols.variables == {
-        "x": {"single": Variable("x", "x", TYPE_SINGLE)}
-    }
+    var = Variable("x", "x", TYPE_SINGLE)
+    assert proc.impls[0].symbols.variables == {"x": Typeset(sigiled={"single": var})}
 
 
 def test_param_name_in_use():
@@ -289,7 +292,10 @@ def test_declare_signatures():
             "foo",
             TypeSignature(
                 TYPE__NONE,
-                [Parameter(TYPE_SINGLE, "a", "a"), Parameter(TYPE_INTEGER, "b", "b%")],
+                [
+                    Parameter(TYPE_SINGLE, "a", "a"),
+                    Parameter(TYPE_INTEGER, "b", "b%", True),
+                ],
             ),
         ),
         Ast(
@@ -392,7 +398,7 @@ def test_declare_mismatch_def_overload():
                 "foo",
                 decl_only=False,
                 signature=TypeSignature(
-                    TYPE__NONE, [Parameter(TYPE_INTEGER, "a", "a%")]
+                    TYPE__NONE, [Parameter(TYPE_INTEGER, "a", "a%", True)]
                 ),
             ),
         ],
@@ -417,7 +423,7 @@ def test_def_overload():
                 "foo",
                 decl_only=False,
                 signature=TypeSignature(
-                    TYPE__NONE, [Parameter(TYPE_INTEGER, "a", "a%")]
+                    TYPE__NONE, [Parameter(TYPE_INTEGER, "a", "a%", True)]
                 ),
             ),
         ],

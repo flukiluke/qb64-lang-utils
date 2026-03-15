@@ -15,7 +15,9 @@ def builtin_proc(name: str):
 
 def parse_clean(input: str):
     program = parse(input)
-    assert program.diagnostics.has_none(), program.diagnostics.diagnostics
+    assert program.diagnostics.has_none(), [
+        d.humanise(input) for d in program.diagnostics.diagnostics
+    ]
     return program
 
 

@@ -16,7 +16,7 @@ from ..parser.ast import (
 )
 from ..parser.datatypes import Type
 from ..parser.diagnostics import DiagLevel, DiagnosticError, DiagnosticStore
-from ..parser.lexer import Lexer
+from ..parser.lexer import Id, Lexer
 from ..parser.ply import LexToken
 
 
@@ -202,6 +202,7 @@ def format(
                     ctx.add(type.source_name)
                 ctx.post_flex()
             case ("ID", c):
+                assert isinstance(c, Id)
                 ctx.add(ctx.tok.plain_value)
                 if c.sigil is not None:
                     ctx.add(c.sigil)

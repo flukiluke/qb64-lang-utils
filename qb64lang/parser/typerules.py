@@ -296,6 +296,14 @@ class TypePass(AstWalk[None | Type]):
                         bound = Cast.wrap(bound, TYPE__INTEGER64)
                     return bound
 
+        if isinstance(node.variable.type, ArrayType):
+            expected_dims = node.variable.type.dimensions
+            actual_dims = len(node.bounds)
+            if expected_dims != actual_dims:
+                self.program.diagnostics.create(
+                    diag.E_ARRAY_BAD_NUM_DIMS, node, expected_dims, actual_dims
+                )
+
         node.bounds = list(map(check_dim, node.bounds))
 
     def kw_print(self, node: Print):

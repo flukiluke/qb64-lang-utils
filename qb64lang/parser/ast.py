@@ -31,8 +31,37 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class Typeset:
+    # Note: "sigiled" is an unfortunate term. A variable is sigiled if it
+    # is not declared with an AS clause, which means the implicitly declared "x"
+    # is considered sigiled. This awkwardness is to allow programs like
+    # "x = 1 : dim x as long".
+
+    # Scalar and compound types
+    unsigiled: "Variable | None" = None
+    sigiled: dict[str, "Variable"] = field(default_factory=dict)
+    # Array types
+    unsigiled_array: "Variable | None" = None
+    # Arrays should be keyed by element type, so dimension does
+    # differentiate them.
+    sigiled_arrays: dict[str, "Variable"] = field(default_factory=dict)
+
+    def get_set(self, is_array: bool):
+        if is_array:
+            return self.unsigiled_array, self.sigiled_arrays
+        else:
+            return self.unsigiled, self.sigiled
+
+    def set_unsigiled(self, var: "Variable", is_array: bool):
+        if is_array:
+            self.unsigiled_array = var
+        else:
+            self.unsigiled = var
+
+
+@dataclass
 class LocalScope:
-    variables: dict[str, dict[str, "Variable"]] = field(default_factory=dict)
+    variables: dict[str, Typeset] = field(default_factory=dict)
 
 
 @dataclass
@@ -534,7 +563,7 @@ PROCS = [
 
 class SymbolStore:
     def __init__(self):
-        self.global_vars: dict[str, dict[str, Variable]] = {}
+        self.global_vars: dict[str, Typeset] = {}
         self.scope = LocalScope()
         self.procedures: dict[str, Procedure] = {}
         self.types: dict[str, Type] = {}
@@ -553,6 +582,10 @@ class SymbolStore:
     def find_procedure(self, ident: str) -> Procedure | None:
         return self.procedures.get(ident)
 
+    def find_variable_typeset(self, ident: str, local_only: bool = False):
+        # TODO: Globals
+        return self.scope.variables.get(ident, Typeset())
+
     def find_variable(
         self,
         ident: str,
@@ -561,51 +594,26 @@ class SymbolStore:
         local_only: bool = False,
     ) -> Variable | None:
         """
-        Lookup variable with name and type in current local scope then global scope.
+        Get existing variable based on name and type.
 
-        If type is None, the requested variable is either of compound type, or the
-        default scalar type (priority given to the former). Default scalars in the
-        local scope take priority over compound variables in the global scope.
-
-        If as_array is True, the given type (or default scalar type if None) is
-        considered the element type of an array and an array type variable is looked
-        up. Array dimension is not considered.
+        For arrays, either:
+            - Supply an array type and leave as_array=False, or
+            - Supply the element type and set as_array=True.
         """
-
-        def find_compound_var(typeset):
-            for var in typeset.values():
-                if isinstance(var.type, CompoundType):
-                    return var
-
+        if not as_array and isinstance(type, ArrayType):
+            type = type.element_type
+            as_array = True
+        # TODO: Globals
         local_typeset = self.scope.variables.get(ident)
-        global_typeset = self.global_vars.get(ident) if not local_only else None
+        if local_typeset is None:
+            return None
+        unsigiled, sigiled = local_typeset.get_set(as_array)
         if type:
-            type_name = type.name + "[0]" if as_array else type.name
-            if local_typeset and (var := local_typeset.get(type_name)):
-                return var
-            if global_typeset and (var := global_typeset.get(type_name)):
-                return var
+            return sigiled.get(type.name)
+        elif unsigiled:
+            return unsigiled
         else:
-            type_name = (
-                self.default_type.name + "[0]" if as_array else self.default_type.name
-            )
-            if local_typeset and (var := find_compound_var(local_typeset)):
-                return var
-            if local_typeset and (var := local_typeset.get(type_name)):
-                return var
-            if global_typeset and (var := find_compound_var(global_typeset)):
-                return var
-            if global_typeset and (var := global_typeset.get(type_name)):
-                return var
-
-    def reregister_local_array(self, var: Variable, type: ArrayType):
-        typeset = self.scope.variables.get(var.name)
-        if typeset is None:
-            raise ParseError("Cannot re-register unregistered array")
-        if type.name in typeset:
-            raise ParseError("Duplicate variable")
-        typeset[type.name] = var
-        var.type = type
+            return sigiled.get(self.default_type.name)
 
     def find_type(self, name: str) -> Type | None:
         return BUILTIN_TYPES.get(name, self.types.get(name))
@@ -623,9 +631,7 @@ class SymbolStore:
         new_type = ArrayType(name, source_name, "", element_type, dimensions)
         return cast(ArrayType, self.types.setdefault(name, new_type))
 
-    def lookup_sigil(self, sigil: str | None) -> Type:
-        if sigil is None:
-            return self.default_type
+    def lookup_sigil(self, sigil: str) -> Type:
         if builtin := BUILTIN_SIGILS.get(sigil):
             return builtin
         if sigil.startswith("`"):
@@ -641,20 +647,19 @@ class SymbolStore:
             assert False, "Unknown type " + sigil
         return self.types.setdefault(new_type.name, new_type)
 
-    def create_local(self, name: str, cased_name: str, type: Type | None):
-        if type is None:
-            type = self.default_type
-        typeset = self.scope.variables.setdefault(name, {})
-        if type.name in typeset:
-            raise ParseError("Duplicate variable")
+    def create_local(self, name: str, cased_name: str, type: Type, has_sigil: bool):
+        is_array = isinstance(type, ArrayType)
+        typeset = self.scope.variables.setdefault(name, Typeset())
+        unsigiled, sigiled = typeset.get_set(is_array)
         var = Variable(name, cased_name, type)
-        typeset[type.name] = var
-        if isinstance(type, ArrayType):
-            name = type.undim_name()
-            # Arrays occupy a second spot in the typeset to prevent the existence
-            # of those that differ only by number of dimensions. It also allows
-            # looking up an array variable without knowing its dimension.
-            typeset[name] = var
+        type = type.element_type if is_array else type
+        if var.type.name in sigiled:
+            raise ParseError("Duplicate variable")
+        sigiled[type.name] = var
+        if not has_sigil:
+            if unsigiled:
+                raise ParseError("Duplicate variable")
+            typeset.set_unsigiled(var, is_array)
         return var
 
     def add_procedure(self, procedure: Procedure):

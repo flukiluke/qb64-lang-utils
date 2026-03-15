@@ -412,7 +412,12 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
                 return t
 
         # otherwise remain as ID
-        t.value = Id(name, symbols.lookup_sigil(sigil), sigil, is_array)
+        t.value = Id(
+            name,
+            symbols.lookup_sigil(sigil) if sigil else symbols.default_type,
+            sigil,
+            is_array,
+        )
         return t
 
     @Token(rf"\.({letter}|{digit}|\.|_)*")
@@ -575,7 +580,14 @@ def lookup_proc(
         )
 
     if symbols.return_proc_as_id and (proc_plain or proc_string):
-        return ("ID", Id(name, symbols.lookup_sigil(sigil), sigil))
+        return (
+            "ID",
+            Id(
+                name,
+                symbols.lookup_sigil(sigil) if sigil else symbols.default_type,
+                sigil,
+            ),
+        )
 
     if sigil is None:
         if proc_plain is None:

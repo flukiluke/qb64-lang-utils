@@ -26,7 +26,6 @@ from .datatypes import (
     TYPE__BYTE,
     TYPE__NONE,
     TYPE_STRING,
-    ArrayType,
     CompoundField,
     CompoundType,
     Parameter,
@@ -383,29 +382,45 @@ def do_dim(ctx: ParseContext):
     Expects: DIM or REDIM
     """
 
-    def dim_item():
+    def dim_item(is_redim: bool):
         var_tok = ctx.tok
         tok_val: Id = var_tok.value
         next(ctx)
-        bounds = None
+        bounds = []
+        is_array = False
         if ctx.at_a("PUNCTUATION", "("):
             ctx.symbols.return_var_as_id = False
             bounds = do_array_bounds(ctx)
             ctx.symbols.return_var_as_id = True
+            is_array = True
         trailing_type = do_as_type_clause(ctx)
         if tok_val.sigil and (leading_type or trailing_type):
             ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
         elif leading_type and trailing_type:
             ctx.diags.raise_error(diag.E_DUPE_AS_TYPE, var_tok)
         type = leading_type or trailing_type or tok_val.type
-        if bounds:
+        if is_array:
             type = ctx.symbols.lookup_array_type(type, len(bounds))
+        if is_redim and not is_array:
+            # REDIM of a scalar has the same rules as DIM
+            is_redim = False
+        is_sigiled = tok_val.sigil is not None
+
         var = ctx.symbols.find_variable(tok_val.name, type, local_only=True)
-        if var and (not is_redim or not isinstance(var.type, ArrayType)):
-            ctx.diags.create(diag.E_DUPE_DIM, var_tok, var.source_name)
-        elif var is None:
-            var = ctx.symbols.create_local(tok_val.name, var_tok.plain_value, type)
-        if bounds:
+        unsigiled_var, _ = ctx.symbols.find_variable_typeset(tok_val.name).get_set(
+            is_array
+        )
+        if var:
+            if not is_redim:
+                ctx.diags.create(diag.E_DUPE_DIM, var_tok, var.source_name)
+        elif unsigiled_var and not is_sigiled:
+            ctx.diags.create(diag.E_DUPE_DIM, var_tok, var_tok.plain_value)
+            var = unsigiled_var
+        else:
+            var = ctx.symbols.create_local(
+                tok_val.name, var_tok.plain_value, type, is_sigiled
+            )
+        if is_array:
             return DimArrayItem(
                 var, bounds, lex_start=var_tok.lexpos, lex_end=ctx.prev.lexend
             )
@@ -420,7 +435,7 @@ def do_dim(ctx: ParseContext):
         next(ctx)
         leading_type = do_as_type_clause(ctx)
         while ctx.at_a("ID"):
-            items.append(dim_item())
+            items.append(dim_item(is_redim))
             if ctx.at_a("PUNCTUATION", ","):
                 next(ctx)
             else:
@@ -698,7 +713,9 @@ def do_sub_function(ctx: ParseContext) -> ProcDefinitionLocation:
     for param in params:
         assert param.name is not None
         assert param.source_name is not None
-        ctx.symbols.create_local(param.name, param.source_name, param.type)
+        ctx.symbols.create_local(
+            param.name, param.source_name, param.type, param.has_sigil
+        )
     with ctx.nestings.nest(impl):
         ctx.consume("NEWLINE")
         impl.statements = do_block(ctx)
@@ -774,7 +791,9 @@ def do_param_list(ctx: ParseContext):
             ctx.diags.raise_error(diag.E_SIGIL_WITH_AS, var_tok)
         elif trailing_type:
             type = trailing_type
-        result.append(Parameter(type, var_id.name, var_tok.plain_value))
+        result.append(
+            Parameter(type, var_id.name, var_tok.plain_value, var_id.sigil is not None)
+        )
         if ctx.at_a("PUNCTUATION", ")"):
             break
         ctx.consume("PUNCTUATION", ",")

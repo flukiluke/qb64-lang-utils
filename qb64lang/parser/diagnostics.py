@@ -55,10 +55,29 @@ class _Diagnostic:
         self.startpos = startpos
         self.endpos = endpos
         self.template = template
-        human_args = self.humanise(args)
-        self.message = template.message.format(*human_args)
+        clean_args = self._remove_control_chars(args)
+        self.message = template.message.format(*clean_args)
 
-    def humanise(self, args: Iterable[Any]):
+    def humanise(self, input: str):
+        if self.startpos == -1 or self.endpos == -1:
+            location = "<unknown location>"
+        else:
+            start_row, start_col = lexpos2rowcol(input, self.startpos)
+            end_row, end_col = lexpos2rowcol(input, self.endpos)
+            end_col -= 1
+            location = f"{start_row}:{start_col}"
+            if start_row == end_row and start_col == end_col:
+                pass
+            elif start_row == end_row:
+                location = f"{start_row}:{start_col}-{end_col}"
+            else:
+                location = f"{start_row}:{start_col}-{end_row}:{end_col}"
+        return (
+            f"{location} {self.template.level_name()} "
+            f"{self.template.id()}: {self.message}"
+        )
+
+    def _remove_control_chars(self, args: Iterable[Any]):
         result = list[str]()
         for arg in args:
             if isinstance(arg, str):
@@ -66,16 +85,6 @@ class _Diagnostic:
             else:
                 result.append(arg)
         return result
-
-    def __repr__(self):
-        if self.startpos == -1 or self.endpos == -1:
-            location = "<unknown location>"
-        else:
-            location = f"{self.startpos}-{self.endpos}"
-        return (
-            f"{location}: {self.template.level_name()} "
-            f"{self.template.id()}: {self.message}"
-        )
 
 
 class DiagnosticError(Exception):

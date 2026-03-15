@@ -175,6 +175,7 @@ def do_lvalue(ctx: ParseContext) -> LValue:
                 implicit_array_id.name,
                 ctx.tok.plain_value,
                 ctx.symbols.lookup_array_type(implicit_array_id.type, 0),
+                has_sigil=True,
             ),
             lex_start=ctx.tok.lexpos,
             lex_end=ctx.tok.lexend,
@@ -192,10 +193,9 @@ def do_lvalue(ctx: ParseContext) -> LValue:
         if implicit_array and implicit_array_id:
             assert isinstance(result, ArrayAccess)
             assert isinstance(implicit_array.target.type, ArrayType)
-            actual_type = ctx.symbols.lookup_array_type(
+            implicit_array.target.type = ctx.symbols.lookup_array_type(
                 implicit_array_id.type, len(result.indices)
             )
-            ctx.symbols.reregister_local_array(implicit_array.target, actual_type)
             implicit_array = None
             implicit_array_id = None
     return result
@@ -210,7 +210,9 @@ def do_bare_var(ctx: ParseContext) -> Var:
     elif ctx.tok.type == "ID":
         var_id: Id = ctx.tok.value
         result = Var(
-            ctx.symbols.create_local(var_id.name, ctx.tok.plain_value, var_id.type),
+            ctx.symbols.create_local(
+                var_id.name, ctx.tok.plain_value, var_id.type, has_sigil=True
+            ),
             lex_start=ctx.tok.lexpos,
             lex_end=ctx.tok.lexend,
         )
