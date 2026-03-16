@@ -429,7 +429,7 @@ def do_dim(ctx: ParseContext):
 
     lex_start = ctx.tok.lexpos
     items = list[DimScalarItem | DimArrayItem]()
-    is_redim = ctx.at_a("KEYWORD", "redim")
+    is_redim = ctx.at_a("KEYWORD", "redim") or ctx.flags.dynamic_arrays
     try:
         ctx.symbols.return_var_as_id = True
         next(ctx)

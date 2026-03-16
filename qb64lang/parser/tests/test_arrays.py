@@ -61,6 +61,19 @@ def test_redim():
     ]
 
 
+def test_dynamic_metacommand():
+    prog = parse_clean("'$Dynamic \n dim x(1) : dim x(2)")
+    assert list(prog.main.find_all(Dim)) == [
+        Ast(Dim, is_redim=True),
+        Ast(Dim, is_redim=True),
+    ]
+
+
+def test_static_metacommand():
+    prog = parse_clean("'$dynamic \n '$STATIC \n dim x(2)")
+    assert prog.main.find(Dim) == Ast(Dim, is_redim=False)
+
+
 def test_custom_lbound():
     prog = parse_clean("dim x(1 to 3, -5 to 8)")
     type = prog.symbols.find_type("single[2]")

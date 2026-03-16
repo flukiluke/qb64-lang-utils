@@ -136,7 +136,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         arg: str | None
         cmd, arg = t.lexer.lexmatch.group("metacmd_a", "metacmd_b")
         if cmd.lower() in ["$static", "$dynamic", "$include"]:
-            t.value = (cmd, arg)
+            t.value = (cmd.lower(), arg)
             return t
 
     @Token(nl)
