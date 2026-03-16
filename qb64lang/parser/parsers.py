@@ -542,6 +542,15 @@ def do_type_prepass(ctx: ParseContext):
     ctx.symbols.create_compound_type(var_id.name, cased_name, fields)
 
 
+def do_end(ctx: ParseContext):
+    """
+    Expects: END command
+    """
+    ctx.tok.type = "PROCEDURE"
+    ctx.tok.value = ctx.symbols.find_procedure("end")
+    return do_procedure_call(ctx)
+
+
 KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "print": do_print,
     "?": do_print,
@@ -553,6 +562,7 @@ KEYWORD_PARSERS: dict[str, Callable[[ParseContext], Statement]] = {
     "dim": do_dim,
     "redim": do_dim,
     "type": do_type,
+    "end": do_end,
 }
 
 
@@ -574,7 +584,13 @@ def is_eob(ctx: ParseContext):
             return True
         case "KEYWORD", "end":
             next(ctx)
-            result = not ctx.at_line_terminator()
+            result = ctx.at_a("KEYWORD") and ctx.tok.value in [
+                "if",
+                "type",
+                "select",
+                "sub",
+                "function",
+            ]
             ctx.reverse()
             return result
         case _:

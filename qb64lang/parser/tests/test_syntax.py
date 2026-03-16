@@ -1,7 +1,7 @@
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import Call, If, Print, Var
-from .helpers import Ast, parse_clean
+from ..ast import Call, Constant, If, Print, Var
+from .helpers import Ast, builtin_proc, parse_clean
 
 
 def test_strictsigil_string():
@@ -49,3 +49,13 @@ def test_strictsigil_combination():
         print foo$
     """)
     assert prog.main.find(If).true_branch == [Ast(Call)]
+
+
+def test_end_command():
+    # Not custom syntax, but special enough to need a dedicated test
+    # because of the conflict with the syntactic structure.
+    prog = parse_clean("end \n end 1")
+    assert list(prog.main.find_all(Call)) == [
+        Ast(Call, builtin_proc("end")),
+        Ast(Call, builtin_proc("end"), [Ast(Constant, 1)]),
+    ]

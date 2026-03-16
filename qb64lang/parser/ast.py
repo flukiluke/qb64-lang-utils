@@ -12,6 +12,7 @@ from .datatypes import (
     TYPE__BYTE,
     TYPE__NONE,
     TYPE_ANY,
+    TYPE_INTEGER,
     TYPE_SINGLE,
     TYPE_STRING,
     ArrayType,
@@ -557,6 +558,27 @@ PROCS = [
     # Other maths
     Procedure(
         "_atan2", "_Atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]
+    ),
+    # Other miscellany
+    Procedure(
+        "end",
+        "End",
+        [
+            ProcDefinition(
+                "end",
+                TypeSignature(TYPE__NONE, []),
+                decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
+            ),
+            ProcDefinition(
+                "end",
+                TypeSignature(TYPE__NONE, [Parameter(TYPE_INTEGER)]),
+                decl_only=True,
+                lex_start=-1,
+                lex_end=-1,
+            ),
+        ],
     ),
 ]
 
