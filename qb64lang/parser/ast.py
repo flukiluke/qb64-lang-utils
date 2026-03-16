@@ -557,6 +557,35 @@ PROCS = [
     Procedure("not", "Not", [*_generic("not", None, [None], INTEGRAL_TYPES)]),
     # Other maths
     Procedure(
+        "abs",
+        "Abs",
+        [
+            *_generic("abs", None, [None], INTEGRAL_TYPES),
+            *_generic("abs", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "atn",
+        "Atn",
+        [
+            *_generic("atn", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "cos",
+        "Cos",
+        [
+            *_generic("cos", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "exp",
+        "Exp",
+        [
+            *_generic("exp", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
         "_atan2", "_Atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]
     ),
     # Other miscellany

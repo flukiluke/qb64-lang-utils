@@ -19,19 +19,43 @@ HEADER = """
 $builtin:on
 $overload:on
 $syntax:strictsigil
-declare sub MkDir (path$)
-declare sub Out (address%, value%)
-declare function Left$ (s$, i&&)
-declare function Right$ (s$, i&&)
-declare function Mid$ (s$, pos&&)
-declare function Mid$ (s$, pos&&, length&&)
-declare function LCase$ (s$)
-declare function UCase$ (s$)
-declare function InStr&& (haystack$, needle$)
-declare function InStr&& (start&&, haystack$, needle$)
-declare function Val## (s$)
-declare sub _AutoDisplay
+declare sub      _AutoDisplay
 declare function _AutoDisplay%%
+declare function Asc~%%         (s$, pos&&)
+declare sub      Beep
+declare sub      BLoad          (file$)
+declare sub      BLoad          (file$, offset%)
+declare sub      BSave          (file$, offset%, length%)
+declare sub      Chain          (file$)
+declare sub      ChDir          (dir$)
+declare function Chr$           (c%)
+declare function Command$
+declare function Command$       (n&)
+declare function CsrLin&
+declare function CVD#           (s$)
+declare function CVDMBF#        (s$)
+declare function CVI%           (s$)
+declare function CVL&           (s$)
+declare function CVS!           (s$)
+declare function CVSMBF!        (s$)
+declare function Date$
+declare sub      Environ        (s$)
+declare function Environ$       (s$)
+declare function Environ$       (n&)
+declare function Erl&&
+declare function Err%
+declare sub      Error          (n%)
+declare function InStr&&        (haystack$, needle$)
+declare function InStr&&        (start&&, haystack$, needle$)
+declare function LCase$         (s$)
+declare function Left$          (s$, i&&)
+declare function Mid$           (s$, pos&&)
+declare function Mid$           (s$, pos&&, length&&)
+declare sub      MkDir          (path$)
+declare sub      Out            (address%, value%)
+declare function Right$         (s$, i&&)
+declare function UCase$         (s$)
+declare function Val##          (s$)
 """
 
 
