@@ -55,8 +55,9 @@ class ParseContext:
 
     def __next__(self):
         self._advance()
-        while self.at_a("META_CMD"):
-            self.do_metacommand()
+        while self.tok.type in ("META_CMD", "COMMENT"):
+            if self.at_a("META_CMD"):
+                self.do_metacommand()
             self._advance()
         return self.tok
 

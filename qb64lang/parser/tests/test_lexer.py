@@ -880,42 +880,90 @@ def test_metacommand():
 
 
 def test_commented_metacommand():
-    check("'$dynamic", Token("META_CMD", ("$dynamic", None)))
+    check(
+        "'$dynamic",
+        [Token("COMMENT", ("'", None)), Token("META_CMD", ("$dynamic", None))],
+    )
     check(
         "'$dynamic\nprint",
         [
+            Token("COMMENT", ("'", None)),
             Token("META_CMD", ("$dynamic", None)),
             Token("NEWLINE"),
             Token("KEYWORD", "print"),
         ],
     )
     check(
-        "'$dynamic $static",
-        [Token("META_CMD", ("$dynamic", None)), Token("META_CMD", ("$static", None))],
+        "'$dynamic $static $notacmd",
+        [
+            Token("COMMENT", ("'", None)),
+            Token("META_CMD", ("$dynamic", None)),
+            Token("META_CMD", ("$static", None)),
+            Token("COMMENT", (None, "$notacmd")),
+        ],
     )
     check(
-        "'$dynamic lskdjf $static",
-        [Token("META_CMD", ("$dynamic", None)), Token("META_CMD", ("$static", None))],
+        "'$dynamic foo $static",
+        [
+            Token("COMMENT", ("'", None)),
+            Token("META_CMD", ("$dynamic", None)),
+            Token("COMMENT", (None, "foo ")),
+            Token("META_CMD", ("$static", None)),
+        ],
     )
 
 
 def test_remmed_metacommand():
-    check("rem $dynamic", Token("META_CMD", ("$dynamic", None)))
+    check(
+        "rem $dynamic",
+        [Token("COMMENT", ("rem", None)), Token("META_CMD", ("$dynamic", None))],
+    )
 
 
 def test_fake_commented_metacommand():
-    check("'$foobar\n", Token("NEWLINE"))
-    check("'$dynamic $spatz", [Token("META_CMD", ("$dynamic", None))])
+    check(
+        "'$foobar\n",
+        [
+            Token("COMMENT", ("'", None)),
+            Token("COMMENT", (None, "$foobar")),
+            Token("NEWLINE"),
+        ],
+    )
+    check(
+        "'$dynamic $spatz",
+        [
+            Token("COMMENT", ("'", None)),
+            Token("META_CMD", ("$dynamic", None)),
+            Token("COMMENT", (None, "$spatz")),
+        ],
+    )
 
 
 def test_include_metacommand():
-    check("'$include", Token("META_CMD", ("$include", None)))
-    check("'$include:''", Token("META_CMD", ("$include", "")))
-    check("'$include:'foo'", Token("META_CMD", ("$include", "foo")))
-    check(" rem  $include  : 'foo'asdf", Token("META_CMD", ("$include", "foo")))
+    check(
+        "'$include",
+        [Token("COMMENT", ("'", None)), Token("META_CMD", ("$include", None))],
+    )
+    check(
+        "'$include:''",
+        [Token("COMMENT", ("'", None)), Token("META_CMD", ("$include", ""))],
+    )
+    check(
+        "'$include:'foo'",
+        [Token("COMMENT", ("'", None)), Token("META_CMD", ("$include", "foo"))],
+    )
+    check(
+        " rem  $include  : 'foo'asdf",
+        [
+            Token("COMMENT", ("rem", None)),
+            Token("META_CMD", ("$include", "foo")),
+            Token("COMMENT", (None, "asdf")),
+        ],
+    )
     check(
         "'$include:'foo' $include:'bar'",
         [
+            Token("COMMENT", ("'", None)),
             Token("META_CMD", ("$include", "foo")),
             Token("META_CMD", ("$include", "bar")),
         ],

@@ -32,7 +32,9 @@ from .ply import LexToken, Token, lex
 
 tokens = (
     "NEWLINE",
-    "COMMENT",  # Returned as NEWLINE
+    # COMMENT only returned when dealing with commented metacommands.
+    # Normally returned as NEWLINE.
+    "COMMENT",
     "REMARK",  # Returned as NEWLINE
     "LINE_SPLIT",  # Returned as NEWLINE
     "META_CMD",
@@ -114,7 +116,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         if text.lstrip(" \t").startswith("$"):
             t.lexer.lexpos = t.lexpos + 1
             t.lexer.begin("meta")
-            return None
+            t.type = "COMMENT"
+            t.value = ("'", None)
+            return t
         t.type = "NEWLINE"
         t.value = "'"
         return t
@@ -125,7 +129,9 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         if text.lstrip(" \t").startswith("$"):
             t.lexer.lexpos = t.lexpos + 3
             t.lexer.begin("meta")
-            return None
+            t.type = "COMMENT"
+            t.value = (t.value[:3].lower(), None)
+            return t
         t.type = "NEWLINE"
         t.value = "rem"
         return t
@@ -137,7 +143,10 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         cmd, arg = t.lexer.lexmatch.group("metacmd_a", "metacmd_b")
         if cmd.lower() in ["$static", "$dynamic", "$include"]:
             t.value = (cmd.lower(), arg)
-            return t
+        else:
+            t.type = "COMMENT"
+            t.value = (None, t.plain_value)
+        return t
 
     @Token(nl)
     def t_meta_NEWLINE(t: LexToken):
@@ -147,7 +156,8 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
 
     @Token("[^$]+")
     def t_meta_COMMENT(t: LexToken):
-        pass
+        t.value = (None, t.value)
+        return t
 
     @Token(rf"^{ws}*(?P<metacmd_c>\${id_body}){ws}*(:{ws}*(?P<metacmd_d>.*))?")
     def t_META_CMD(t: LexToken):

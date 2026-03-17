@@ -134,3 +134,37 @@ def test_array_access():
     assert (
         format_text("dim Foo(2,3) : print Foo(1,2)") == "DIM Foo(2, 3): PRINT Foo(1, 2)"
     )
+
+
+def test_static_dynamic_metacommands_comment():
+    assert (
+        format_text("""
+'$dynamic
+'$Static foobar $DYnamic
+'This is not $static or $dynamic
+print '$dynamic
+""")
+        == """
+'$DYNAMIC
+'$STATIC foobar $DYNAMIC
+'This is not $static or $dynamic
+PRINT '$DYNAMIC
+"""
+    )
+
+
+def test_static_dynamic_metacommands_remark():
+    assert (
+        format_text("""
+rem $dynamic
+rem $Static foobar $DYnamic
+rem This is not $static or $dynamic
+print rem $dynamic
+""")
+        == """
+REM $DYNAMIC
+REM $STATIC foobar $DYNAMIC
+REM This is not $static or $dynamic
+PRINT REM $DYNAMIC
+"""
+    )

@@ -175,7 +175,20 @@ def format(
                 ctx.statement_position()
             case ("NEWLINE", "\n"):
                 ctx.newline()
+            case ("META_CMD", (name, arg)):
+                _format_meta_cmd(ctx, name, arg)
+            case ("COMMENT", ("'", _)):
+                ctx.pre_flex()
+                ctx.add("'")
+            case ("COMMENT", ("rem", _)):
+                ctx.pre_flex()
+                ctx.add(ctx.case("Rem", ctx.tok.plain_value[:3]))
+                ctx.post_flex()
+            case ("COMMENT", (None, text)):
+                assert isinstance(text, str)
+                ctx.add(text)
             case ("KEYWORD", keyword):
+                assert isinstance(keyword, str)
                 _format_keyword(ctx, keyword)
             case ("VARIABLE", var):
                 assert isinstance(var, Variable)
@@ -251,6 +264,21 @@ def format(
                 ctx.post_flex()
         ctx.advance()
     return ctx.result
+
+
+def _format_meta_cmd(ctx: FormatContext, name: str, arg: str | None):
+    match name:
+        case "$static":
+            ctx.add(ctx.case("$Static", name))
+            ctx.post_flex()
+        case "$dynamic":
+            ctx.add(ctx.case("$Dynamic", name))
+            ctx.post_flex()
+        case _:
+            ctx.add(name)
+            if arg:
+                ctx.add(": " + arg)
+            ctx.post_flex()
 
 
 def _format_keyword(ctx: FormatContext, keyword: str):
