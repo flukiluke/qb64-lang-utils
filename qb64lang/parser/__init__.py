@@ -7,18 +7,15 @@ from .typerules import typecheck
 """
 Below are declarations for almost all built-in commands. Omitted are infix operators,
 structural keywords, declarations and those with highly custom syntax.
-The following metacommands are used:
- - $builtin to generally flag these as built-ins
- - $overload to allow declaring the same name multiple times, with different
+The following $flags are used:
+ - builtin to generally flag these as built-ins
+ - overload to allow declaring the same name multiple times, with different
    type signatures.
- - $syntax to specify special syntax rules. This is a comma-separated list of flags:
-    - strictsigil: for functions returning string, require the $ always be present. For
+ - strictsigil: for functions returning string, require the $ always be present. For
       functions returning a number, require no sigil be used.
 """
 HEADER = """
-$builtin:on
-$overload:on
-$syntax:strictsigil
+$flags:builtin=on,overload=on,strictsigil=on
 declare sub      _AutoDisplay
 declare function _AutoDisplay%%
 declare function Asc~%%         (s$, pos&&)

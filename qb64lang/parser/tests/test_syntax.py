@@ -6,7 +6,7 @@ from .helpers import Ast, builtin_proc, parse_clean
 
 def test_strictsigil_string():
     prog = parse_clean("""
-        $syntax:strictsigil
+        $flags:strictsigil=on
         declare function foo$
         print foo$; foo
     """)
@@ -15,7 +15,7 @@ def test_strictsigil_string():
 
 def test_strictsigil_num():
     prog = parse_clean("""
-        $syntax:strictsigil
+        $flags:strictsigil=on
         declare function foo%
         print foo; foo$
     """)
@@ -24,7 +24,7 @@ def test_strictsigil_num():
 
 def test_strictsigil_num_bad():
     assert parse("""
-        $syntax:strictsigil
+        $flags:strictsigil=on
         declare function foo%
         print foo%;
     """).diagnostics.has(diag.E_EXISTING_DEF_SIGIL_CLASH)
@@ -32,7 +32,7 @@ def test_strictsigil_num_bad():
 
 def test_strictsigil_num_bad_sigil():
     assert parse("""
-        $syntax:strictsigil
+        $flags:strictsigil=on
         declare function foo%
         print foo&;
     """).diagnostics.has(diag.E_EXISTING_DEF_SIGIL_CLASH)
@@ -40,10 +40,8 @@ def test_strictsigil_num_bad_sigil():
 
 def test_strictsigil_combination():
     prog = parse_clean("""
-        $overload:on
-        $syntax:strictsigil
+        $flags:overload=on,strictsigil=on
         declare function foo$
-        $syntax:strictsigil
         declare sub foo
         if 1 then foo
         print foo$

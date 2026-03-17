@@ -310,8 +310,7 @@ def do_declare_prepass(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     next(ctx)
     name, cased_name, ret = do_proc_ident(ctx)
-    strictsigil = ctx.flags.syntax.get("strictsigil") is not None
-    if strictsigil and ret == TYPE_STRING:
+    if ctx.flags.strictsigil and ret == TYPE_STRING:
         name += "$"
     proc = ctx.symbols.find_procedure(name)
     if proc is None:
@@ -324,7 +323,7 @@ def do_declare_prepass(ctx: ParseContext):
         name,
         TypeSignature(ret, params),
         decl_only=True,
-        strictsigil=strictsigil,
+        strictsigil=ctx.flags.strictsigil,
         lex_start=lex_start,
         lex_end=ctx.prev.lexend,
     )
@@ -340,8 +339,7 @@ def do_declare(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
     next(ctx)
     name, _, ret = do_proc_ident(ctx)
-    strictsigil = ctx.flags.syntax.get("strictsigil") is not None
-    if strictsigil and ret == TYPE_STRING:
+    if ctx.flags.strictsigil and ret == TYPE_STRING:
         name += "$"
     proc = ctx.symbols.find_procedure(name)
     if proc is None:

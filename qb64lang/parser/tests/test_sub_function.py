@@ -341,7 +341,7 @@ def test_repeated_declare():
 
 
 def test_declare_overload():
-    prog = parse_clean("$overload:on\ndeclare sub foo(a) : declare sub foo(a, b)")
+    prog = parse_clean("$flags:overload=on\ndeclare sub foo(a) : declare sub foo(a, b)")
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
         "foo",
@@ -371,7 +371,7 @@ def test_declare_overload():
 
 def test_declare_match_def_overload():
     prog = parse_clean(
-        "$overload:on\ndeclare sub foo (a) : sub foo (a) : x = 1: end sub"
+        "$flags:overload=on\ndeclare sub foo (a) : sub foo (a) : x = 1: end sub"
     )
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
@@ -382,7 +382,9 @@ def test_declare_match_def_overload():
 
 
 def test_declare_mismatch_def_overload():
-    prog = parse_clean("$overload:on\ndeclare sub foo (a) : sub foo (a%) : end sub")
+    prog = parse_clean(
+        "$flags:overload=on\ndeclare sub foo (a) : sub foo (a%) : end sub"
+    )
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
         "foo",
@@ -407,7 +409,9 @@ def test_declare_mismatch_def_overload():
 
 
 def test_def_overload():
-    prog = parse_clean("$overload:on\n sub foo (a) : end sub : sub foo (a%) : end sub")
+    prog = parse_clean(
+        "$flags:overload=on\n sub foo (a) : end sub : sub foo (a%) : end sub"
+    )
     assert prog.symbols.find_procedure("foo") == Procedure(
         "foo",
         "foo",

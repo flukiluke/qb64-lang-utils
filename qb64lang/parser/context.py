@@ -14,12 +14,29 @@ TRACE_TOKENS = "TRACE_TOKENS" in os.environ
 class _Flags:
     # '$dynamic, '$static
     dynamic_arrays: bool = False
-    # $overload:on/off
+    # Allow multiple procedures with same name
     allow_proc_overloads: bool = False
+    # Mark procedures as builtin
+    builtin: bool = False
+    # Require stricter rules about sigil presence
+    strictsigil: bool = False
     # $syntax:key=value,key=value,...
     syntax: dict[str, str] = field(default_factory=dict)
-    # $builtin:on/off
-    builtin: bool = False
+
+    def set(self, key: str, value: str):
+        match (key, value):
+            case ("overload", "on"):
+                self.allow_proc_overloads = True
+            case ("overload", "off"):
+                self.allow_proc_overloads = False
+            case ("builtin", "on"):
+                self.builtin = True
+            case ("builtin", "off"):
+                self.builtin = False
+            case ("strictsigil", "on"):
+                self.strictsigil = True
+            case ("strictsigil", "off"):
+                self.strictsigil = False
 
 
 class NestList:
@@ -139,24 +156,18 @@ class ParseContext:
                 self.flags.dynamic_arrays = False
             case ("$include", path):
                 raise diag.ParseError(f"Unimplemented $include:'{path}'")
-            case ("$overload", "on"):
-                self.flags.allow_proc_overloads = True
-            case ("$overload", "off"):
-                self.flags.allow_proc_overloads = False
-            case ("$builtin", "on"):
-                self.flags.builtin = True
-            case ("$builtin", "off"):
-                self.flags.builtin = False
+            case ("$flags", v):
+                for item in v.split(","):
+                    if "=" not in item:
+                        self.diags.create(
+                            diag.E_BAD_METACOMMAND, self.tok, "$flags:" + item
+                        )
+                        return
+                    k, v = item.split("=", 1)
+                    self.flags.set(k, v)
             case ("$syntax", syntax):
-                for item in syntax.split(","):
-                    if "=" in item:
-                        k, v = item.split("=", 1)
-                        self.flags.syntax[k.strip()] = v.strip()
-                    else:
-                        self.flags.syntax[item.strip()] = "on"
+                self.flags.syntax = syntax
             case (name, None):
-                self.diags.raise_error(diag.E_BAD_METACOMMAND, self.tok, name)
+                self.diags.create(diag.E_BAD_METACOMMAND, self.tok, name)
             case (name, arg):
-                self.diags.raise_error(
-                    diag.E_BAD_METACOMMAND, self.tok, name + ":" + arg
-                )
+                self.diags.create(diag.E_BAD_METACOMMAND, self.tok, name + ":" + arg)

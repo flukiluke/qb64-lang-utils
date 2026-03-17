@@ -252,7 +252,7 @@ def test_operator_overload_mixed_to_float():
 
 def test_sub_function_mix():
     prog = parse_clean("""
-        $overload:on
+        $flags:overload=on
         declare sub foo
         declare function foo&
         if 1 then foo
