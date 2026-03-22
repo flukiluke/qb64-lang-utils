@@ -1,6 +1,6 @@
 import contextlib
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from . import diagnostics as diag
 from .ast import Node, SymbolStore
@@ -20,8 +20,8 @@ class _Flags:
     builtin: bool = False
     # Require stricter rules about sigil presence
     strictsigil: bool = False
-    # $syntax:key=value,key=value,...
-    syntax: dict[str, str] = field(default_factory=dict)
+    # Custom syntax spec in effect for next procedure
+    syntax: str | None = None
 
     def set(self, key: str, value: str):
         match (key, value):
@@ -94,6 +94,7 @@ class ParseContext:
             eof.lexend = eof.lexpos = self.tok.lexer.lexlen
             eof.type = "EOF"
             eof.value = "<end of file>"
+            eof.plain_value = eof.value
             self.tok = eof
         if TRACE_TOKENS:
             print(">", self.tok)

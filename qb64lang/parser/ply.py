@@ -61,7 +61,7 @@ class LexError(Exception):
 class LexToken(object):
     type: str
     value: Any
-    plain_value: Any
+    plain_value: str
     lexpos: int
     lexer: "Lexer"
     lexend: int

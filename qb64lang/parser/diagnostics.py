@@ -58,6 +58,9 @@ class _Diagnostic:
         clean_args = self._remove_control_chars(args)
         self.message = template.message.format(*clean_args)
 
+    def __repr__(self):
+        return f"{self.startpos}-{self.endpos}: {self.message}"
+
     def humanise(self, input: str):
         if self.startpos == -1 or self.endpos == -1:
             location = "<unknown location>"
@@ -251,3 +254,7 @@ E_ARRAY_BAD_NUM_DIMS = DiagTemplate(
     DiagLevel.ERR_SEM, "Wrong number of array dimensions, expected {} but got {}."
 )
 E_DUPE_DIM = DiagTemplate(DiagLevel.ERR_SEM, "Cannot DIM existing variable {}.")
+E_BAD_SYNTAX_SPEC = DiagTemplate(DiagLevel.ERR_SYN, "Cannot compile syntax spec: {}.")
+E_SPEC_BAD_NUM_PARAMS = DiagTemplate(
+    DiagLevel.ERR_SYN, "Syntax spec gives {} parameters but procedure takes {}."
+)

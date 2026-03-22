@@ -2,7 +2,7 @@ from . import diagnostics as diag
 from .ast import ArrayAccess, Call, Constant, Expr, FieldAccess, LValue, Var
 from .context import ParseContext
 from .datatypes import TYPE_STRING, ArrayType, CompoundType, Type
-from .lexer import Id
+from .lexer import Id, LexToken
 
 PRECEDENCE = {
     "imp": 2,
@@ -27,6 +27,18 @@ PRECEDENCE = {
 }
 # Precedence of - or + sign on a number
 PREC_SIGN = 13
+
+
+# Must be kept in sync with do_expr.start()
+def is_expr_start(tok: LexToken):
+    match tok.type, tok.value:
+        case "PUNCTUATION", "(" | "-" | "+":
+            return True
+        case "KEYWORD", "not":
+            return True
+        case "ID" | "STRING_LIT" | "NUM_LIT" | "PROCEDURE" | "VARIABLE", _:
+            return True
+    return False
 
 
 def do_expr(ctx: ParseContext, right_binding: int = 0) -> Expr:

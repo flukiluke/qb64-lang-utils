@@ -29,6 +29,7 @@ from .diagnostics import ParseError
 
 if TYPE_CHECKING:
     from . import Program
+    from .syntax import SyntaxSpec
 
 
 @dataclass
@@ -115,6 +116,7 @@ class ProcDefinition(Node):
     statements: list[Statement] = field(default_factory=list, repr=False)
     decl_only: bool = False
     strictsigil: bool = False
+    syntax_spec: "SyntaxSpec | None" = None
 
     def children(self):
         return self.statements
@@ -143,6 +145,12 @@ class CompoundDefinition(Statement):
 class Expr(Node):
     expr_type: Type = field(default_factory=lambda: TYPE__NONE, kw_only=True)
     parens: int = field(default=0, kw_only=True)
+
+
+# For omitted optional arguments
+@dataclass
+class EmptyExpr(Expr):
+    type: Type
 
 
 class LValue(Expr):
@@ -179,6 +187,7 @@ class Call(Expr, Statement):
         INFIX = auto()
         PREFIX = auto()
         STATEMENT = auto()
+        CUSTOM = auto()
 
     target: "Procedure"
     args: list[Expr] = field(default_factory=list)
@@ -735,6 +744,7 @@ class AstWalk(Generic[T]):
             Dim: self.kw_dim,
             DimArrayItem: self.kw_dim_array_item,
             DimScalarItem: self.kw_dim_scalar_item,
+            EmptyExpr: self.empty_expr,
             FieldAccess: self.field_access,
             For: self.kw_for,
             If: self.kw_if,
@@ -767,6 +777,8 @@ class AstWalk(Generic[T]):
     def kw_dim_array_item(self, node: DimArrayItem) -> T: ...
 
     def kw_dim_scalar_item(self, node: DimScalarItem) -> T: ...
+
+    def empty_expr(self, node: EmptyExpr) -> T: ...
 
     def field_access(self, node: FieldAccess) -> T: ...
 

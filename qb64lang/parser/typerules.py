@@ -225,6 +225,9 @@ class TypePass(AstWalk[None | Type]):
             )
         return node.type
 
+    def empty_expr(self, node):
+        return node.type
+
     def assignment(self, node: Assignment):
         rtype = self.evaluate(node.rval)
         ltype = self.evaluate(node.lval)

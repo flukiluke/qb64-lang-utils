@@ -9,6 +9,7 @@ from .ast import (
     Dim,
     DimArrayItem,
     DimScalarItem,
+    EmptyExpr,
     Expr,
     For,
     If,
@@ -35,6 +36,7 @@ from .datatypes import (
 )
 from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
 from .lexer import Id, Number
+from .syntax import compile_syntax_spec
 
 
 def do_print(ctx: ParseContext):
@@ -308,6 +310,13 @@ def do_declare_prepass(ctx: ParseContext):
     Expects: DECLARE
     """
     lex_start = ctx.tok.lexpos
+    start_tok = ctx.tok
+    syntax_spec = (
+        compile_syntax_spec(ctx.flags.syntax, ctx.diags, start_tok)
+        if ctx.flags.syntax
+        else None
+    )
+    ctx.flags.syntax = None
     next(ctx)
     name, cased_name, ret = do_proc_ident(ctx)
     if ctx.flags.strictsigil and ret == TYPE_STRING:
@@ -319,11 +328,19 @@ def do_declare_prepass(ctx: ParseContext):
     elif not ctx.flags.allow_proc_overloads:
         ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, ctx.prev, name)
     params = do_param_list(ctx)
+    if syntax_spec and len(params) != len(syntax_spec.value_items):
+        ctx.diags.raise_error(
+            diag.E_SPEC_BAD_NUM_PARAMS,
+            start_tok,
+            len(syntax_spec.value_items),
+            len(params),
+        )
     impl = ProcDefinition(
         name,
         TypeSignature(ret, params),
         decl_only=True,
         strictsigil=ctx.flags.strictsigil,
+        syntax_spec=syntax_spec,
         lex_start=lex_start,
         lex_end=ctx.prev.lexend,
     )
@@ -685,6 +702,13 @@ def do_main(ctx: ParseContext):
 
 def do_sub_function_prepass(ctx: ParseContext):
     lex_start = ctx.tok.lexpos
+    start_tok = ctx.tok
+    syntax_spec = (
+        compile_syntax_spec(ctx.flags.syntax, ctx.diags, ctx.tok)
+        if ctx.flags.syntax
+        else None
+    )
+    ctx.flags.syntax = None
     # Grab this token for error reporting purposes
     start_tok = ctx.tok
     name, cased_name, ret = do_proc_ident(ctx)
@@ -696,12 +720,25 @@ def do_sub_function_prepass(ctx: ParseContext):
         ctx.symbols.add_procedure(proc)
     params = do_param_list(ctx)
     sig = TypeSignature(ret, params)
+    if syntax_spec and len(params) != len(syntax_spec.value_items):
+        ctx.diags.raise_error(
+            diag.E_SPEC_BAD_NUM_PARAMS,
+            start_tok,
+            len(syntax_spec.value_items),
+            len(params),
+        )
 
     impl = proc.find_impl(sig)
     if not impl and len(proc.impls) and not ctx.flags.allow_proc_overloads:
         ctx.diags.raise_error(diag.E_OVERLOAD_PROHIBITED, start_tok, name)
     elif not impl:
-        impl = ProcDefinition(name, sig, lex_start=lex_start, lex_end=ctx.prev.lexend)
+        impl = ProcDefinition(
+            name,
+            sig,
+            syntax_spec=syntax_spec,
+            lex_start=lex_start,
+            lex_end=ctx.prev.lexend,
+        )
         proc.impls.append(impl)
     elif impl.decl_only:
         impl.decl_only = False
@@ -909,7 +946,9 @@ def do_procedure_call(ctx: ParseContext):
     """
     Expects: procedure name
     """
-    target = ctx.tok.value
+    target: Procedure = ctx.tok.value
+    if target.impls and target.impls[0].syntax_spec:
+        return do_proc_call_custom_syntax(ctx, target)
     lex_start = ctx.tok.lexpos
     next(ctx)
     if not ctx.at_line_terminator():
@@ -923,4 +962,33 @@ def do_procedure_call(ctx: ParseContext):
         )
     return Call(
         target, style=Call.Style.STATEMENT, lex_start=lex_start, lex_end=ctx.prev.lexend
+    )
+
+
+def do_proc_call_custom_syntax(ctx: ParseContext, target: Procedure):
+    """
+    Expects: procedure name
+    """
+    lex_start = ctx.tok.lexpos
+    impl = target.impls[0]
+    spec = impl.syntax_spec
+    assert spec is not None
+    next(ctx)
+    results = spec.accept(ctx)
+    args = list[Expr]()
+    arg_start = lex_start
+    for param in impl.signature.params:
+        assert param.name is not None
+        expr = results.get(
+            param.name,
+            EmptyExpr(param.type, lex_start=arg_start, lex_end=arg_start + 1),
+        )
+        arg_start = expr.lex_end
+        args.append(expr)
+    return Call(
+        target,
+        args,
+        style=Call.Style.CUSTOM,
+        lex_start=lex_start,
+        lex_end=ctx.prev.lexend,
     )
