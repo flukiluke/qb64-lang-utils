@@ -930,6 +930,15 @@ def test_fake_commented_metacommand():
         ],
     )
     check(
+        "'$syntax:[method][, [bgColor][, image]]\n",
+        [
+            Token("COMMENT", ("'", None)),
+            Token("COMMENT", (None, "$syntax")),
+            Token("COMMENT", (None, ":[method][, [bgColor][, image]]")),
+            Token("NEWLINE"),
+        ],
+    )
+    check(
         "'$dynamic $spatz",
         [
             Token("COMMENT", ("'", None)),

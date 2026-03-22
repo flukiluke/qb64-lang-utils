@@ -119,6 +119,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             t.lexer.begin("meta")
             t.type = "COMMENT"
             t.value = ("'", None)
+            t.lexend = t.lexpos + 1
             return t
         t.type = "NEWLINE"
         t.value = "'"
@@ -132,6 +133,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
             t.lexer.begin("meta")
             t.type = "COMMENT"
             t.value = (t.value[:3].lower(), None)
+            t.lexend = t.lexpos + 3
             return t
         t.type = "NEWLINE"
         t.value = "rem"
@@ -155,7 +157,7 @@ def Lexer(symbols: SymbolStore, diags: diag.DiagnosticStore):
         t.lexer.begin("INITIAL")
         return t
 
-    @Token("[^$]+")
+    @Token("[^$\n]+")
     def t_meta_COMMENT(t: LexToken):
         t.value = (None, t.value)
         return t
