@@ -1,4 +1,5 @@
 import dataclasses
+from collections.abc import Sequence
 from typing import Any
 
 from .. import ast, parse
@@ -80,8 +81,17 @@ class Ast(ast.Statement, ast.LValue, ast.ProcDefinition):
 def _test_props(other: object, props: dict[str, Any]):
     for prop, value in props.items():
         try:
+            otherProp = getattr(other, prop)
             if getattr(other, prop) != value:
-                print(f"Mismatch on {prop}:\n{getattr(other, prop)}\n\n{value}")
+                print(f"Mismatch on {prop}:\n{getattr(other, prop)}\n{value}")
+                if (
+                    isinstance(value, Sequence)
+                    and isinstance(otherProp, Sequence)
+                    and len(value) == len(otherProp)
+                ):
+                    for i, (a, b) in enumerate(zip(otherProp, value)):
+                        if a != b:
+                            print(f"Mismatch on {prop}[{i}]:\n{a}\n{b}")
                 return False
         except AttributeError:
             return False

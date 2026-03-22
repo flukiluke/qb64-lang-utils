@@ -188,7 +188,7 @@ def _Lexer():
 
     @Token("[a-z0-9_]+:")
     def t_TAG(t: LexToken):
-        t.value = t.value.rstrip(":")
+        t.value = t.value.rstrip(":").lower()
         return t
 
     @Token('"(?P<literal>[^"]*)"')
@@ -198,6 +198,7 @@ def _Lexer():
 
     @Token("[a-z0-9_]+")
     def t_EXPR(t: LexToken):
+        t.value = t.value.lower()
         return t
 
     def t_error(t: LexToken):

@@ -9,6 +9,9 @@ OK:
     CHAIN (statement) sends a program to another specified program module or compiled program.
     CHDIR (statement) changes the current program path for file access.
     CHR$ (function) returns a text string character by the specified ASCII code number.
+    CIRCLE (statement) creates a circle, ellipse or arc at a designated graphical coordinate position.
+    CLEAR (statement) sets all variable and array values to zero number values or empty STRINGs.
+    CLS (statement) clears a program screen, VIEW port or WINDOW.
     COMMAND$ (function) returns the command line arguments passed when a program is run.
     COS (function) returns the cosine of a radian angle value.
     CSRLIN (function) returns the present PRINT cursor text row SCREEN coordinate position.
@@ -21,6 +24,7 @@ OK:
     DATE$ (function) returns the present Operating System date string formatted as mm-dd-yyyy.
     DOUBLE (numerical type #) 8 byte value limited to values up to 15 decimal places.
     DO...LOOP (statement) sets a recursive procedure loop that can be ignored or exited using conditional arguments.
+    DRAW (statement) uses a special string format that draws graphical lines in specific directions.
     ELSE (IF...THEN statement) is used to direct program flow when no other condition is evaluated as true.
     ELSEIF (IF...THEN statement) is used with THEN to set alternate conditional evaluations.
     END (statement) sets the end of a program, sub-procedure, statement block, DECLARE LIBRARY or TYPE definition.
@@ -52,11 +56,8 @@ Unsupported:
     CASE IS (SELECT CASE condition) designates specific conditions in a SELECT CASE statement block.
     CDBL (function) returns the closest DOUBLE value of a number.
     CINT (function) returns the closest INTEGER value of a numerical value.
-    CIRCLE (statement) creates a circle, ellipse or arc at a designated graphical coordinate position.
-    CLEAR (statement) sets all variable and array values to zero number values or empty STRINGs.
     CLNG (function) returns the closest LONG value of a numerical value.
     CLOSE (statement) closes specific file number(s) or all files when a number is not specified.
-    CLS (statement) clears a program screen, VIEW port or WINDOW.
     COLOR (statement) sets the current text foreground and/or background color to be used.
     COMMON (statement) sets a variable name as shared by CHAINed program modules.
     CONST (statement) sets a variable name and its value as a constant value to be used by all procedures.
@@ -69,7 +70,6 @@ Unsupported:
     DEFLNG (statement) defines a set of undefined variable name starting letters as LONG type numerical values.
     DEFSNG (statement) defines a set of undefined variable name starting letters as SINGLE type numerical values.
     DEFSTR (statement) defines a set of undefined variable name starting letters as STRING type values.
-    DRAW (statement) uses a special string format that draws graphical lines in specific directions.
     $DYNAMIC (metacommand) used at the start of a program to set all program arrays as changeable in size using REDIM.
     EOF (function) returns -1 when a file INPUT or GET has reached the end of a file.
     ERASE (statement) clears the values from $STATIC arrays and completely removes $DYNAMIC arrays.

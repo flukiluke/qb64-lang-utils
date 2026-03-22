@@ -1,6 +1,6 @@
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import Call, Constant, If, Print, Var
+from ..ast import Call, Constant, EmptyExpr, If, Print, Var
 from .helpers import Ast, builtin_proc, parse_clean
 
 
@@ -57,3 +57,86 @@ def test_end_command():
         Ast(Call, builtin_proc("end")),
         Ast(Call, builtin_proc("end"), [Ast(Constant, 1)]),
     ]
+
+
+def test_circle():
+    assert parse_clean("circle (1.0, 2.0), 3.0").main.find(Call) == Ast(
+        Call,
+        args=[
+            Ast(EmptyExpr),
+            Ast(Constant, 1.0),
+            Ast(Constant, 2.0),
+            Ast(Constant, 3.0),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+        ],
+    )
+    assert parse_clean("circle step(1.0, 2.0), 3.0").main.find(Call) == Ast(
+        Call,
+        args=[
+            Ast(Constant, -1),
+            Ast(Constant, 1.0),
+            Ast(Constant, 2.0),
+            Ast(Constant, 3.0),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+        ],
+    )
+    assert parse_clean("circle (1.0, 2.0), 3.0, &hffffffff~&").main.find(Call) == Ast(
+        Call,
+        args=[
+            Ast(EmptyExpr),
+            Ast(Constant, 1.0),
+            Ast(Constant, 2.0),
+            Ast(Constant, 3.0),
+            Ast(Constant, 0xFFFFFFFF),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+        ],
+    )
+    assert parse_clean("circle (1.0, 2.0), 3.0, , 4.0, 5.0").main.find(Call) == Ast(
+        Call,
+        args=[
+            Ast(EmptyExpr),
+            Ast(Constant, 1.0),
+            Ast(Constant, 2.0),
+            Ast(Constant, 3.0),
+            Ast(EmptyExpr),
+            Ast(Constant, 4.0),
+            Ast(Constant, 5.0),
+            Ast(EmptyExpr),
+        ],
+    )
+    assert parse_clean("circle (1.0, 2.0), 3.0, , 4.0, 5.0, 6.0").main.find(
+        Call
+    ) == Ast(
+        Call,
+        args=[
+            Ast(EmptyExpr),
+            Ast(Constant, 1.0),
+            Ast(Constant, 2.0),
+            Ast(Constant, 3.0),
+            Ast(EmptyExpr),
+            Ast(Constant, 4.0),
+            Ast(Constant, 5.0),
+            Ast(Constant, 6.0),
+        ],
+    )
+    assert parse_clean("circle (1.0, 2.0), 3.0, , , , 6.0").main.find(Call) == Ast(
+        Call,
+        args=[
+            Ast(EmptyExpr),
+            Ast(Constant, 1.0),
+            Ast(Constant, 2.0),
+            Ast(Constant, 3.0),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+            Ast(EmptyExpr),
+            Ast(Constant, 6.0),
+        ],
+    )

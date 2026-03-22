@@ -46,7 +46,7 @@ def test_spec_expr_punctuation():
 
 
 def test_spec_alternation():
-    assert spec_clean("{foo bar baz}") == SyntaxSpec(
+    assert spec_clean("{FOO bar baz}") == SyntaxSpec(
         [
             AlternateItem(
                 [
@@ -58,7 +58,7 @@ def test_spec_alternation():
         ],
         [],
     )
-    assert spec_clean("a1:{foo bar}") == SyntaxSpec(
+    assert spec_clean("A1:{foo bar}") == SyntaxSpec(
         [
             AlternateItem(
                 [

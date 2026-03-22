@@ -26,6 +26,12 @@ declare sub      BSave          (file$, offset%, length%)
 declare sub      Chain          (file$)
 declare sub      ChDir          (dir$)
 declare function Chr$           (c%)
+$syntax:[rel:"Step"](x, y), radius[, [drawColor][, [startRadian][, [stopRadian][, aspect]]]]
+declare sub      Circle         (rel%, x!, y!, radius!, drawColor~&, startRadian!, stopRadian!, aspect!)
+$syntax:[, [dataSize][, stackSize]]
+declare sub      Clear          (dataSize&&, stackSize&&)
+$syntax:[method][, [bgColor][, image]]
+declare sub      Cls            (method%, bgColor~&, image&)
 declare function Command$
 declare function Command$       (n&)
 declare function CsrLin&
@@ -36,6 +42,7 @@ declare function CVL&           (s$)
 declare function CVS!           (s$)
 declare function CVSMBF!        (s$)
 declare function Date$
+declare sub      Draw           (s$)
 declare sub      Environ        (s$)
 declare function Environ$       (s$)
 declare function Environ$       (n&)
@@ -53,7 +60,7 @@ declare sub      Out            (address%, value%)
 declare function Right$         (s$, i&&)
 declare function UCase$         (s$)
 declare function Val##          (s$)
-"""
+"""  # noqa: E501
 
 
 class Program:
