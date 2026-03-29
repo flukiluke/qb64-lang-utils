@@ -37,6 +37,10 @@ OK:
     ERR (function) returns the ERROR code when a program error occurs.
     ERROR (statement) sets a specific ERROR code to be simulated.
     EXP (function) returns the value of e to the exponential power specified.
+    FILES (statement) returns a list of files in the current directory path to the SCREEN.
+    FOR...NEXT (statement) creates a recursive loop procedure that loop a specified number of times.
+    FREEFILE (function) returns a file number that is currently not in use by the Operating System.
+    FUNCTION (procedure block) sub-procedure that can calculate and return one value to a program in its name.
 
 Partial:
     AS is used to denote a variable type or file number. [AS type clause only]
@@ -74,15 +78,10 @@ Unsupported:
     $DYNAMIC (metacommand) used at the start of a program to set all program arrays as changeable in size using REDIM.
     ERASE (statement) clears the values from $STATIC arrays and completely removes $DYNAMIC arrays.
     EXIT (statement) immediately exits a program FOR...NEXT, DO...LOOP, SUB or FUNCTION procedure.
----
     FIELD (statement) defines the variable sizes to be written or read from a file.
-    FILES (statement) returns a list of files in the current directory path to the SCREEN.
     FIX (function) returns the rounded INTEGER value of a numerical value.
-    FOR...NEXT (statement) creates a recursive loop procedure that loop a specified number of times.
     FOR (file statement) used in an OPEN file or device statement to indicate the access mode.
     FREE (QB64 TIMER statement) frees a numbered TIMER event in QB64.
-    FREEFILE (function) returns a file number that is currently not in use by the Operating System.
-    FUNCTION (procedure block) sub-procedure that can calculate and return one value to a program in its name.
     GET (file statement) reads a file sequencially or at a specific position and returns the value as the variable type used.
     GET (HTTP statement) reads the response of an HTTP request that was opened using _OPENCLIENT.
     GET (TCP/IP statement) reads a TCP/IP connection port to return a value.

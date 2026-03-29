@@ -51,6 +51,9 @@ declare function Eof%%          (handle&)
 declare function Erl&&
 declare function Err%
 declare sub      Error          (n%)
+declare sub      Files
+declare sub      Files          (fileSpec$)
+declare function FreeFile&
 declare function InStr&&        (haystack$, needle$)
 declare function InStr&&        (start&&, haystack$, needle$)
 declare function LCase$         (s$)
