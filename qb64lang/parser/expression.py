@@ -1,5 +1,15 @@
 from . import diagnostics as diag
-from .ast import ArrayAccess, Call, Constant, Expr, FieldAccess, LValue, Var
+from .ast import (
+    ArrayAccess,
+    Call,
+    Constant,
+    EmptyExpr,
+    Expr,
+    FieldAccess,
+    LValue,
+    Procedure,
+    Var,
+)
 from .context import ParseContext
 from .datatypes import TYPE_STRING, ArrayType, CompoundType, Type
 from .lexer import Id, LexToken
@@ -242,6 +252,8 @@ def do_func_call(ctx: ParseContext) -> Call:
     """
     target = ctx.tok.value
     lex_start, lex_end = ctx.tok.lexpos, ctx.tok.lexend
+    if target.impls and target.impls[0].syntax_spec:
+        return do_proc_call_custom_syntax(ctx, target)
     next(ctx)
     if ctx.at_a("PUNCTUATION", "("):
         next(ctx)
@@ -264,3 +276,32 @@ def do_func_args(ctx: ParseContext) -> list[Expr]:
             next(ctx)
         else:
             return args
+
+
+def do_proc_call_custom_syntax(ctx: ParseContext, target: Procedure):
+    """
+    Expects: procedure name
+    """
+    lex_start = ctx.tok.lexpos
+    impl = target.impls[0]
+    spec = impl.syntax_spec
+    assert spec is not None
+    next(ctx)
+    results = spec.accept(ctx)
+    args = list[Expr]()
+    arg_start = lex_start
+    for param in impl.signature.params:
+        assert param.name is not None
+        expr = results.get(
+            param.name,
+            EmptyExpr(param.type, lex_start=arg_start, lex_end=arg_start + 1),
+        )
+        arg_start = expr.lex_end
+        args.append(expr)
+    return Call(
+        target,
+        args,
+        style=Call.Style.CUSTOM,
+        lex_start=lex_start,
+        lex_end=ctx.prev.lexend,
+    )

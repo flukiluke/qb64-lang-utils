@@ -46,6 +46,8 @@ declare sub      Draw           (s$)
 declare sub      Environ        (s$)
 declare function Environ$       (s$)
 declare function Environ$       (n&)
+$syntax:([#]handle)
+declare function Eof%%          (handle&)
 declare function Erl&&
 declare function Err%
 declare sub      Error          (n%)

@@ -31,6 +31,7 @@ OK:
     END IF (statement) ENDs an IF...THEN conditional block statement using more than one line of code.
     ENVIRON (statement) temporarily sets an environmental key/pair value.
     ENVIRON$ (function) returns a specified string setting or numerical position as an environmental STRING value.
+    EOF (function) returns -1 when a file INPUT or GET has reached the end of a file.
     EQV (logic operator) is used to compare two numerical values bitwise.
     ERL (function) returns the closest line number before an error occurred if line numbers are used.
     ERR (function) returns the ERROR code when a program error occurs.
@@ -71,7 +72,6 @@ Unsupported:
     DEFSNG (statement) defines a set of undefined variable name starting letters as SINGLE type numerical values.
     DEFSTR (statement) defines a set of undefined variable name starting letters as STRING type values.
     $DYNAMIC (metacommand) used at the start of a program to set all program arrays as changeable in size using REDIM.
-    EOF (function) returns -1 when a file INPUT or GET has reached the end of a file.
     ERASE (statement) clears the values from $STATIC arrays and completely removes $DYNAMIC arrays.
     EXIT (statement) immediately exits a program FOR...NEXT, DO...LOOP, SUB or FUNCTION procedure.
 ---

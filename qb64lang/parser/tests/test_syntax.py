@@ -140,3 +140,10 @@ def test_circle():
             Ast(Constant, 6.0),
         ],
     )
+
+
+def test_eof():
+    assert parse_clean("x = eof(3&)").main.find(Call) == Ast(
+        Call, args=[Ast(Constant, 3)]
+    )
+    assert parse_clean("x = eof(#x&)").main.find(Call) == Ast(Call, args=[Ast(Var)])

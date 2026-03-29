@@ -9,7 +9,6 @@ from .ast import (
     Dim,
     DimArrayItem,
     DimScalarItem,
-    EmptyExpr,
     Expr,
     For,
     If,
@@ -34,7 +33,13 @@ from .datatypes import (
     TypeSignature,
     validate_fixed_width,
 )
-from .expression import do_bare_var, do_expr, do_func_args, do_lvalue
+from .expression import (
+    do_bare_var,
+    do_expr,
+    do_func_args,
+    do_lvalue,
+    do_proc_call_custom_syntax,
+)
 from .lexer import Id, Number
 from .syntax import compile_syntax_spec
 
@@ -962,33 +967,4 @@ def do_procedure_call(ctx: ParseContext):
         )
     return Call(
         target, style=Call.Style.STATEMENT, lex_start=lex_start, lex_end=ctx.prev.lexend
-    )
-
-
-def do_proc_call_custom_syntax(ctx: ParseContext, target: Procedure):
-    """
-    Expects: procedure name
-    """
-    lex_start = ctx.tok.lexpos
-    impl = target.impls[0]
-    spec = impl.syntax_spec
-    assert spec is not None
-    next(ctx)
-    results = spec.accept(ctx)
-    args = list[Expr]()
-    arg_start = lex_start
-    for param in impl.signature.params:
-        assert param.name is not None
-        expr = results.get(
-            param.name,
-            EmptyExpr(param.type, lex_start=arg_start, lex_end=arg_start + 1),
-        )
-        arg_start = expr.lex_end
-        args.append(expr)
-    return Call(
-        target,
-        args,
-        style=Call.Style.CUSTOM,
-        lex_start=lex_start,
-        lex_end=ctx.prev.lexend,
     )
