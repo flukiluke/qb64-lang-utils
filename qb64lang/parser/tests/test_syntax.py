@@ -1,6 +1,6 @@
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import Call, Constant, EmptyExpr, If, Print, Var
+from ..ast import ArrayAccess, Call, Constant, EmptyExpr, If, Print, Var
 from .helpers import Ast, builtin_proc, parse_clean
 
 
@@ -147,3 +147,10 @@ def test_eof():
         Call, args=[Ast(Constant, 3)]
     )
     assert parse_clean("x = eof(#x&)").main.find(Call) == Ast(Call, args=[Ast(Var)])
+
+
+def test_hex():
+    assert parse_clean("print hex$(3)").main.find(Call) == Ast(
+        Call, args=[Ast(Constant, 3)]
+    )
+    assert parse_clean("print hex(3)").main.find(ArrayAccess) is not None

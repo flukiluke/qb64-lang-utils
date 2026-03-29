@@ -102,14 +102,14 @@ def test_semantic_errors_formatted():
 
 def test_compound_type_definition():
     assert (
-        format_text("type foo\nA as long\nas string b,c\nend type")
+        format_clean("type foo\nA as long\nas string b,c\nend type")
         == "TYPE foo\n    A AS LONG\n    AS STRING b, c\nEND TYPE"
     )
 
 
 def test_field_access():
     assert (
-        format_text("""
+        format_clean("""
         type foo
         Bar as long
         end type
@@ -127,18 +127,19 @@ PRINT Baz.Bar
 
 
 def test_dim():
-    assert format_text("dim a(2,3),b$(1 to 5)") == "DIM a(2, 3), b$(1 TO 5)"
+    assert format_clean("dim a(2,3),b$(1 to 5)") == "DIM a(2, 3), b$(1 TO 5)"
 
 
 def test_array_access():
     assert (
-        format_text("dim Foo(2,3) : print Foo(1,2)") == "DIM Foo(2, 3): PRINT Foo(1, 2)"
+        format_clean("dim Foo(2,3) : print Foo(1,2)")
+        == "DIM Foo(2, 3): PRINT Foo(1, 2)"
     )
 
 
 def test_static_dynamic_metacommands_comment():
     assert (
-        format_text("""
+        format_clean("""
 '$dynamic
 '$Static foobar $DYnamic
 'This is not $static or $dynamic
@@ -155,7 +156,7 @@ PRINT '$DYNAMIC
 
 def test_static_dynamic_metacommands_remark():
     assert (
-        format_text("""
+        format_clean("""
 rem $dynamic
 rem $Static foobar $DYnamic
 rem This is not $static or $dynamic
@@ -168,3 +169,7 @@ REM This is not $static or $dynamic
 PRINT REM $DYNAMIC
 """
     )
+
+
+def test_hex():
+    assert format_clean("print hex$(3)") == "PRINT HEX$(3)"

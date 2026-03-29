@@ -564,6 +564,31 @@ PROCS = [
     Procedure("or", "Or", [*_generic("or", None, [None, None], INTEGRAL_TYPES)]),
     Procedure("and", "And", [*_generic("and", None, [None, None], INTEGRAL_TYPES)]),
     Procedure("not", "Not", [*_generic("not", None, [None], INTEGRAL_TYPES)]),
+    # Base conversions
+    Procedure(
+        "hex$",
+        "Hex",
+        [
+            *_generic("hex", TYPE_STRING, [None], INTEGRAL_TYPES),
+            *_generic("hex", TYPE_STRING, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "oct",
+        "Oct",
+        [
+            *_generic("oct", TYPE_STRING, [None], INTEGRAL_TYPES),
+            *_generic("oct", TYPE_STRING, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "_bin",
+        "_Bin",
+        [
+            *_generic("_bin", TYPE_STRING, [None], INTEGRAL_TYPES),
+            *_generic("_bin", TYPE_STRING, [None], FLOAT_TYPES),
+        ],
+    ),
     # Other maths
     Procedure(
         "abs",
