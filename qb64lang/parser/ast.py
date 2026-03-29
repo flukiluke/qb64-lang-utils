@@ -620,6 +620,13 @@ PROCS = [
         ],
     ),
     Procedure(
+        "log",
+        "Log",
+        [
+            *_generic("log", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
         "_atan2", "_Atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]
     ),
     # Other miscellany

@@ -41,6 +41,47 @@ OK:
     FOR...NEXT (statement) creates a recursive loop procedure that loop a specified number of times.
     FREEFILE (function) returns a file number that is currently not in use by the Operating System.
     FUNCTION (procedure block) sub-procedure that can calculate and return one value to a program in its name.
+    HEX$ (function) returns the hexadecimal (base 16) STRING representation of the INTEGER part of any value.
+    IF...THEN (statement) a conditional block statement used control program flow.
+    IMP (logic operator) is used to compare two numerical values bitwise.
+    INKEY$ (function) ASCII returns a string value entry from the keyboard.
+    INP (function) returns a numerical value from a specified port register address. See Keyboard scancodes
+    INPUT$ (function) returns a designated number of string bytes from the keyboard entry or a file number.
+    INSTR (function) returns the position in a text string where a character sequence match starts.
+    INTEGER (% numerical type) 2 byte whole values from -32768 to 32767.
+    KILL (statement) deletes the specified file without a warning. Remove empty folders with RMDIR.
+    LCASE$ (function) returns the lower case value of a STRING.
+    LEFT$ (function) returns the specified number of text characters from the left end of a STRING.
+    LOC (function) returns the present file byte position or number of bytes in the OPEN COM buffer.
+    LOCATE (statement) sets the text cursor's row and column position for a PRINT or INPUT statement.
+    LOF (function) returns the size of an OPEN file in bytes.
+    LOG (function) returns the natural logarithm of a specified numerical value
+    LONG (& numerical type) 4 byte whole values from -2147483648 to 2147483647.
+    LOOP (block statement) bottom end of a recursive DO loop.
+    LPOS (function) returns the printer head position.
+    LTRIM$ (function) returns a string value with no leading spaces.
+    MID$ (function) returns a designated portion of a STRING.
+    MKD$ (function) returns an 8 byte ASCII string representation of a DOUBLE numerical value.
+    MKDIR (statement) creates a new folder in the current or designated program path.
+    MKDMBF$ (function) returns an 8 byte Microsoft Binary Format STRING representation of a DOUBLE numerical value.
+    MKI$ (function) returns a 2 byte ASCII string representation of an INTEGER.
+    MKL$ (function) returns a 4 byte ASCII string representation of a LONG numerical value.
+    MKS$ (function) returns a 4 byte ASCII string representation of a SINGLE numerical value.
+    MKSMBF$ (function) returns an 8 byte Microsoft Binary Format STRING representation of a DOUBLE numerical value.
+    MOD (math operator) performs integer remainder division on a numerical value.
+    NAME (statement) names an existing file name AS a new file name.
+    NEXT (statement) bottom end of a FOR...NEXT counter loop to returns to the start or a RESUME NEXT error.
+    NOT (logical operator) inverts the value of a logic operation or returns True when a boolean evaluation is False.
+    OCT$ (function) returns the octal (base 8) STRING representation of the INTEGER part of any value.
+    OR (logic operator) is used to compare two numerical values bitwise.
+    OR (boolean) conditonal operator is used to include an alternative evaluation in an IF...THEN or Boolean statement.
+    OUT (statement) writes numerical data to a specified register port.
+    PAINT (statement) fills an enclosed area of a graphics screen with a color until it encounters a specific colored border.
+    PALETTE (statement) sets the Red, Green and Blue color attribute intensities using a RGB multiplier calculation.
+    PCOPY (statement) swaps two designated memory page images when page swapping is enabled in the SCREEN statement.
+    PEEK (function) returns a numerical value from a specified segment address in memory.
+    PLAY (statement) uses a special string format that can produce musical tones and effects.
+    PLAY (function) returns the number of remaining notes in the background music queue.
 
 Partial:
     AS is used to denote a variable type or file number. [AS type clause only]
@@ -88,60 +129,28 @@ Unsupported:
     GET (graphics statement) maps an area the current screen's video information and places it in an INTEGER array.
     GOSUB (statement) sends the program to a designated line label procedure in the main program.
     GOTO (statement) sends the program to a designated line number or line label in a procedure.
-    HEX$ (function) returns the hexadecimal (base 16) STRING representation of the INTEGER part of any value.
-    IF...THEN (statement) a conditional block statement used control program flow.
-    IMP (logic operator) is used to compare two numerical values bitwise.
     $INCLUDE (metacommand) designates a text code library file to include with the program.
-    INKEY$ (function) ASCII returns a string value entry from the keyboard.
-    INP (function) returns a numerical value from a specified port register address. See Keyboard scancodes
     INPUT (statement) a user input that returns a value to one or more specified variable(s).
     INPUT (file mode) OPEN statement that only allows an existing file to be read using INPUT (file statement) or INPUT$.
     INPUT (file statement) reads a file sequentially using the variable types designated.
-    INPUT$ (function) returns a designated number of string bytes from the keyboard entry or a file number.
-    INSTR (function) returns the position in a text string where a character sequence match starts.
     INT (function) rounds a numerical value to an INTEGER value by removing the decimal point fraction.
-    INTEGER (% numerical type) 2 byte whole values from -32768 to 32767.
     INTERRUPT (statement) is used to access computer interrupt registers.
     INTERRUPTX (statement) is used to access computer interrupt registers.
     KEY n (statement) used with ON KEY(n) events to assign a "softkey" string to a key or create a user defined key.
     KEY(n) (statement) used with ON KEY(n) events to assign, enable, disable or suspend event trapping.
     KEY LIST (statement) lists the 12 Function key soft key string assignments going down left side of screen.
-    KILL (statement) deletes the specified file without a warning. Remove empty folders with RMDIR.
     LBOUND (function) returns the lower boundary of the specified array.
-    LCASE$ (function) returns the lower case value of a STRING.
-    LEFT$ (function) returns the specified number of text characters from the left end of a STRING.
     LEN (function) returns the length or number of characters in a STRING value in bytes.
     LET (statement) assigns a variable a literal value. Not required.
     LINE (statement) creates a graphic line or box on the SCREEN.
     LINE INPUT (statement) user input can be any text character including commas and quotes as a STRING value only.
     LINE INPUT (file statement) returns an entire text file line and returns it as a STRING value.
     LIST displays the current ON KEY(n) function key (F1 to F10) "soft key" settings.
-    LOC (function) returns the present file byte position or number of bytes in the OPEN COM buffer.
-    LOCATE (statement) sets the text cursor's row and column position for a PRINT or INPUT statement.
     LOCK (statement) restricts access to portions or all of a file by other programs or processes.
-    LOF (function) returns the size of an OPEN file in bytes.
-    LOG (function) returns the natural logarithm of a specified numerical value
-    LONG (& numerical type) 4 byte whole values from -2147483648 to 2147483647.
-    LOOP (block statement) bottom end of a recursive DO loop.
-    LPOS (function) returns the printer head position.
     LPRINT (statement) sends STRING data to the default LPT or USB printer.
     LPRINT USING (statement) sends template formatted text to the default LPT or USB printer.
     LSET (statement) left justifies the text in a string so that there are no leading spaces.
-    LTRIM$ (function) returns a string value with no leading spaces.
-    MID$ (function) returns a designated portion of a STRING.
     MID$ (statement) redefines existing characters in a STRING.
-    MKD$ (function) returns an 8 byte ASCII string representation of a DOUBLE numerical value.
-    MKDIR (statement) creates a new folder in the current or designated program path.
-    MKDMBF$ (function) returns an 8 byte Microsoft Binary Format STRING representation of a DOUBLE numerical value.
-    MKI$ (function) returns a 2 byte ASCII string representation of an INTEGER.
-    MKL$ (function) returns a 4 byte ASCII string representation of a LONG numerical value.
-    MKS$ (function) returns a 4 byte ASCII string representation of a SINGLE numerical value.
-    MKSMBF$ (function) returns an 8 byte Microsoft Binary Format STRING representation of a DOUBLE numerical value.
-    MOD (math operator) performs integer remainder division on a numerical value.
-    NAME (statement) names an existing file name AS a new file name.
-    NEXT (statement) bottom end of a FOR...NEXT counter loop to returns to the start or a RESUME NEXT error.
-    NOT (logical operator) inverts the value of a logic operation or returns True when a boolean evaluation is False.
-    OCT$ (function) returns the octal (base 8) STRING representation of the INTEGER part of any value.
     OFF (event statement) turns off all ON event checking.
     ON ERROR (statement) sets up and activates an error event checking procedure call. Use to avoid program errors.
     ON KEY(n) (statement) sets up a keyboard key entry event procedure.
@@ -152,17 +161,9 @@ Unsupported:
     OPEN (file statement) opens a file name for an access mode with a specific file number.
     OPEN COM (statement) opens a serial communication port for access at a certain speed and mode.
     OPTION BASE (statement) can set the lower boundary of all arrays to 1.
-    OR (logic operator) is used to compare two numerical values bitwise.
-    OR (boolean) conditonal operator is used to include an alternative evaluation in an IF...THEN or Boolean statement.
-    OUT (statement) writes numerical data to a specified register port.
     OUTPUT (file mode) creates a new file or clears all data from an existing file to acess the file sequencially.
-    PAINT (statement) fills an enclosed area of a graphics screen with a color until it encounters a specific colored border.
-    PALETTE (statement) sets the Red, Green and Blue color attribute intensities using a RGB multiplier calculation.
     PALETTE USING (statement) sets the color intensity settings using a designated array.
-    PCOPY (statement) swaps two designated memory page images when page swapping is enabled in the SCREEN statement.
-    PEEK (function) returns a numerical value from a specified segment address in memory.
-    PLAY (statement) uses a special string format that can produce musical tones and effects.
-    PLAY (function) returns the number of remaining notes in the background music queue.
+---
     PMAP (function) returns the physical or WINDOW view graphic coordinates.
     POINT (function) returns the color attribute number or 32 bit _RGB32 value.
     POKE (statement) writes a numerical value to a specified segment address in memory.

@@ -22,6 +22,7 @@ def test_trig():
 
 def test_logarithms():
     parse_clean("print exp(x!)")
+    parse_clean("print log(x!)")
 
 
 def test_arithmetic4():

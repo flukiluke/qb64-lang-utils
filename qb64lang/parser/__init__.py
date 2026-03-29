@@ -54,14 +54,44 @@ declare sub      Error          (n%)
 declare sub      Files
 declare sub      Files          (fileSpec$)
 declare function FreeFile&
+declare function InKey$
+declare function Inp%           (address%)
+declare function Input$         (bytes&&)
+declare function Input$         (bytes&&, file&)
 declare function InStr&&        (haystack$, needle$)
 declare function InStr&&        (start&&, haystack$, needle$)
+declare sub      Kill           (file$)
 declare function LCase$         (s$)
 declare function Left$          (s$, i&&)
+declare function Loc&&          (file&)
+$syntax:[row][, [column][, [cursor][, [cursorStart][, cursorEnd]]]]
+declare sub      Locate         (row%, column%, cursor%, cursorStart%, cursorEnd%)
+$syntax:([#]handle)
+declare function Lof&&          (handle&)
+declare function LPos%          (index%)
+declare function LTrim$         (s$)
 declare function Mid$           (s$, pos&&)
 declare function Mid$           (s$, pos&&, length&&)
+declare function MKD$           (n#)
+declare function MKDMBF$        (n#)
+declare function MKI$           (n%)
+declare function MKL$           (n&)
+declare function MKS$           (n!)
+declare function MKSMBF$        (n!)
 declare sub      MkDir          (path$)
+$syntax:old "AS" new
+declare sub      Name           (old$, new$)
 declare sub      Out            (address%, value%)
+$syntax:[rel:"Step"](x, y), fillColor[, borderColor]
+declare sub      Paint          (rel%, x!, y!, fillColor~&, borderColor~&)
+declare sub      Palette
+declare sub      Palette        (attribute%, mapColor~&)
+declare sub      PCopy          (source%, dest%)
+declare function Peek%%         (address%)
+$syntax:voice1[, [voice2][, [voice3][, voice4]]]
+declare sub      Play           (voice1$, voice2$, voice3$, voice4$)
+declare function Play#
+declare function Play#          (voice&)
 declare function Right$         (s$, i&&)
 declare function UCase$         (s$)
 declare function Val##          (s$)
