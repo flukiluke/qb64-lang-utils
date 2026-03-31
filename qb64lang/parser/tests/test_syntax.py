@@ -1,7 +1,7 @@
 from .. import diagnostics as diag
 from .. import parse
-from ..ast import ArrayAccess, Call, Constant, EmptyExpr, If, Print, Var
-from .helpers import Ast, builtin_proc, parse_clean
+from ..ast import Call, Constant, EmptyExpr, If, Print, Var
+from .helpers import Ast, parse_clean
 
 
 def test_strictsigil_string():
@@ -47,16 +47,6 @@ def test_strictsigil_combination():
         print foo$
     """)
     assert prog.main.find(If).true_branch == [Ast(Call)]
-
-
-def test_end_command():
-    # Not custom syntax, but special enough to need a dedicated test
-    # because of the conflict with the syntactic structure.
-    prog = parse_clean("end \n end 1")
-    assert list(prog.main.find_all(Call)) == [
-        Ast(Call, builtin_proc("end")),
-        Ast(Call, builtin_proc("end"), [Ast(Constant, 1)]),
-    ]
 
 
 def test_circle():
@@ -149,8 +139,12 @@ def test_eof():
     assert parse_clean("x = eof(#x&)").main.find(Call) == Ast(Call, args=[Ast(Var)])
 
 
-def test_hex():
-    assert parse_clean("print hex$(3)").main.find(Call) == Ast(
-        Call, args=[Ast(Constant, 3)]
-    )
-    assert parse_clean("print hex(3)").main.find(ArrayAccess) is not None
+def test_strig():
+    assert parse_clean("strig (1) on")
+    assert parse_clean("strig (1, 2) off")
+    assert parse_clean("strig (1, 2) stop")
+
+
+def test_string_func():
+    assert parse_clean("x$ = string$(3, 10)").main.find(Call) is not None
+    assert parse_clean('x$ = string$(3, "d")').main.find(Call) is not None

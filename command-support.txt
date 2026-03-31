@@ -82,10 +82,61 @@ OK:
     PEEK (function) returns a numerical value from a specified segment address in memory.
     PLAY (statement) uses a special string format that can produce musical tones and effects.
     PLAY (function) returns the number of remaining notes in the background music queue.
+    PMAP (function) returns the physical or WINDOW view graphic coordinates.
+    POINT (function) returns the color attribute number or 32 bit _RGB32 value.
+    POKE (statement) writes a numerical value to a specified segment address in memory.
+    POS (function) returns the current text column position of the text cursor.
+    PRESET (statement) sets a pixel coordinate to the background color unless one is specified.
+    PRINT (statement) prints text strings or numerical values to the SCREEN.
+    PSET (statement) sets a pixel coordinate to the current color unless a color is designated.
+    REM (statement) or an apostrophe tells the program to ignore statements following it on the same line.
+    RESET (statement) closes all files and writes the directory information to a diskette before it is removed from a disk drive.
+    RIGHT$ (function) returns a specific number of text characters from the right end of a STRING.
+    RMDIR (statement) removes an empty folder from the current path or the one designated.
+    RND (function) returns a random number value from 0 to .9999999.
+    RTRIM$ (function) returns a string with all spaces removed from the right end.
+    SADD (function) returns the address of a STRING variable as an offset from the current data segment.
+    SCREEN (function) can return the ASCII character code or color of the text at a text designated coordinate.
+    SEEK (function) returns the present byte position in an opened file.
+    SEEK (statement) moves to a specified position in an opened file.
+    SGN (function) returns -1 for negative, 0 for zero, and 1 for positive numerical values.
+    SHELL (function) executes an external command or calls another program. Returns codes sent by END or SYSTEM.
+    SIN (function) returns the sine of a radian angle.
+    SINGLE (! numerical type) 4 byte floating decimal point values up to 7 decimal places.
+    SLEEP (statement) pauses the program for a designated number of seconds or until a key is pressed.
+    SPACE$ (function) returns a designated number of spaces to a STRING.
+    SQR (function) returns the square root of a non-negative number.
+    STEP (keyword) move relatively from one graphic position or change the counting increment in a FOR...NEXT loop.
+    STICK (function) returns the present joystick position.
+    STOP (statement) stops a program when troubleshooting or stops an ON event.
+    STR$ (function) returns a string value of a number with a leading space when it is positive.
+    STRIG(n) (statement)
+    STRING ($ variable type) one byte text variable with ASCII code values from 0 to 255.
+    STRING$ (function) returns a designated number of string characters.
+    SUB (procedure block) sub-procedure that can calculate and return multiple parameter values.
+    SYSTEM (statement) ends a program immediately.
+    TAN (function) returns the ratio of SINe to COSine or tangent value of an angle measured in radians.
+    THEN (IF...THEN keyword) must be used in a one line IF...THEN program flow statement.
+    TIME$ (function) returns the present time setting of the Operating System as a format hh:mm:ss STRING.
+    TIMER (function) returns the number of seconds since midnight as a SINGLE value.
+    TO indicates a range of numerical values or an assignment of one value to another.
+    TYPE (definition) defines a variable type or file record that can include any STRING or numerical types.
+    UCASE$ (function) returns an uppercase representation of a specified STRING.
+    UNLOCK (statement) unlocks a designated file or portions of it.
+    UNTIL (condition) evaluates a DO...LOOP condition until it is True.
+    VAL (function) returns the numerical value of a string number.
+    VIEW (graphics statement) sets up a graphic view port area of the screen.
+    WAIT (statement) waits until a vertical retrace is started or a screen draw ends.
+    WEND (statement) the bottom end of a WHILE...WEND loop.
+    WHILE (condition) evaluates a DO...LOOP or WHILE...WEND condition until it is False.
+    WHILE...WEND (statement) sets a recursive procedure loop that can only be exited using the WHILE conditional argument.
+    WINDOW (statement) maps a window size different from the program's window size.
+    XOR (boolean) (logic operator) is used to compare two numerical values bitwise.
 
 Partial:
     AS is used to denote a variable type or file number. [AS type clause only]
     DIM (statement) defines a variable as a specified type and can size a STATIC array. [DIM SHARED not supported]
+    REDIM (statement) creates a new dynamic array or resizes one without losing data when _PRESERVE is used. [_PRESERVE not supported]
 
 Unsupported:
     ABSOLUTE (statement) is used to access computer interrupt registers.
@@ -163,17 +214,9 @@ Unsupported:
     OPTION BASE (statement) can set the lower boundary of all arrays to 1.
     OUTPUT (file mode) creates a new file or clears all data from an existing file to acess the file sequencially.
     PALETTE USING (statement) sets the color intensity settings using a designated array.
----
-    PMAP (function) returns the physical or WINDOW view graphic coordinates.
-    POINT (function) returns the color attribute number or 32 bit _RGB32 value.
-    POKE (statement) writes a numerical value to a specified segment address in memory.
-    POS (function) returns the current text column position of the text cursor.
-    PRESET (statement) sets a pixel coordinate to the background color unless one is specified.
-    PRINT (statement) prints text strings or numerical values to the SCREEN.
     PRINT (file statement) prints text strings or numerical values to a file.
     PRINT USING (statement) prints a template formatted string to the SCREEN.
     PRINT USING (file statement) prints a template formatted string to a file.
-    PSET (statement) sets a pixel coordinate to the current color unless a color is designated.
     PUT (file I/O statement) writes data sequencially or to a designated position using a variable value.
     PUT (QB64 TCP/IP statement) sends raw data to a user's connection handle.
     PUT (graphics statement) places pixel data stored in an INTEGER array to a specified area of the SCREEN.
@@ -181,75 +224,31 @@ Unsupported:
     RANDOMIZE (statement) sets the random seed value for a specific sequence of random RND values.
     RANDOMIZE USING (QB64 statement) restarts the designated seed value's random sequence of values from the beginning.
     READ (statement) reads values from a DATA field. ACCESS READ is used with the OPEN statement.
-    REDIM (statement) creates a new dynamic array or resizes one without losing data when _PRESERVE is used.
-    REM (statement) or an apostrophe tells the program to ignore statements following it on the same line.
-    RESET (statement) closes all files and writes the directory information to a diskette before it is removed from a disk drive.
     RESTORE (statement) resets the DATA pointer to the start of a designated field of data.
     RESUME (statement) an error handling procedure exit that can send the program to a line number or the NEXT code line.
     RETURN (statement) returns the program to the code immediately following a GOSUB call.
-    RIGHT$ (function) returns a specific number of text characters from the right end of a STRING.
-    RMDIR (statement) removes an empty folder from the current path or the one designated.
-    RND (function) returns a random number value from 0 to .9999999.
     RSET (statement) right justifies a string value so that any end spaces are moved to the beginning.
-    RTRIM$ (function) returns a string with all spaces removed from the right end.
     RUN (statement) clears and restarts the program currently in memory or executes another specified program.
-    SADD (function) returns the address of a STRING variable as an offset from the current data segment.
-    SCREEN (function) can return the ASCII character code or color of the text at a text designated coordinate.
     SCREEN (statement) sets the display mode and size of the program window.
-    SEEK (function) returns the present byte position in an opened file.
-    SEEK (statement) moves to a specified position in an opened file.
     SELECT CASE (statement) a program flow block that can handle numerous conditional evaluations.
-    SGN (function) returns -1 for negative, 0 for zero, and 1 for positive numerical values.
     SHARED (statement) designates that a variable can be used by other procedures or the main procedure when in a sub-procedure.
     SHELL (statement) sends STRING commands to the command line. SHELL calls will not affect the current path.
-    SHELL (function) executes an external command or calls another program. Returns codes sent by END or SYSTEM.
-    SIN (function) returns the sine of a radian angle.
-    SINGLE (! numerical type) 4 byte floating decimal point values up to 7 decimal places.
-    SLEEP (statement) pauses the program for a designated number of seconds or until a key is pressed.
     SOUND (statement) creates a sound of a specified frequency and duration.
-    SPACE$ (function) returns a designated number of spaces to a STRING.
     SPC (function) moves the text cursor a number of spaces on the SCREEN.
-    SQR (function) returns the square root of a non-negative number.
     STATIC (statement) creates a SUB or FUNCTION variable that retains its value.
     $STATIC (metacommand) used at the start of a program to set all program arrays as unchangeable in size using DIM.
-    STEP (keyword) move relatively from one graphic position or change the counting increment in a FOR...NEXT loop.
-    STICK (function) returns the present joystick position.
-    STOP (statement) stops a program when troubleshooting or stops an ON event.
-    STR$ (function) returns a string value of a number with a leading space when it is positive.
     STRIG (function) returns the joystick button press values when read.
-    STRIG(n) (statement)
-    STRING ($ variable type) one byte text variable with ASCII code values from 0 to 255.
-    STRING$ (function) returns a designated number of string characters.
-    SUB (procedure block) sub-procedure that can calculate and return multiple parameter values.
     SWAP (statement) swaps two string or numerical values.
-    SYSTEM (statement) ends a program immediately.
     TAB (function) moves a designated number of columns on the screen.
-    TAN (function) returns the ratio of SINe to COSine or tangent value of an angle measured in radians.
-    THEN (IF...THEN keyword) must be used in a one line IF...THEN program flow statement.
-    TIME$ (function) returns the present time setting of the Operating System as a format hh:mm:ss STRING.
-    TIMER (function) returns the number of seconds since midnight as a SINGLE value.
     TIMER (statement) events based on the designated time interval and timer number.
-    TO indicates a range of numerical values or an assignment of one value to another.
-    TYPE (definition) defines a variable type or file record that can include any STRING or numerical types.
     UBOUND (function) returns the upper-most index number of a designated array.
-    UCASE$ (function) returns an uppercase representation of a specified STRING.
-    UNLOCK (statement) unlocks a designated file or portions of it.
-    UNTIL (condition) evaluates a DO...LOOP condition until it is True.
-    VAL (function) returns the numerical value of a string number.
     VARPTR (function) returns the segment pointer address in memory.
     VARPTR$ (function) returns the string value of a numerical value in memory.
     VARSEG (function) returns the segment address of a value in memory.
-    VIEW (graphics statement) sets up a graphic view port area of the screen.
     VIEW PRINT (statement) sets up a text viewport area of the screen.
-    WAIT (statement) waits until a vertical retrace is started or a screen draw ends.
-    WEND (statement) the bottom end of a WHILE...WEND loop.
-    WHILE (condition) evaluates a DO...LOOP or WHILE...WEND condition until it is False.
-    WHILE...WEND (statement) sets a recursive procedure loop that can only be exited using the WHILE conditional argument.
     WIDTH (statement) sets the text column and row sizes in several SCREEN modes.
-    WINDOW (statement) maps a window size different from the program's window size.
     WRITE (screen I/O statement) prints variable values to the screen with commas separating each value.
     WRITE (file statement) writes data to a file with each variable value separated by commas.
-    XOR (boolean) (logic operator) is used to compare two numerical values bitwise.
     _ACCEPTFILEDROP (statement) turns a program window into a valid drop destination for dragging files from Windows Explorer.
     _ACOS (function) arccosine function returns the angle in radians based on an input COSine value range from -1 to 1.
     _ACOSH (function) Returns the nonnegative arc hyperbolic cosine of x, expressed in radians.

@@ -92,8 +92,50 @@ $syntax:voice1[, [voice2][, [voice3][, voice4]]]
 declare sub      Play           (voice1$, voice2$, voice3$, voice4$)
 declare function Play#
 declare function Play#          (voice&)
+declare function PMap!          (value!, action%)
+declare function Point!         (action%)
+declare function Point~&        (x!, y!)
+declare sub      Poke           (address%, value%)
+declare function Pos%           (dummy&)
+$syntax:[rel:"Step"](x, y)[, setColor]
+declare sub      PReset         (rel%, x!, y!, setColor~&)
+$syntax:[rel:"Step"](x, y)[, setColor]
+declare sub      PSet           (rel%, x!, y!, setColor~&)
+declare sub      Reset
 declare function Right$         (s$, i&&)
+declare sub      RmDir          (dir$)
+declare function Rnd!
+declare function Rnd!           (n!)
+declare function RTrim$         (s$)
+declare function SAdd%          (s$)
+declare function Screen~&       (row%, col%)
+declare function Screen~&       (row%, col%, colorFlag%)
+declare sub      Seek           (handle&, position&&)
+declare function Seek&&         (handle&)
+declare function Shell%%        (cmd$)
+declare sub      Sleep
+declare sub      Sleep          (seconds&)
+declare function Space$         (count&&)
+declare function Stick%         (direction%)
+declare function Stick%         (direction%, axis%)
+declare sub      Stop
+$syntax: (button[, device]) action:{On Off Stop}
+declare sub      STrig          (button%, device%, action%)
+declare function String$        (count&&, character$)
+declare function String$        (count&&, byte%%)
+declare sub      System         (code%)
+declare function Time$
+declare function Timer!
+declare function Timer#         (accuracy!)
 declare function UCase$         (s$)
+$syntax:[#]handle[, [firstRecord] ["To" lastRecord]]
+declare sub      Unlock         (handle&, firstRecord&&, lastRecord&&)
+$syntax:[[isScreen:"Screen"] (x1, y1)-(x2, y2)[, [bgColor][, borderColor]]]
+declare sub      View           (isScreen%, x1!, y1!, x2!, y2!, bgColor~&, borderColor~&)
+declare sub      Wait           (port%, andMask%)
+declare sub      Wait           (port%, andMask%, xorMask%)
+$syntax:[[isScreen:"Screen"] (x1, y1)-(x2, y2)]
+declare sub      Window         (isScreen%, x1!, y1!, x2!, y2!)
 declare function Val##          (s$)
 """  # noqa: E501
 

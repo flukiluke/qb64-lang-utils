@@ -375,6 +375,8 @@ def _generic(
 KEYWORDS = {
     # Misc
     "to": "To",
+    "on": "On",
+    "off": "Off",
     # Declarations
     "dim": "Dim",
     "redim": "ReDim",
@@ -574,7 +576,7 @@ PROCS = [
         ],
     ),
     Procedure(
-        "oct",
+        "oct$",
         "Oct",
         [
             *_generic("oct", TYPE_STRING, [None], INTEGRAL_TYPES),
@@ -582,7 +584,7 @@ PROCS = [
         ],
     ),
     Procedure(
-        "_bin",
+        "_bin$",
         "_Bin",
         [
             *_generic("_bin", TYPE_STRING, [None], INTEGRAL_TYPES),
@@ -627,6 +629,35 @@ PROCS = [
         ],
     ),
     Procedure(
+        "sgn",
+        "Sgn",
+        [
+            *_generic("sgn", None, [None], INTEGRAL_TYPES),
+            *_generic("sgn", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "sin",
+        "Sin",
+        [
+            *_generic("sin", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "sqr",
+        "Sqr",
+        [
+            *_generic("sqr", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
+        "tan",
+        "Tan",
+        [
+            *_generic("tan", None, [None], FLOAT_TYPES),
+        ],
+    ),
+    Procedure(
         "_atan2", "_Atan2", [*_generic("_atan2", None, [None, None], FLOAT_TYPES)]
     ),
     # Other miscellany
@@ -648,6 +679,14 @@ PROCS = [
                 lex_start=-1,
                 lex_end=-1,
             ),
+        ],
+    ),
+    Procedure(
+        "str$",
+        "Str",
+        [
+            *_generic("str", None, [None], INTEGRAL_TYPES),
+            *_generic("str", None, [None], FLOAT_TYPES),
         ],
     ),
 ]
