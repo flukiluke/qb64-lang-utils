@@ -116,6 +116,8 @@ class NullLogger(object):
 # -----------------------------------------------------------------------------
 
 class Lexer:
+    last_token: LexToken
+
     def __init__(self):
         self.lexre = None             # Master regular expression. This is a list of
                                       # tuples (re, findex) where re is a compiled
@@ -142,6 +144,7 @@ class Lexer:
         self.lexliterals = ''         # Literal characters that can be passed through
         self.lexmodule = None         # Module
         self.lexoptimize = False      # Optimized mode
+        self.last_token = LexToken()
 
     def clone(self, object=None):
         c = copy.copy(self)
@@ -416,10 +419,10 @@ class Lexer:
         return self
 
     def next(self):
-        t = self.token()
-        if t is None:
+        self.last_token = self.token()
+        if self.last_token is None:
             raise StopIteration
-        return t
+        return self.last_token
 
     __next__ = next
 

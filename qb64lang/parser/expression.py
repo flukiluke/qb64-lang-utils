@@ -287,7 +287,7 @@ def do_proc_call_custom_syntax(ctx: ParseContext, target: Procedure):
     spec = impl.syntax_spec
     assert spec is not None
     next(ctx)
-    results = spec.accept(ctx)
+    results = spec.eval(ctx)
     args = list[Expr]()
     arg_start = lex_start
     for param in impl.signature.params:

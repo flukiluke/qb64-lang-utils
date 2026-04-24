@@ -119,7 +119,7 @@ declare function Space$         (count&&)
 declare function Stick%         (direction%)
 declare function Stick%         (direction%, axis%)
 declare sub      Stop
-$syntax: (button[, device]) action:{On Off Stop}
+$syntax: (button[, device]) action:{"On" | "Off" | "Stop"}
 declare sub      STrig          (button%, device%, action%)
 declare function String$        (count&&, character$)
 declare function String$        (count&&, byte%%)
