@@ -32,6 +32,8 @@ $syntax:[, [dataSize][, stackSize]]
 declare sub      Clear          (dataSize&&, stackSize&&)
 $syntax:[method][, [bgColor][, image]]
 declare sub      Cls            (method%, bgColor~&, image&)
+$syntax:[fg][, [bg][, [border][, image]]]
+declare sub      Color          (fg~&, bg~&, border~&, image&)
 declare function Command$
 declare function Command$       (n&)
 declare function CsrLin&

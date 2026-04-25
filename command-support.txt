@@ -12,6 +12,7 @@ OK:
     CIRCLE (statement) creates a circle, ellipse or arc at a designated graphical coordinate position.
     CLEAR (statement) sets all variable and array values to zero number values or empty STRINGs.
     CLS (statement) clears a program screen, VIEW port or WINDOW.
+    COLOR (statement) sets the current text foreground and/or background color to be used.
     COMMAND$ (function) returns the command line arguments passed when a program is run.
     COS (function) returns the cosine of a radian angle value.
     CSRLIN (function) returns the present PRINT cursor text row SCREEN coordinate position.
@@ -155,7 +156,6 @@ Unsupported:
     CINT (function) returns the closest INTEGER value of a numerical value.
     CLNG (function) returns the closest LONG value of a numerical value.
     CLOSE (statement) closes specific file number(s) or all files when a number is not specified.
-    COLOR (statement) sets the current text foreground and/or background color to be used.
     COMMON (statement) sets a variable name as shared by CHAINed program modules.
     CONST (statement) sets a variable name and its value as a constant value to be used by all procedures.
     CSNG (function) returns the closest SINGLE value of a numerical value.
